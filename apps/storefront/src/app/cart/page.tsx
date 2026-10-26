@@ -21,6 +21,7 @@ import {
   AlertCircle,
   Loader2,
   ExternalLink,
+  Mail,
 } from "lucide-react";
 import { useCartStore } from "@/stores/cart-store";
 import { formatBdt, calculateAdvanceDepositRequirement, isValidBdPhone } from "@solusation/shared-types";
@@ -100,6 +101,7 @@ export default function CartPage() {
   // Customer & Delivery Info
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
+  const [customerEmail, setCustomerEmail] = useState("");
   const [district, setDistrict] = useState("Dhaka");
   const [area, setArea] = useState("");
   const [address, setAddress] = useState("");
@@ -159,6 +161,14 @@ export default function CartPage() {
       return false;
     }
 
+    if (customerEmail.trim()) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(customerEmail.trim())) {
+        setErrorMessage("Please enter a valid email address (or leave it blank).");
+        return false;
+      }
+    }
+
     if (!area.trim() || area.trim().length < 2) {
       setErrorMessage("Please enter your area or thana.");
       return false;
@@ -201,7 +211,7 @@ export default function CartPage() {
       const payload = {
         customerName: customerName.trim(),
         customerPhone: formattedPhone,
-        customerEmail: null,
+        customerEmail: customerEmail.trim() ? customerEmail.trim().toLowerCase() : null,
         district: district.trim(),
         area: area.trim(),
         address: `${address.trim()}${notes.trim() ? ` (Note: ${notes.trim()})` : ""}`,
@@ -225,6 +235,7 @@ export default function CartPage() {
       if (res?.success && res.data) {
         setPlacedOrder({
           ...res.data,
+          customerEmail: customerEmail.trim() || res.data.customerEmail,
           itemsSummary: items,
           deliveryFee,
           deliveryZone,
@@ -349,6 +360,9 @@ export default function CartPage() {
               </div>
               <p><span className="text-muted-foreground">Name:</span> <strong>{placedOrder.customerName}</strong></p>
               <p><span className="text-muted-foreground">Phone:</span> <strong>{placedOrder.customerPhone}</strong></p>
+              {placedOrder.customerEmail && (
+                <p><span className="text-muted-foreground">Email:</span> <strong>{placedOrder.customerEmail}</strong></p>
+              )}
             </div>
             <div className="space-y-1.5">
               <div className="font-bold text-foreground text-sm flex items-center gap-1.5 text-primary">
@@ -552,6 +566,24 @@ export default function CartPage() {
                   Required for delivery call and verification.
                 </div>
               </div>
+            </div>
+
+            {/* Email Address */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-foreground flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <Mail className="w-3.5 h-3.5 text-primary" />
+                  <span>Email Address</span>
+                </span>
+                <span className="text-[10px] text-muted-foreground font-normal">Optional (for invoice & digital receipt)</span>
+              </label>
+              <input
+                type="email"
+                value={customerEmail}
+                onChange={(e) => setCustomerEmail(e.target.value)}
+                placeholder="e.g. yourname@example.com"
+                className="w-full bg-background border border-border focus:border-primary rounded-xl px-3.5 py-2.5 text-xs text-foreground outline-none transition-colors"
+              />
             </div>
 
             {/* Delivery Destination Options */}
@@ -904,8 +936,16 @@ export default function CartPage() {
               </div>
             </div>
 
+            {errorMessage && (
+              <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-600 dark:text-red-400 text-xs font-semibold flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>{errorMessage}</span>
+              </div>
+            )}
+
             {/* Place Order CTA Button */}
             <button
+              id="confirm-order-btn"
               type="submit"
               disabled={isSubmitting}
               className={`w-full text-white font-black py-3.5 px-4 rounded-xl text-sm flex items-center justify-center gap-2 shadow-xl transition-all hover:scale-[1.01] active:scale-95 disabled:opacity-60 ${

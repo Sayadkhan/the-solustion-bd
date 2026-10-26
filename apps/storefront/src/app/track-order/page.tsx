@@ -16,6 +16,7 @@ import {
   ExternalLink,
   ChevronRight,
   Box,
+  Mail,
 } from "lucide-react";
 import { storefrontApi } from "@/lib/api";
 
@@ -47,7 +48,7 @@ export default function TrackOrderPage() {
     }
   };
 
-  const getStatusStep = (status: string) => {
+  const getStatusStep = (status?: string) => {
     switch (status?.toUpperCase()) {
       case "PENDING":
         return 1;
@@ -61,11 +62,12 @@ export default function TrackOrderPage() {
       case "CANCELLED":
         return -1;
       default:
-        return 1;
+        return 2;
     }
   };
 
-  const currentStep = order ? getStatusStep(order.status) : 0;
+  const activeStatus = order?.orderStatus || order?.status || "CONFIRMED";
+  const currentStep = order ? getStatusStep(activeStatus) : 0;
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-background py-10 px-4">
@@ -141,19 +143,19 @@ export default function TrackOrderPage() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-border">
               <div>
                 <div className="flex items-center gap-2.5 mb-1">
-                  <h2 className="text-lg font-black text-foreground">Invoice #{order.orderNumber}</h2>
+                  <h2 className="text-lg font-black text-foreground">Invoice #{order.invoiceNo || order.orderNumber}</h2>
                   <span
                     className={`text-[11px] font-black uppercase px-2.5 py-0.5 rounded-full ${
-                      order.status === "DELIVERED"
+                      activeStatus === "DELIVERED"
                         ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400"
-                        : order.status === "SHIPPED"
+                        : activeStatus === "SHIPPED"
                         ? "bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-400"
-                        : order.status === "CANCELLED"
+                        : activeStatus === "CANCELLED"
                         ? "bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-400"
                         : "bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400"
                     }`}
                   >
-                    {order.status}
+                    {activeStatus}
                   </span>
                 </div>
                 <p className="text-xs text-muted-foreground">
@@ -162,8 +164,8 @@ export default function TrackOrderPage() {
               </div>
 
               <div className="text-left sm:text-right">
-                <div className="text-xs text-muted-foreground">Total Bill</div>
-                <div className="text-xl font-black text-primary">৳{(order.totalAmount || 0).toLocaleString()}</div>
+                <div className="text-xs text-muted-foreground">Total Payable</div>
+                <div className="text-xl font-black text-primary">৳{(order.totalPayableBdt || order.totalAmount || 0).toLocaleString()}</div>
                 <div className="text-[11px] text-muted-foreground">Payment: {order.paymentMethod || "CASH_ON_DELIVERY"}</div>
               </div>
             </div>
@@ -242,15 +244,21 @@ export default function TrackOrderPage() {
               <div className="space-y-3 bg-slate-50 dark:bg-muted/40 p-4 rounded-xl border border-border">
                 <h3 className="text-xs font-black uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
                   <MapPin className="w-4 h-4 text-primary" />
-                  Delivery Address
+                  Delivery & Contact
                 </h3>
                 <div className="text-sm font-bold text-foreground">{order.customerName}</div>
                 <div className="text-xs text-muted-foreground flex items-center gap-1.5">
-                  <Phone className="w-3.5 h-3.5" />
-                  {order.phone}
+                  <Phone className="w-3.5 h-3.5 text-primary" />
+                  {order.customerPhone || order.phone}
                 </div>
-                <div className="text-xs text-muted-foreground">
-                  {order.address}, {order.district}
+                {(order.customerEmail || order.email) && (
+                  <div className="text-xs text-muted-foreground flex items-center gap-1.5">
+                    <Mail className="w-3.5 h-3.5 text-primary" />
+                    {order.customerEmail || order.email}
+                  </div>
+                )}
+                <div className="text-xs text-muted-foreground pt-1 border-t border-border/50">
+                  {order.address}, {order.area ? `${order.area}, ` : ""}{order.district}
                 </div>
               </div>
 
@@ -260,15 +268,19 @@ export default function TrackOrderPage() {
                   Order Summary
                 </h3>
                 <div className="divide-y divide-border">
-                  {order.items?.map((item: any, idx: number) => (
-                    <div key={idx} className="py-2 first:pt-0 last:pb-0 flex items-center justify-between text-xs">
-                      <div>
-                        <span className="font-semibold text-foreground">{item.productName || item.sku}</span>
-                        <span className="text-muted-foreground ml-1.5">x{item.quantity}</span>
+                  {order.items?.map((item: any, idx: number) => {
+                    const quantity = item.qty || item.quantity || 1;
+                    const price = item.unitPriceBdt || item.priceBdt || 0;
+                    return (
+                      <div key={idx} className="py-2 first:pt-0 last:pb-0 flex items-center justify-between text-xs">
+                        <div>
+                          <span className="font-semibold text-foreground">{item.productName || item.sku}</span>
+                          <span className="text-muted-foreground ml-1.5">x{quantity}</span>
+                        </div>
+                        <span className="font-bold text-foreground">৳{(price * quantity).toLocaleString()}</span>
                       </div>
-                      <span className="font-bold text-foreground">৳{((item.priceBdt || 0) * (item.quantity || 1)).toLocaleString()}</span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </div>
