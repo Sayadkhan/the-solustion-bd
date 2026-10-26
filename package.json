@@ -1,0 +1,19 @@
+{
+  "name": "the-solusation-bd",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Bangladesh High-Performance Tech & PC Hardware E-Commerce Platform",
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "check-types": "turbo check-types",
+    "clean": "turbo clean"
+  },
+  "devDependencies": {
+    "prettier": "^3.5.0",
+    "turbo": "^2.4.4",
+    "typescript": "^5.7.3"
+  },
+  "packageManager": "pnpm@12.15.0"
+}

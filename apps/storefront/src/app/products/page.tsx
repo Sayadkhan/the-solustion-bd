@@ -1,0 +1,441 @@
+"use client";
+
+import React, { useState, useEffect, useMemo, Suspense } from "react";
+import Link from "next/link";
+import { useSearchParams, useRouter } from "next/navigation";
+import {
+  Filter,
+  SlidersHorizontal,
+  Grid3X3,
+  List,
+  ChevronRight,
+  RotateCcw,
+  Check,
+  Search,
+} from "lucide-react";
+import { CATALOG_PRODUCTS, CATEGORIES, Product } from "@/lib/catalog";
+import { ProductCard } from "@/components/product-card";
+import { formatBdt } from "@solusation/shared-types";
+import { storefrontApi } from "@/lib/api";
+
+function ProductsContent() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  const selectedCategory = searchParams.get("category") || "all";
+  const selectedBrand = searchParams.get("brand") || "all";
+  const searchQuery = searchParams.get("q") || "";
+
+  // Local products state
+  const [productsList, setProductsList] = useState<Product[]>(CATALOG_PRODUCTS);
+
+  // Fetch live products from backend
+  useEffect(() => {
+    async function fetchLiveProducts() {
+      try {
+        const live = await storefrontApi.getProducts({ limit: 100 });
+        if (live && live.length > 0) {
+          const formatted: Product[] = live.map((p: any) => ({
+            id: p.id,
+            name: p.name,
+            slug: p.slug,
+            sku: p.sku || `SKU-${p.id.slice(0, 6)}`,
+            brand: p.brand?.name || p.brand || "Authentic",
+            categorySlug: p.category?.slug || p.categorySlug || "processor",
+            categoryName: p.category?.name || p.categoryName || "Hardware",
+            cashPriceBdt: Number(p.cashPriceBdt) || 0,
+            regularPriceBdt: Number(p.regularPriceBdt) || Number(p.cashPriceBdt) || 0,
+            costPriceBdt: Number(p.costPriceBdt) || 0,
+            isEmiAvailable: Boolean(p.isEmiAvailable),
+            totalStock: Number(p.totalStock) || 10,
+            stockStatus: p.stockStatus || "IN_STOCK",
+            thumbnailUrl: p.thumbnailUrl || p.images?.[0] || "https://images.unsplash.com/photo-1591799264318-7e6ef8ddb7ea?w=800",
+            images: p.images || [p.thumbnailUrl || ""],
+            keyFeatures: p.keyFeatures || [
+              "Official Distributor Warranty",
+              "Box Serial Number Tracking",
+              "100% Genuine Box Pack",
+            ],
+            warrantyDurationMonths: p.warrantyDurationMonths || 36,
+            warrantyNotice: p.warrantyNotice || "3 Years Official Warranty",
+            branchStocks: p.branchStocks || {},
+            specifications: p.specifications || [],
+            compatibility: p.compatibility || { componentType: "OTHER" },
+          }));
+
+          setProductsList(formatted);
+        }
+      } catch (err) {
+        console.warn("Failed to fetch live products in products catalog:", err);
+      }
+    }
+
+    fetchLiveProducts();
+  }, []);
+
+  // Local filter states
+  const [minPrice, setMinPrice] = useState<number>(0);
+  const [maxPrice, setMaxPrice] = useState<number>(200000);
+  const [inStockOnly, setInStockOnly] = useState<boolean>(false);
+  const [selectedBrands, setSelectedBrands] = useState<string[]>(
+    selectedBrand !== "all" ? [selectedBrand] : []
+  );
+  const [selectedSocket, setSelectedSocket] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<string>("price-asc");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
+
+  // Available unique brands from catalog
+  const allBrands = useMemo(() => {
+    return Array.from(new Set(productsList.map((p) => p.brand))).sort();
+  }, [productsList]);
+
+  // Filter and sort products
+  const filteredProducts = useMemo(() => {
+    return productsList.filter((prod) => {
+      // Category filter
+      if (selectedCategory !== "all" && prod.categorySlug !== selectedCategory) {
+        return false;
+      }
+
+      // Search filter
+      if (
+        searchQuery &&
+        !prod.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
+        !prod.sku.toLowerCase().includes(searchQuery.toLowerCase()) &&
+        !prod.brand.toLowerCase().includes(searchQuery.toLowerCase())
+      ) {
+        return false;
+      }
+
+      // Price filter
+      if (prod.cashPriceBdt < minPrice || prod.cashPriceBdt > maxPrice) {
+        return false;
+      }
+
+      // Stock filter
+      if (inStockOnly && prod.stockStatus !== "IN_STOCK") {
+        return false;
+      }
+
+      // Brand filter
+      if (selectedBrands.length > 0 && !selectedBrands.includes(prod.brand)) {
+        return false;
+      }
+
+      // Socket filter
+      if (selectedSocket !== "all" && prod.compatibility.socket !== selectedSocket) {
+        return false;
+      }
+
+      return true;
+    }).sort((a, b) => {
+      if (sortBy === "price-asc") return a.cashPriceBdt - b.cashPriceBdt;
+      if (sortBy === "price-desc") return b.cashPriceBdt - a.cashPriceBdt;
+      if (sortBy === "name-asc") return a.name.localeCompare(b.name);
+      return 0;
+    });
+  }, [
+    selectedCategory,
+    searchQuery,
+    minPrice,
+    maxPrice,
+    inStockOnly,
+    selectedBrands,
+    selectedSocket,
+    sortBy,
+  ]);
+
+  const toggleBrand = (b: string) => {
+    setSelectedBrands((prev) =>
+      prev.includes(b) ? prev.filter((x) => x !== b) : [...prev, b]
+    );
+  };
+
+  const resetFilters = () => {
+    setMinPrice(0);
+    setMaxPrice(200000);
+    setInStockOnly(false);
+    setSelectedBrands([]);
+    setSelectedSocket("all");
+    setSortBy("price-asc");
+    router.push("/products");
+  };
+
+  return (
+    <div className="container mx-auto px-4 py-6 space-y-6">
+      {/* Breadcrumbs */}
+      <nav className="flex items-center space-x-2 text-xs text-muted-foreground">
+        <Link href="/" className="hover:text-primary transition-colors">
+          Home
+        </Link>
+        <ChevronRight className="w-3.5 h-3.5" />
+        <Link href="/products" className="hover:text-primary transition-colors">
+          Components & Hardware
+        </Link>
+        {selectedCategory !== "all" && (
+          <>
+            <ChevronRight className="w-3.5 h-3.5" />
+            <span className="font-semibold text-foreground capitalize">
+              {CATEGORIES.find((c) => c.slug === selectedCategory)?.name || selectedCategory}
+            </span>
+          </>
+        )}
+      </nav>
+
+      {/* Page Title & Mobile Filter Trigger */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-border">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">
+            {selectedCategory === "all"
+              ? "All PC Hardware & Components"
+              : CATEGORIES.find((c) => c.slug === selectedCategory)?.name || "Components"}
+          </h1>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+            Browse genuine Bangladeshi hardware with official warranty and instant cash discount.
+          </p>
+        </div>
+
+        <button
+          onClick={() => setMobileFilterOpen(!mobileFilterOpen)}
+          className="lg:hidden flex items-center space-x-2 bg-primary/10 text-primary border border-primary/20 px-4 py-2 rounded-lg font-bold text-xs"
+        >
+          <SlidersHorizontal className="w-4 h-4" />
+          <span>Filters ({filteredProducts.length})</span>
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 items-start">
+        {/* Left Filter Sidebar */}
+        <aside
+          className={`lg:block ${
+            mobileFilterOpen ? "block" : "hidden"
+          } space-y-6 bg-card p-5 rounded-xl border border-border/70 sticky top-20`}
+        >
+          <div className="flex items-center justify-between pb-3 border-b border-border">
+            <span className="font-bold text-sm text-foreground flex items-center gap-2">
+              <Filter className="w-4 h-4 text-primary" />
+              <span>Filters</span>
+            </span>
+            <button
+              onClick={resetFilters}
+              className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors"
+            >
+              <RotateCcw className="w-3 h-3" />
+              <span>Reset</span>
+            </button>
+          </div>
+
+          {/* Categories */}
+          <div className="space-y-2">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              Categories
+            </h4>
+            <div className="space-y-1">
+              <Link
+                href="/products"
+                className={`flex items-center justify-between text-xs px-2.5 py-1.5 rounded-lg transition-colors ${
+                  selectedCategory === "all"
+                    ? "bg-primary text-white font-bold"
+                    : "hover:bg-muted text-foreground"
+                }`}
+              >
+                <span>All Categories</span>
+                <span>{CATALOG_PRODUCTS.length}</span>
+              </Link>
+              {CATEGORIES.map((cat) => (
+                <Link
+                  key={cat.slug}
+                  href={`/products?category=${cat.slug}`}
+                  className={`flex items-center justify-between text-xs px-2.5 py-1.5 rounded-lg transition-colors ${
+                    selectedCategory === cat.slug
+                      ? "bg-primary text-white font-bold"
+                      : "hover:bg-muted text-foreground"
+                  }`}
+                >
+                  <span>{cat.name}</span>
+                  <span className="opacity-70 text-[10px]">
+                    {CATALOG_PRODUCTS.filter((p) => p.categorySlug === cat.slug).length}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          {/* Price Range Slider */}
+          <div className="space-y-3 pt-3 border-t border-border/70">
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                Price Range (BDT)
+              </h4>
+              <span className="text-xs font-bold text-primary">
+                {formatBdt(maxPrice)}
+              </span>
+            </div>
+            <input
+              type="range"
+              min={10000}
+              max={200000}
+              step={5000}
+              value={maxPrice}
+              onChange={(e) => setMaxPrice(Number(e.target.value))}
+              className="w-full accent-primary h-1.5 bg-muted rounded-lg cursor-pointer"
+            />
+            <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+              <span>৳10,000</span>
+              <span>৳2,00,000+</span>
+            </div>
+          </div>
+
+          {/* In Stock Toggle */}
+          <div className="pt-3 border-t border-border/70">
+            <label className="flex items-center space-x-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={inStockOnly}
+                onChange={(e) => setInStockOnly(e.target.checked)}
+                className="w-4 h-4 rounded border-border text-primary focus:ring-primary accent-primary"
+              />
+              <span className="text-xs font-semibold text-foreground">
+                In Stock Only (Physical Branches)
+              </span>
+            </label>
+          </div>
+
+          {/* Brand Filter */}
+          <div className="space-y-2 pt-3 border-t border-border/70">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              Brands
+            </h4>
+            <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+              {allBrands.map((brand) => {
+                const checked = selectedBrands.includes(brand);
+                return (
+                  <label
+                    key={brand}
+                    className="flex items-center space-x-2 text-xs text-foreground cursor-pointer hover:text-primary transition-colors"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => toggleBrand(brand)}
+                      className="w-3.5 h-3.5 rounded border-border text-primary focus:ring-primary accent-primary"
+                    />
+                    <span>{brand}</span>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Processor Sockets (AM5, LGA1700) */}
+          <div className="space-y-2 pt-3 border-t border-border/70">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              Socket / Platform
+            </h4>
+            <div className="grid grid-cols-2 gap-1.5 text-xs">
+              {["all", "AM5", "LGA1700"].map((s) => (
+                <button
+                  key={s}
+                  onClick={() => setSelectedSocket(s)}
+                  className={`py-1 px-2 rounded border text-center font-medium transition-colors ${
+                    selectedSocket === s
+                      ? "bg-primary text-white border-primary"
+                      : "border-border hover:bg-muted text-foreground"
+                  }`}
+                >
+                  {s === "all" ? "All" : s}
+                </button>
+              ))}
+            </div>
+          </div>
+        </aside>
+
+        {/* Product Grid Area */}
+        <main className="lg:col-span-3 space-y-6">
+          {/* Top Sort & View Bar */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-card p-3 rounded-xl border border-border/70 text-xs">
+            <div className="text-muted-foreground font-medium">
+              Showing <strong className="text-foreground">{filteredProducts.length}</strong> items
+            </div>
+
+            <div className="flex items-center space-x-3 w-full sm:w-auto justify-between sm:justify-end">
+              {/* Sort By Dropdown */}
+              <div className="flex items-center space-x-2">
+                <span className="text-muted-foreground hidden sm:inline">Sort By:</span>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="bg-muted/50 border border-border rounded-lg px-2.5 py-1.5 text-xs text-foreground outline-none focus:border-primary"
+                >
+                  <option value="price-asc">Price: Low to High</option>
+                  <option value="price-desc">Price: High to Low</option>
+                  <option value="name-asc">Name: A to Z</option>
+                </select>
+              </div>
+
+              {/* Grid / List Switcher */}
+              <div className="flex items-center border border-border rounded-lg overflow-hidden">
+                <button
+                  onClick={() => setViewMode("grid")}
+                  className={`p-1.5 transition-colors ${
+                    viewMode === "grid" ? "bg-primary text-white" : "hover:bg-muted text-muted-foreground"
+                  }`}
+                  title="Grid view"
+                >
+                  <Grid3X3 className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setViewMode("list")}
+                  className={`p-1.5 transition-colors ${
+                    viewMode === "list" ? "bg-primary text-white" : "hover:bg-muted text-muted-foreground"
+                  }`}
+                  title="List view"
+                >
+                  <List className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Products Render */}
+          {filteredProducts.length === 0 ? (
+            <div className="p-12 text-center bg-card rounded-xl border border-dashed border-border space-y-3">
+              <Search className="w-10 h-10 text-muted-foreground mx-auto stroke-1" />
+              <h3 className="text-base font-bold text-foreground">No components found</h3>
+              <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+                No products match your selected filters. Try clearing or relaxing price and brand filters.
+              </p>
+              <button
+                onClick={resetFilters}
+                className="inline-block bg-primary text-white font-bold px-4 py-2 rounded-lg text-xs hover:bg-primary/90"
+              >
+                Clear All Filters
+              </button>
+            </div>
+          ) : viewMode === "grid" ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+              {filteredProducts.map((p) => (
+                <ProductCard key={p.id} product={p} viewMode="grid" />
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {filteredProducts.map((p) => (
+                <ProductCard key={p.id} product={p} viewMode="list" />
+              ))}
+            </div>
+          )}
+        </main>
+      </div>
+    </div>
+  );
+}
+
+export default function ProductsPage() {
+  return (
+    <Suspense fallback={<div className="container mx-auto p-12 text-center text-sm">Loading components...</div>}>
+      <ProductsContent />
+    </Suspense>
+  );
+}

@@ -1,0 +1,20 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1792808797892,
+      "tag": "0000_modern_earthquake",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792809395387,
+      "tag": "0001_living_kingpin",
+      "breakpoints": true
+    }
+  ]
+}
