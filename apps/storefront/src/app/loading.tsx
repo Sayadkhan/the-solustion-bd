@@ -6,7 +6,7 @@ export default function Loading() {
     <div className="min-h-screen bg-background text-foreground animate-in fade-in duration-200">
       {/* Top indeterminate glowing progress line */}
       <div className="fixed top-0 left-0 right-0 z-50 h-1 bg-muted/30 overflow-hidden">
-        <div className="h-full bg-gradient-to-r from-red-600/40 via-red-600 to-amber-500 w-1/2 animate-indeterminate rounded-full shadow-[0_0_12px_rgba(239,68,68,0.8)]" />
+        <div className="h-full bg-gradient-to-r from-blue-600/40 via-blue-600 to-cyan-400 w-1/2 animate-indeterminate rounded-full shadow-[0_0_12px_rgba(37,99,235,0.8)]" />
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">

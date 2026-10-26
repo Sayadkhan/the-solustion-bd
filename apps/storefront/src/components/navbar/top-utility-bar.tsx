@@ -37,7 +37,7 @@ export function TopUtilityBar() {
             href="tel:+8801700000000"
             className="flex items-center space-x-1.5 hover:text-white transition-colors"
           >
-            <Phone className="w-3.5 h-3.5 text-red-500" />
+            <Phone className="w-3.5 h-3.5 text-blue-500" />
             <span className="font-medium text-slate-200">+880 1700-000000</span>
             <span className="text-slate-500 hidden sm:inline">(10 AM - 8 PM)</span>
           </a>
@@ -74,7 +74,7 @@ export function TopUtilityBar() {
 
           <Link
             href="/pc-builder"
-            className="flex items-center space-x-1.5 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-semibold px-2.5 py-1 rounded text-[11px] shadow-sm transition-all"
+            className="flex items-center space-x-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold px-2.5 py-1 rounded text-[11px] shadow-sm transition-all"
           >
             <Cpu className="w-3.5 h-3.5 animate-pulse" />
             <span>PC Builder</span>

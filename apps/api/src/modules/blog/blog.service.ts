@@ -44,7 +44,7 @@ export class BlogService {
     const metaDescription =
       input.metaDescription || (input.excerpt ? input.excerpt.slice(0, 160) : input.title);
     const canonicalUrl =
-      input.canonicalUrl || `https://thesolusationbd.com/blog/${slug}`;
+      input.canonicalUrl || `https://thesolutionsbd.com/blog/${slug}`;
 
     const [newPost] = await db
       .insert(blogs)
@@ -55,7 +55,7 @@ export class BlogService {
         content: input.content,
         featuredImage: input.featuredImage || null,
         authorId: authorId || null,
-        authorName: input.authorName || "The Solusation BD Editorial",
+        authorName: input.authorName || "The Solutions BD Editorial",
         category: input.category || "Tech Guide",
         tags: input.tags || [],
         status: input.status || "PUBLISHED",

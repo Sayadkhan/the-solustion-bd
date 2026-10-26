@@ -254,7 +254,7 @@ export default function CorporateLeadsPage() {
                         {/* WhatsApp quote */}
                         <a
                           href={`https://wa.me/${inq.phone?.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(
-                            `Hello ${inq.contactPerson}, Greetings from The Solusation BD! Regarding your inquiry for ${inq.companyName}, here is the quotation detail...`
+                            `Hello ${inq.contactPerson}, Greetings from The Solutions BD! Regarding your inquiry for ${inq.companyName}, here is the quotation detail...`
                           )}`}
                           target="_blank"
                           rel="noopener noreferrer"
@@ -267,7 +267,7 @@ export default function CorporateLeadsPage() {
                         {/* Mail quote */}
                         <a
                           href={`mailto:${inq.email}?subject=${encodeURIComponent(
-                            `The Solusation BD Quotation for ${inq.companyName}`
+                            `The Solutions BD Quotation for ${inq.companyName}`
                           )}`}
                           className="flex items-center gap-1 px-2.5 py-1 rounded-md border border-border hover:bg-muted text-foreground text-[11px] font-medium transition-colors"
                         >

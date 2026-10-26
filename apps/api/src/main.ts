@@ -41,7 +41,7 @@ async function bootstrap() {
 
   // Swagger OpenAPI Documentation
   const swaggerConfig = new DocumentBuilder()
-    .setTitle("The Solusation BD - Backend API")
+    .setTitle("The Solutions BD - Backend API")
     .setDescription(
       "High-Performance NestJS E-Commerce API for Bangladesh Tech Platform with Dual Pricing, Rule 4.3 PSU Headroom, and Rule 4.5 Outside-Dhaka COD logic."
     )
@@ -56,7 +56,7 @@ async function bootstrap() {
   await app.listen(PORT);
 
   console.log(`====================================================`);
-  console.log(`🚀 The Solusation BD NestJS API server running!`);
+  console.log(`🚀 The Solutions BD NestJS API server running!`);
   console.log(`📍 Base API: http://localhost:${PORT}/api/v1`);
   console.log(`📚 Swagger Docs: http://localhost:${PORT}/api/docs`);
   console.log(`🐘 Database: PostgreSQL (Drizzle ORM)`);

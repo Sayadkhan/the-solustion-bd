@@ -59,7 +59,7 @@ export function ProductCard({ product, viewMode = "grid" }: ProductCardProps) {
 
   if (viewMode === "list") {
     return (
-      <div className="group bg-white dark:bg-[#0d1620] rounded-xl border border-slate-200 dark:border-slate-800 hover:border-red-500/60 transition-all duration-300 shadow-sm hover:shadow-xl p-4 flex flex-col md:flex-row items-center gap-5">
+      <div className="group bg-white dark:bg-[#0d1620] rounded-xl border border-slate-200 dark:border-slate-800 hover:border-blue-500/60 transition-all duration-300 shadow-sm hover:shadow-xl p-4 flex flex-col md:flex-row items-center gap-5">
         {/* Image */}
         <Link
           href={`/products/${product.slug}`}
@@ -80,13 +80,13 @@ export function ProductCard({ product, viewMode = "grid" }: ProductCardProps) {
         {/* Info */}
         <div className="flex-1 space-y-2 text-left w-full">
           <div className="flex items-center gap-2 text-xs text-muted-foreground font-normal">
-            <span className="text-red-600 font-bold uppercase">{product.brand}</span>
+            <span className="text-blue-600 font-bold uppercase">{product.brand}</span>
             <span>•</span>
             <span className="font-normal">SKU: {product.sku}</span>
           </div>
 
           <Link href={`/products/${product.slug}`}>
-            <h3 className="font-bold text-sm text-foreground group-hover:text-red-600 transition-colors line-clamp-2">
+            <h3 className="font-bold text-sm text-foreground group-hover:text-blue-600 transition-colors line-clamp-2">
               {product.name}
             </h3>
           </Link>
@@ -109,7 +109,7 @@ export function ProductCard({ product, viewMode = "grid" }: ProductCardProps) {
         {/* Pricing & CTA */}
         <div className="w-full md:w-48 shrink-0 flex flex-col justify-between border-t md:border-t-0 md:border-l border-border md:pl-5 pt-3 md:pt-0">
           <div className="space-y-1">
-            <div className="text-lg font-black text-red-600">
+            <div className="text-lg font-black text-blue-600">
               {formatBdt(product.cashPriceBdt)}
             </div>
             {discountAmount > 0 && (
@@ -122,7 +122,7 @@ export function ProductCard({ product, viewMode = "grid" }: ProductCardProps) {
           <div className="flex items-center gap-2 mt-4">
             <button
               onClick={handleAddToCart}
-              className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-3 rounded text-xs flex items-center justify-center gap-1.5 shadow transition-all"
+              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded text-xs flex items-center justify-center gap-1.5 shadow transition-all"
             >
               <ShoppingCart className="w-3.5 h-3.5" />
               <span>Buy Now</span>
@@ -131,7 +131,7 @@ export function ProductCard({ product, viewMode = "grid" }: ProductCardProps) {
               onClick={handleCompare}
               className={`p-2 rounded border text-xs transition-colors ${
                 compared
-                  ? "bg-red-600 text-white border-red-600"
+                  ? "bg-blue-600 text-white border-blue-600"
                   : "border-border hover:bg-muted text-muted-foreground hover:text-foreground"
               }`}
               title="Compare"
@@ -146,7 +146,7 @@ export function ProductCard({ product, viewMode = "grid" }: ProductCardProps) {
 
   // Star Tech Grid View Card (matches screenshot startech_products_grid_1792953209530.png)
   return (
-    <div className="group bg-white dark:bg-[#0d1620] rounded-xl border border-slate-200 dark:border-slate-800 hover:border-red-500/50 hover:shadow-xl transition-all duration-300 p-3.5 flex flex-col justify-between relative overflow-hidden">
+    <div className="group bg-white dark:bg-[#0d1620] rounded-xl border border-slate-200 dark:border-slate-800 hover:border-blue-500/50 hover:shadow-xl transition-all duration-300 p-3.5 flex flex-col justify-between relative overflow-hidden">
       {/* Top Left Discount Tag (Star Tech Signature Purple/Blue Badge) */}
       <div className="flex items-center justify-between mb-1">
         {discountAmount > 0 ? (
@@ -163,7 +163,7 @@ export function ProductCard({ product, viewMode = "grid" }: ProductCardProps) {
           onClick={handleCompare}
           className={`p-1.5 rounded text-xs transition-colors ${
             compared
-              ? "bg-red-600 text-white"
+              ? "bg-blue-600 text-white"
               : "text-slate-400 hover:text-slate-700 dark:hover:text-white"
           }`}
           title="Compare specification"
@@ -193,7 +193,7 @@ export function ProductCard({ product, viewMode = "grid" }: ProductCardProps) {
       {/* Title */}
       <div className="text-left mb-2">
         <Link href={`/products/${product.slug}`}>
-          <h3 className="font-bold text-sm sm:text-[15px] text-slate-900 dark:text-slate-100 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors line-clamp-2 h-11 leading-snug">
+          <h3 className="font-bold text-sm sm:text-[15px] text-slate-900 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2 h-11 leading-snug">
             {product.name}
           </h3>
         </Link>
@@ -209,10 +209,10 @@ export function ProductCard({ product, viewMode = "grid" }: ProductCardProps) {
         ))}
       </ul>
 
-      {/* Pricing block (Large Red Cash Price, Strikethrough Regular Price) */}
+      {/* Pricing block (Large Blue Cash Price, Strikethrough Regular Price) */}
       <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
         <div className="flex items-baseline gap-2 text-left mb-2.5">
-          <span className="text-lg font-black text-red-600 dark:text-red-500">
+          <span className="text-lg font-black text-blue-600 dark:text-blue-400">
             {formatBdt(product.cashPriceBdt)}
           </span>
           {discountAmount > 0 && (

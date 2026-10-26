@@ -47,7 +47,7 @@ export function AddBlogModal({ isOpen, onClose, onSuccess }: AddBlogModalProps) 
   >([
     {
       anchorText: "Official GPU Collection",
-      url: "https://thesolusationbd.com/products?category=graphics-card",
+      url: "https://thesolutionsbd.com/products?category=graphics-card",
       rel: "dofollow",
       targetBlank: true,
     },
@@ -64,7 +64,7 @@ export function AddBlogModal({ isOpen, onClose, onSuccess }: AddBlogModalProps) 
       .replace(/[\s_-]+/g, "-");
     setSlug(autoSlug);
     if (!metaTitle) setMetaTitle(val.slice(0, 65));
-    if (!canonicalUrl) setCanonicalUrl(`https://thesolusationbd.com/blog/${autoSlug}`);
+    if (!canonicalUrl) setCanonicalUrl(`https://thesolutionsbd.com/blog/${autoSlug}`);
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -128,7 +128,7 @@ export function AddBlogModal({ isOpen, onClose, onSuccess }: AddBlogModalProps) 
           .split(",")
           .map((k) => k.trim())
           .filter(Boolean),
-        canonicalUrl: canonicalUrl.trim() || `https://thesolusationbd.com/blog/${slug}`,
+        canonicalUrl: canonicalUrl.trim() || `https://thesolutionsbd.com/blog/${slug}`,
         backlinks,
       };
 
@@ -384,7 +384,7 @@ export function AddBlogModal({ isOpen, onClose, onSuccess }: AddBlogModalProps) 
               />
               <input
                 type="text"
-                placeholder="URL (e.g. https://thesolusationbd.com/products/...)"
+                placeholder="URL (e.g. https://thesolutionsbd.com/products/...)"
                 value={newUrl}
                 onChange={(e) => setNewUrl(e.target.value)}
                 className="px-3 py-1.5 text-xs font-mono bg-muted/40 border border-border rounded-lg text-foreground outline-none md:col-span-2"

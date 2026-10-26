@@ -32,7 +32,7 @@ export function FloatingWidgets() {
         <span className="text-[9px] font-bold tracking-tighter uppercase text-slate-300 mt-0.5">
           COMPARE
         </span>
-        <span className="absolute -top-1.5 -right-1.5 bg-red-600 text-white text-[10px] font-black rounded-full h-5 w-5 flex items-center justify-center shadow">
+        <span className="absolute -top-1.5 -right-1.5 bg-blue-600 text-white text-[10px] font-black rounded-full h-5 w-5 flex items-center justify-center shadow">
           {compareCount}
         </span>
       </Link>
@@ -43,11 +43,11 @@ export function FloatingWidgets() {
         className="w-14 h-14 rounded-xl bg-[#081621] hover:bg-[#0c2233] text-white border border-slate-700/80 shadow-2xl flex flex-col items-center justify-center relative hover:scale-105 transition-all group"
         title="View Cart & Checkout"
       >
-        <ShoppingCart className="w-5 h-5 text-slate-300 group-hover:text-red-500 transition-colors" />
+        <ShoppingCart className="w-5 h-5 text-slate-300 group-hover:text-blue-400 transition-colors" />
         <span className="text-[9px] font-bold tracking-tighter uppercase text-slate-300 mt-0.5">
           CART
         </span>
-        <span className="absolute -top-1.5 -right-1.5 bg-red-600 text-white text-[10px] font-black rounded-full h-5 w-5 flex items-center justify-center shadow">
+        <span className="absolute -top-1.5 -right-1.5 bg-blue-600 text-white text-[10px] font-black rounded-full h-5 w-5 flex items-center justify-center shadow">
           {cartCount}
         </span>
       </Link>

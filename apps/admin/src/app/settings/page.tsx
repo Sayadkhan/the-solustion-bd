@@ -27,7 +27,7 @@ export default function SettingsPage() {
   const [settingsData, setSettingsData] = useState({
     hotlineNumber: "+880 1700-000000",
     whatsappNumber: "+880 1700-000000",
-    contactEmail: "support@thesolusationbd.com",
+    contactEmail: "support@thesolutionsbd.com",
     usdToBdtRate: "122.50",
     headerNoticeText:
       "⚡ Special Flash Sale: Get instant cash discount on selected Intel 14th Gen & AMD Ryzen 9000 Processors!",

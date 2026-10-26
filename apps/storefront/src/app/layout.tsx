@@ -17,12 +17,12 @@ const roboto = Roboto({
 });
 
 export const metadata: Metadata = {
-  title: "The Solusation BD | Bangladesh's High-Performance PC & Tech Mega Store",
+  title: "The Solutions BD | Bangladesh's High-Performance PC & Tech Mega Store",
   description:
     "Buy original Intel & AMD processors, RTX graphics cards, gaming motherboards, RAM, and SSDs with official box serial number warranty and instant cash discount in Bangladesh.",
   keywords: [
     "PC Builder Bangladesh",
-    "Star Tech alternative",
+    "The Solutions BD",
     "Computer components BD",
     "Ryzen 9000 BD price",
     "RTX 4080 price in Bangladesh",
@@ -45,7 +45,7 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className={`${roboto.className} min-h-screen flex flex-col antialiased selection:bg-red-600/20 selection:text-red-500 font-sans`}>
+      <body className={`${roboto.className} min-h-screen flex flex-col antialiased selection:bg-blue-600/20 selection:text-blue-500 font-sans`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"

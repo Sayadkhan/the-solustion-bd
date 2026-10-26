@@ -46,7 +46,7 @@ const HERO_SLIDES = [
     tag: "10.10 MEGA SALE",
     title: "১০.১০ টেক মেগা অফার!",
     subtitle: "Up to 40% Off on Gaming Laptops, RTX 40 Series & AMD AM5 BattleStations",
-    bgGradient: "from-red-700 via-rose-800 to-slate-900",
+    bgGradient: "from-blue-700 via-indigo-900 to-slate-950",
     buttonText: "Shop Mega Deals",
     buttonLink: "/products?deals=true",
     image: "https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=1000&auto=format&fit=crop&q=80",
@@ -66,7 +66,7 @@ const HERO_SLIDES = [
     tag: "OFFICIAL WARRANTY",
     title: "AMD Ryzen 9000 & 7000X3D Series",
     subtitle: "Experience world-record FPS gaming with 3D V-Cache architecture in Bangladesh",
-    bgGradient: "from-amber-700 via-red-800 to-stone-900",
+    bgGradient: "from-cyan-700 via-blue-900 to-slate-950",
     buttonText: "Explore Processors",
     buttonLink: "/products?category=processor",
     image: "https://images.unsplash.com/photo-1555680202-c86f0e12f086?w=1000&auto=format&fit=crop&q=80",
@@ -223,7 +223,7 @@ export default function StorefrontHomePage() {
                       className="inline-flex items-center gap-2 bg-white text-slate-900 hover:bg-slate-100 font-extrabold px-6 py-3 rounded-md text-xs shadow-xl hover:scale-105 transition-all"
                     >
                       <span>{slide.buttonText}</span>
-                      <ArrowRight className="w-4 h-4 text-red-600" />
+                      <ArrowRight className="w-4 h-4 text-blue-600" />
                     </Link>
                   </div>
                 </div>
@@ -264,7 +264,7 @@ export default function StorefrontHomePage() {
                   key={i}
                   onClick={() => setCurrentSlide(i)}
                   className={`h-2 rounded-full transition-all ${
-                    i === currentSlide ? "w-8 bg-red-600" : "w-2 bg-white/50"
+                    i === currentSlide ? "w-8 bg-blue-600" : "w-2 bg-white/50"
                   }`}
                   aria-label={`Slide ${i + 1}`}
                 />
@@ -300,11 +300,11 @@ export default function StorefrontHomePage() {
               <div className="absolute -right-6 -bottom-6 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl group-hover:scale-125 transition-transform" />
             </div>
 
-            {/* Promo Card 2: Orange/Red Corporate Solutions & PC Builder */}
-            <div className="flex-1 rounded-xl p-6 bg-gradient-to-br from-[#8a1c14] to-[#3a0805] text-white flex flex-col justify-between shadow-lg relative overflow-hidden group">
+            {/* Promo Card 2: Deep Blue Corporate Solutions & PC Builder */}
+            <div className="flex-1 rounded-xl p-6 bg-gradient-to-br from-[#1e3a8a] to-[#0f172a] text-white flex flex-col justify-between shadow-lg relative overflow-hidden group">
               <div className="relative z-10 space-y-2">
-                <div className="flex items-center gap-2 text-rose-300 text-xs font-bold uppercase tracking-wider">
-                  <Cpu className="w-4 h-4 text-rose-400" />
+                <div className="flex items-center gap-2 text-cyan-300 text-xs font-bold uppercase tracking-wider">
+                  <Cpu className="w-4 h-4 text-cyan-400" />
                   <span>Custom Rig & B2B Solutions</span>
                 </div>
                 <h3 className="text-lg sm:text-xl font-black leading-snug">
@@ -317,13 +317,13 @@ export default function StorefrontHomePage() {
               <div className="relative z-10 pt-4">
                 <Link
                   href="/pc-builder"
-                  className="inline-block bg-white hover:bg-slate-100 text-red-700 font-extrabold px-4 py-2 rounded text-xs shadow-md transition-colors"
+                  className="inline-block bg-white hover:bg-slate-100 text-blue-700 font-extrabold px-4 py-2 rounded text-xs shadow-md transition-colors"
                 >
                   Configure Rig Now
                 </Link>
               </div>
               {/* Background ambient shape */}
-              <div className="absolute -right-6 -bottom-6 w-32 h-32 bg-red-500/15 rounded-full blur-2xl group-hover:scale-125 transition-transform" />
+              <div className="absolute -right-6 -bottom-6 w-32 h-32 bg-blue-500/15 rounded-full blur-2xl group-hover:scale-125 transition-transform" />
             </div>
           </div>
         </div>
@@ -352,13 +352,13 @@ export default function StorefrontHomePage() {
           {/* Card 1 */}
           <Link
             href="/products?category=laptop"
-            className="bg-white dark:bg-[#0d1620] p-4 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center gap-3.5 shadow-sm hover:shadow-md hover:border-red-500/50 transition-all group"
+            className="bg-white dark:bg-[#0d1620] p-4 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center gap-3.5 shadow-sm hover:shadow-md hover:border-blue-500/50 transition-all group"
           >
-            <div className="w-12 h-12 rounded-full bg-red-500/10 text-red-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+            <div className="w-12 h-12 rounded-full bg-blue-500/10 text-blue-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
               <Laptop className="w-6 h-6" />
             </div>
             <div>
-              <h4 className="font-bold text-sm sm:text-[15px] text-slate-900 dark:text-white group-hover:text-red-600 transition-colors">
+              <h4 className="font-bold text-sm sm:text-[15px] text-slate-900 dark:text-white group-hover:text-blue-600 transition-colors">
                 Laptop Finder
               </h4>
               <p className="text-xs font-normal text-slate-500 dark:text-slate-400">
@@ -370,13 +370,13 @@ export default function StorefrontHomePage() {
           {/* Card 2 */}
           <Link
             href="/track-order"
-            className="bg-white dark:bg-[#0d1620] p-4 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center gap-3.5 shadow-sm hover:shadow-md hover:border-red-500/50 transition-all group"
+            className="bg-white dark:bg-[#0d1620] p-4 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center gap-3.5 shadow-sm hover:shadow-md hover:border-blue-500/50 transition-all group"
           >
             <div className="w-12 h-12 rounded-full bg-blue-500/10 text-blue-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
               <MessageSquare className="w-6 h-6" />
             </div>
             <div>
-              <h4 className="font-bold text-sm sm:text-[15px] text-slate-900 dark:text-white group-hover:text-red-600 transition-colors">
+              <h4 className="font-bold text-sm sm:text-[15px] text-slate-900 dark:text-white group-hover:text-blue-600 transition-colors">
                 Raise a Complain
               </h4>
               <p className="text-xs font-normal text-slate-500 dark:text-slate-400">
@@ -388,13 +388,13 @@ export default function StorefrontHomePage() {
           {/* Card 3 */}
           <Link
             href="/pc-builder"
-            className="bg-white dark:bg-[#0d1620] p-4 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center gap-3.5 shadow-sm hover:shadow-md hover:border-red-500/50 transition-all group"
+            className="bg-white dark:bg-[#0d1620] p-4 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center gap-3.5 shadow-sm hover:shadow-md hover:border-blue-500/50 transition-all group"
           >
             <div className="w-12 h-12 rounded-full bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
               <Calculator className="w-6 h-6" />
             </div>
             <div>
-              <h4 className="font-bold text-sm sm:text-[15px] text-slate-900 dark:text-white group-hover:text-red-600 transition-colors">
+              <h4 className="font-bold text-sm sm:text-[15px] text-slate-900 dark:text-white group-hover:text-blue-600 transition-colors">
                 PC Wattage Calculator
               </h4>
               <p className="text-xs font-normal text-slate-500 dark:text-slate-400">
@@ -406,13 +406,13 @@ export default function StorefrontHomePage() {
           {/* Card 4 */}
           <Link
             href="/track-order"
-            className="bg-white dark:bg-[#0d1620] p-4 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center gap-3.5 shadow-sm hover:shadow-md hover:border-red-500/50 transition-all group"
+            className="bg-white dark:bg-[#0d1620] p-4 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center gap-3.5 shadow-sm hover:shadow-md hover:border-blue-500/50 transition-all group"
           >
             <div className="w-12 h-12 rounded-full bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
               <Wrench className="w-6 h-6" />
             </div>
             <div>
-              <h4 className="font-bold text-sm sm:text-[15px] text-slate-900 dark:text-white group-hover:text-red-600 transition-colors">
+              <h4 className="font-bold text-sm sm:text-[15px] text-slate-900 dark:text-white group-hover:text-blue-600 transition-colors">
                 Servicing Center
               </h4>
               <p className="text-xs font-normal text-slate-500 dark:text-slate-400">
@@ -441,12 +441,12 @@ export default function StorefrontHomePage() {
               <Link
                 key={cat.name}
                 href={cat.href}
-                className="bg-white dark:bg-[#0d1620] rounded-xl border border-slate-200 dark:border-slate-800 p-4 flex flex-col items-center justify-center text-center shadow-sm hover:shadow-md hover:border-red-500/50 transition-all group"
+                className="bg-white dark:bg-[#0d1620] rounded-xl border border-slate-200 dark:border-slate-800 p-4 flex flex-col items-center justify-center text-center shadow-sm hover:shadow-md hover:border-blue-500/50 transition-all group"
               >
-                <div className="w-12 h-12 rounded-full bg-slate-50 dark:bg-slate-900 flex items-center justify-center text-slate-700 dark:text-slate-200 group-hover:text-red-600 group-hover:scale-110 transition-transform mb-2">
+                <div className="w-12 h-12 rounded-full bg-slate-50 dark:bg-slate-900 flex items-center justify-center text-slate-700 dark:text-slate-200 group-hover:text-blue-600 group-hover:scale-110 transition-transform mb-2">
                   <Icon className="w-6 h-6" />
                 </div>
-                <span className="font-bold text-[13px] sm:text-sm text-slate-900 dark:text-slate-100 group-hover:text-red-600 transition-colors line-clamp-1">
+                <span className="font-bold text-[13px] sm:text-sm text-slate-900 dark:text-slate-100 group-hover:text-blue-600 transition-colors line-clamp-1">
                   {cat.name}
                 </span>
               </Link>
@@ -496,25 +496,25 @@ export default function StorefrontHomePage() {
               </p>
             </div>
 
-            {/* Countdown Boxes (Star Tech Red Badges) */}
+            {/* Countdown Boxes (Star Tech Style Badges) */}
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
                 Ending In:
               </span>
               <div className="flex items-center gap-1.5 font-bold text-xs">
-                <div className="flex items-center gap-1 bg-red-600 text-white px-2 py-1 rounded shadow-sm">
+                <div className="flex items-center gap-1 bg-blue-600 text-white px-2 py-1 rounded shadow-sm">
                   <span>{String(countdown.days).padStart(2, "0")}</span>
                   <span className="text-[10px] uppercase font-normal">Days</span>
                 </div>
-                <div className="flex items-center gap-1 bg-red-600 text-white px-2 py-1 rounded shadow-sm">
+                <div className="flex items-center gap-1 bg-blue-600 text-white px-2 py-1 rounded shadow-sm">
                   <span>{String(countdown.hours).padStart(2, "0")}</span>
                   <span className="text-[10px] uppercase font-normal">Hours</span>
                 </div>
-                <div className="flex items-center gap-1 bg-red-600 text-white px-2 py-1 rounded shadow-sm">
+                <div className="flex items-center gap-1 bg-blue-600 text-white px-2 py-1 rounded shadow-sm">
                   <span>{String(countdown.minutes).padStart(2, "0")}</span>
                   <span className="text-[10px] uppercase font-normal">Min</span>
                 </div>
-                <div className="flex items-center gap-1 bg-red-600 text-white px-2 py-1 rounded shadow-sm">
+                <div className="flex items-center gap-1 bg-blue-600 text-white px-2 py-1 rounded shadow-sm">
                   <span>{String(countdown.seconds).padStart(2, "0")}</span>
                   <span className="text-[10px] uppercase font-normal">Sec</span>
                 </div>
@@ -558,8 +558,8 @@ export default function StorefrontHomePage() {
               onClick={() => setActiveTab(tab.id)}
               className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all shrink-0 ${
                 activeTab === tab.id
-                  ? "bg-red-600 text-white shadow-md shadow-red-600/20"
-                  : "bg-white dark:bg-[#0d1620] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:border-red-500/50"
+                  ? "bg-blue-600 text-white shadow-md shadow-blue-600/20"
+                  : "bg-white dark:bg-[#0d1620] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:border-blue-500/50"
               }`}
             >
               {tab.label}
@@ -590,10 +590,10 @@ export default function StorefrontHomePage() {
       <section className="max-w-[1600px] mx-auto px-4 pt-8">
         <div className="bg-white dark:bg-[#0c1319] border border-slate-200 dark:border-slate-800 rounded-xl p-6 sm:p-8 space-y-4 text-xs text-slate-600 dark:text-slate-400 leading-relaxed shadow-sm">
           <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
-            Trusted Online Computer & Tech Shopping in Bangladesh — The Solusation BD
+            Trusted Online Computer & Tech Shopping in Bangladesh — The Solutions BD
           </h3>
           <p>
-            The Solusation BD is committed to delivering the ultimate computing experience across
+            The Solutions BD is committed to delivering the ultimate computing experience across
             Bangladesh. Whether you are assembling a top-tier esports battlestation, seeking high-performance
             AI/workstation servers, or purchasing genuine brand laptops, we guarantee 100% authentic
             box serial number warranty tracking and official distributor coverage.

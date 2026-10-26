@@ -120,13 +120,13 @@ export function AdminShell({
   return (
     <div className="min-h-screen bg-background flex flex-col md:flex-row antialiased">
       {/* Mobile Header Bar */}
-      <div className="md:hidden flex items-center justify-between p-4 border-b border-border bg-card">
+      <div className="md:hidden flex items-center justify-between p-3 border-b border-border bg-card">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-primary to-rose-400 flex items-center justify-center text-white font-black text-sm shadow">
-            SB
+          <div className="p-1 rounded bg-white shadow-sm border border-border shrink-0">
+            <img src="/logo.png" alt="The Solutions BD" className="h-6 w-auto object-contain" />
           </div>
           <span className="font-bold text-sm tracking-tight text-foreground">
-            Solusation BD <span className="text-primary text-xs font-semibold">Admin</span>
+            The Solutions BD <span className="text-primary text-xs font-semibold">Admin</span>
           </span>
         </div>
         <button
@@ -144,14 +144,14 @@ export function AdminShell({
         }`}
       >
         {/* Brand Logo & Header */}
-        <div className="p-5 border-b border-border flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3 group">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-primary to-rose-400 flex items-center justify-center text-white font-black text-base shadow-md group-hover:scale-105 transition-transform">
-              SB
+        <div className="p-4 border-b border-border flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2.5 group">
+            <div className="p-1.5 rounded-lg bg-white shadow-sm border border-border shrink-0 flex items-center justify-center">
+              <img src="/logo.png" alt="The Solutions BD" className="h-7 w-auto object-contain" />
             </div>
             <div>
               <div className="font-extrabold text-sm tracking-tight text-foreground flex items-center gap-1.5">
-                The Solusation BD
+                The Solutions BD
               </div>
               <div className="text-[10px] text-muted-foreground uppercase tracking-widest font-mono">
                 Admin & POS Center

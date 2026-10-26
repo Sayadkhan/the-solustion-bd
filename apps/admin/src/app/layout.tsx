@@ -3,7 +3,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 
 export const metadata: Metadata = {
-  title: "Solusation BD Admin & POS Dashboard",
+  title: "The Solutions BD Admin & POS Dashboard",
   description:
     "Omnichannel Point of Sale, multi-branch inventory, serial number warranty management, and outside-Dhaka COD deposit queue.",
 };

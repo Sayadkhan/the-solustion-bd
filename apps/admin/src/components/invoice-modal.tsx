@@ -51,15 +51,18 @@ export function InvoiceModal({ order, onClose }: InvoiceModalProps) {
           {/* Header */}
           <div className="flex items-start justify-between border-b border-border pb-6">
             <div>
-              <h1 className="text-2xl font-black tracking-tight text-primary">THE SOLUSATION BD</h1>
+              <div className="flex items-center gap-2 mb-1">
+                <img src="/logo.png" alt="The Solutions BD" className="h-9 w-auto object-contain" />
+              </div>
+              <h1 className="text-xl font-black tracking-tight text-primary">THE SOLUTIONS BD</h1>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Premier Computer Hardware, Component Retailer & Official Warranty Service
+                An Incomparable IT Solution Provider & Official Warranty Service
               </p>
               <p className="text-xs text-muted-foreground">
                 Central Outlet & Warehouse: Shop 412, Level 4, Multiplan Center, Elephant Road, Dhaka
               </p>
               <p className="text-xs text-muted-foreground">
-                Hotline: +880 1700-000000 | Email: support@thesolusationbd.com
+                Hotline: +880 1700-000000 | Email: support@thesolutionsbd.com
               </p>
             </div>
             <div className="text-right">
