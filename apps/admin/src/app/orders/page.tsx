@@ -83,21 +83,67 @@ export default function OrdersPage() {
     }
   };
 
+  // Live counts per status
+  const statusCounts = useMemo(() => {
+    const counts = {
+      ALL: orders.length,
+      PENDING: 0,
+      CONFIRMED: 0,
+      PROCESSING: 0,
+      SHIPPED: 0,
+      DELIVERED: 0,
+      CANCELLED: 0,
+      PENDING_DEPOSIT: 0,
+    };
+    orders.forEach((o) => {
+      const s = (o.orderStatus || o.status || "PENDING").toUpperCase();
+      if (s === "PENDING") counts.PENDING++;
+      else if (s === "CONFIRMED") counts.CONFIRMED++;
+      else if (s === "PROCESSING") counts.PROCESSING++;
+      else if (s === "SHIPPED") counts.SHIPPED++;
+      else if (s === "DELIVERED") counts.DELIVERED++;
+      else if (s === "CANCELLED") counts.CANCELLED++;
+
+      const isOutsideDhaka = o.district && o.district.toLowerCase() !== "dhaka";
+      if (isOutsideDhaka && (o.paidAmountBdt || 0) < 1000 && s === "PENDING") {
+        counts.PENDING_DEPOSIT++;
+      }
+    });
+    return counts;
+  }, [orders]);
+
   // Filtered orders
   const filteredOrders = useMemo(() => {
     return orders.filter((o) => {
-      const ordStatus = o.orderStatus || o.status || "PENDING";
-      if (statusFilter !== "ALL" && ordStatus !== statusFilter) return false;
-      const q = searchTerm.toLowerCase();
+      const ordStatus = (o.orderStatus || o.status || "PENDING").toUpperCase();
+
+      if (statusFilter !== "ALL") {
+        if (statusFilter === "PENDING_DEPOSIT") {
+          const isOutsideDhaka = o.district && o.district.toLowerCase() !== "dhaka";
+          const isDepositPending = isOutsideDhaka && (o.paidAmountBdt || 0) < 1000 && ordStatus === "PENDING";
+          if (!isDepositPending) return false;
+        } else if (ordStatus !== statusFilter) {
+          return false;
+        }
+      }
+
+      const q = searchTerm.toLowerCase().trim();
+      if (!q) return true;
+
       const invoiceNo = String(o.invoiceNo || o.orderNumber || o.id || "").toLowerCase();
       const customerName = String(o.customerName || "").toLowerCase();
       const customerPhone = String(o.customerPhone || "").toLowerCase();
+      const customerEmail = String(o.customerEmail || "").toLowerCase();
       const address = String(o.address || o.deliveryAddress || "").toLowerCase();
+      const district = String(o.district || "").toLowerCase();
+
       return (
         invoiceNo.includes(q) ||
         customerName.includes(q) ||
         customerPhone.includes(q) ||
-        address.includes(q)
+        customerEmail.includes(q) ||
+        address.includes(q) ||
+        district.includes(q)
       );
     });
   }, [orders, statusFilter, searchTerm]);
@@ -136,15 +182,56 @@ export default function OrdersPage() {
               Order Fulfillment & POS Register
             </h2>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Verify Outside Dhaka advance deposits and generate formatted thermal/A4 cash memos.
+              Filter by live status, verify advance deposits and generate formatted thermal/A4 cash memos.
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-xs font-mono px-2.5 py-1 rounded-full bg-muted text-foreground font-semibold">
+          <span className="text-xs font-mono px-3 py-1.5 rounded-full bg-primary/10 text-primary border border-primary/20 font-bold">
             Total Orders: {orders.length}
           </span>
         </div>
+      </div>
+
+      {/* Quick Status Filter Tabs */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
+        {[
+          { key: "ALL", label: "All Orders", count: statusCounts.ALL },
+          { key: "PENDING", label: "Pending", count: statusCounts.PENDING },
+          { key: "CONFIRMED", label: "Confirmed", count: statusCounts.CONFIRMED },
+          { key: "PENDING_DEPOSIT", label: "Deposit Needed", count: statusCounts.PENDING_DEPOSIT },
+          { key: "PROCESSING", label: "Processing", count: statusCounts.PROCESSING },
+          { key: "SHIPPED", label: "Shipped", count: statusCounts.SHIPPED },
+          { key: "DELIVERED", label: "Delivered", count: statusCounts.DELIVERED },
+          { key: "CANCELLED", label: "Cancelled", count: statusCounts.CANCELLED },
+        ].map((tab) => {
+          const isActive = statusFilter === tab.key;
+          return (
+            <button
+              key={tab.key}
+              onClick={() => {
+                setStatusFilter(tab.key);
+                setCurrentPage(1);
+              }}
+              className={`px-3 py-1.5 rounded-xl font-bold flex items-center gap-2 shrink-0 transition-all border text-xs cursor-pointer ${
+                isActive
+                  ? "bg-primary text-white border-primary shadow-sm shadow-primary/25"
+                  : "bg-card border-border text-muted-foreground hover:text-foreground hover:bg-muted/50"
+              }`}
+            >
+              <span>{tab.label}</span>
+              <span
+                className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono font-semibold ${
+                  isActive
+                    ? "bg-white/20 text-white"
+                    : "bg-muted text-foreground"
+                }`}
+              >
+                {tab.count}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Filters Bar */}
@@ -154,7 +241,7 @@ export default function OrdersPage() {
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <input
             type="text"
-            placeholder="Search by order no, customer name or phone..."
+            placeholder="Search by order no, customer, phone, email, district..."
             value={searchTerm}
             onChange={(e) => {
               setSearchTerm(e.target.value);
@@ -164,7 +251,7 @@ export default function OrdersPage() {
           />
         </div>
 
-        {/* Status Filter */}
+        {/* Status Filter Dropdown */}
         <div className="flex items-center gap-1.5">
           <Filter className="w-3.5 h-3.5 text-muted-foreground" />
           <select
@@ -173,16 +260,16 @@ export default function OrdersPage() {
               setStatusFilter(e.target.value);
               setCurrentPage(1);
             }}
-            className="bg-card border border-border text-foreground rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+            className="bg-card border border-border text-foreground rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-primary"
           >
-            <option value="ALL">All Order Status</option>
-            <option value="PENDING">Pending</option>
-            <option value="PENDING_DEPOSIT">Pending Deposit (Outside Dhaka)</option>
-            <option value="CONFIRMED">Confirmed</option>
-            <option value="PROCESSING">Processing</option>
-            <option value="SHIPPED">Shipped</option>
-            <option value="DELIVERED">Delivered</option>
-            <option value="CANCELLED">Cancelled</option>
+            <option value="ALL">All Order Status ({statusCounts.ALL})</option>
+            <option value="PENDING">Pending ({statusCounts.PENDING})</option>
+            <option value="CONFIRMED">Confirmed ({statusCounts.CONFIRMED})</option>
+            <option value="PENDING_DEPOSIT">Deposit Needed ({statusCounts.PENDING_DEPOSIT})</option>
+            <option value="PROCESSING">Processing ({statusCounts.PROCESSING})</option>
+            <option value="SHIPPED">Shipped ({statusCounts.SHIPPED})</option>
+            <option value="DELIVERED">Delivered ({statusCounts.DELIVERED})</option>
+            <option value="CANCELLED">Cancelled ({statusCounts.CANCELLED})</option>
           </select>
         </div>
       </div>
@@ -259,6 +346,11 @@ export default function OrdersPage() {
                         <div className="text-[11px] text-muted-foreground font-mono">
                           {customerPhone}
                         </div>
+                        {ord.customerEmail && (
+                          <div className="text-[10px] text-primary font-mono truncate max-w-xs">
+                            {ord.customerEmail}
+                          </div>
+                        )}
                         <div className="text-[10px] text-muted-foreground line-clamp-1 max-w-xs">
                           {address}
                         </div>
