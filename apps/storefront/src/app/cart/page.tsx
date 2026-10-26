@@ -20,7 +20,6 @@ import {
   Building,
   AlertCircle,
   Loader2,
-  Check,
   ExternalLink,
 } from "lucide-react";
 import { useCartStore } from "@/stores/cart-store";
@@ -98,7 +97,7 @@ const BD_DISTRICTS = [
 export default function CartPage() {
   const { items, removeItem, updateQuantity, clearCart, getTotalCashBdt } = useCartStore();
 
-  // Guest checkout customer info
+  // Customer & Delivery Info
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [district, setDistrict] = useState("Dhaka");
@@ -107,12 +106,12 @@ export default function CartPage() {
   const [notes, setNotes] = useState("");
   const [deliveryZone, setDeliveryZone] = useState<"INSIDE_DHAKA" | "OUTSIDE_DHAKA">("INSIDE_DHAKA");
 
-  // Payment method state
+  // Payment Method
   const [paymentMethod, setPaymentMethod] = useState<"COD" | "BKASH">("COD");
   const [bkashTrxId, setBkashTrxId] = useState<string | null>(null);
   const [isBkashModalOpen, setIsBkashModalOpen] = useState(false);
 
-  // Order submission state
+  // Submission State
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [placedOrder, setPlacedOrder] = useState<any | null>(null);
@@ -141,58 +140,49 @@ export default function CartPage() {
     }
   };
 
-  // Rule 4.5 Outside Dhaka deposit check
+  // Deposit check for high-value outside Dhaka COD
   const depositCheck = calculateAdvanceDepositRequirement({
     district: deliveryZone === "OUTSIDE_DHAKA" ? district : "Dhaka",
     totalBdt: grandTotal,
     paymentMethod: paymentMethod === "BKASH" ? "BKASH" : "COD",
   });
 
-  // Common customer validation
   const validateForm = () => {
     if (!customerName.trim() || customerName.trim().length < 2) {
-      setErrorMessage("অনুগ্রহ করে আপনার পূর্ণ নাম লিখুন (Please enter your full name).");
+      setErrorMessage("Please enter your full name.");
       return false;
     }
 
     const cleanPhone = customerPhone.trim().replace(/[\s-]/g, "");
     if (!isValidBdPhone(cleanPhone)) {
-      setErrorMessage(
-        "অনুগ্রহ করে একটি সঠিক বাংলাদেশী মোবাইল নম্বর লিখুন (e.g. 01712345678)."
-      );
+      setErrorMessage("Please enter a valid Bangladeshi mobile number (e.g. 01712345678).");
       return false;
     }
 
     if (!area.trim() || area.trim().length < 2) {
-      setErrorMessage("অনুগ্রহ করে আপনার থানা বা এলাকা লিখুন (Please enter your area/thana).");
+      setErrorMessage("Please enter your area or thana.");
       return false;
     }
 
     if (!address.trim() || address.trim().length < 5) {
-      setErrorMessage(
-        "অনুগ্রহ করে পূর্ণ ডেলিভারি ঠিকানা লিখুন যেমন বাসা/রোড নম্বর (Please enter detailed delivery address)."
-      );
+      setErrorMessage("Please enter your detailed delivery address (house/road/block).");
       return false;
     }
 
     if (items.length === 0) {
-      setErrorMessage("আপনার কার্টে কোনো প্রোডাক্ট নেই (Your cart is empty).");
+      setErrorMessage("Your cart is empty. Please add items to proceed.");
       return false;
     }
 
     return true;
   };
 
-  // Callback when bKash payment succeeds inside the modal
   const handleBkashPaymentSuccess = async (trxId: string, paymentDetails: any) => {
     setBkashTrxId(trxId);
     setIsBkashModalOpen(false);
-
-    // Place the order immediately with bKash TrxID
     await executeOrderPlacement(trxId);
   };
 
-  // Execute Order Placement to backend API
   const executeOrderPlacement = async (verifiedTrxId?: string | null) => {
     setIsSubmitting(true);
     setErrorMessage(null);
@@ -244,23 +234,21 @@ export default function CartPage() {
         clearCart();
         window.scrollTo({ top: 0, behavior: "smooth" });
       } else {
-        setErrorMessage(res?.message || "অর্ডার সম্পন্ন হতে ব্যর্থ হয়েছে। পুনরায় চেষ্টা করুন।");
+        setErrorMessage(res?.message || "Failed to place order. Please try again.");
       }
     } catch (err: any) {
-      setErrorMessage(err.message || "অর্ডার প্লেস করার সময় সমস্যা হয়েছে।");
+      setErrorMessage(err.message || "An unexpected error occurred while placing order.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Form submit handler
   const handlePlaceOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
 
     if (!validateForm()) return;
 
-    // If bKash is selected but TrxID is not yet verified, open the bKash Gateway Modal
     if (paymentMethod === "BKASH" && !bkashTrxId) {
       setIsBkashModalOpen(true);
       return;
@@ -269,7 +257,7 @@ export default function CartPage() {
     await executeOrderPlacement();
   };
 
-  // SUCCESS SCREEN: When order is placed successfully
+  // SUCCESS SCREEN
   if (placedOrder) {
     const isOrderBkash = placedOrder.paymentMethodUsed === "BKASH";
 
@@ -282,48 +270,48 @@ export default function CartPage() {
 
           <div className="space-y-2">
             <span className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-              Order Placed Successfully
+              Order Confirmed
             </span>
             <h1 className="text-2xl sm:text-3xl font-black text-foreground">
-              আপনার অর্ডারটি সফলভাবে গ্রহণ করা হয়েছে!
+              Thank you for your order!
             </h1>
             <p className="text-sm text-muted-foreground max-w-lg mx-auto">
               {isOrderBkash
-                ? "বিকাশ পেমেন্ট সফলভাবে ভেরিফাই হয়েছে। আপনার অর্ডার কনফার্ম করে দ্রুত প্যাকেজিং শুরু করা হয়েছে।"
-                : "ধন্যবাদ! আমাদের কাস্টমার সাপোর্ট টিম শীঘ্রই আপনার মোবাইল নম্বরে ফোন করে অর্ডারটি কনফার্ম করবেন।"}
+                ? "Your bKash payment has been verified successfully. Your order is confirmed and will be dispatched shortly."
+                : "Your Cash on Delivery order has been received. Our team will contact you shortly to confirm delivery."}
             </p>
           </div>
 
           {/* Invoice & Status Header Box */}
           <div className="bg-muted/40 rounded-xl p-4 border border-border flex flex-wrap items-center justify-between gap-4 text-left">
             <div>
-              <div className="text-xs text-muted-foreground">ইনভয়েস নম্বর (Invoice No):</div>
+              <div className="text-xs text-muted-foreground font-medium">Invoice Number:</div>
               <div className="text-base font-black text-primary tracking-wide">
                 #{placedOrder.invoiceNo}
               </div>
             </div>
 
             <div>
-              <div className="text-xs text-muted-foreground">পেমেন্ট মেথড:</div>
+              <div className="text-xs text-muted-foreground font-medium">Payment Method:</div>
               {isOrderBkash ? (
                 <div className="text-sm font-bold text-[#E2136E] flex items-center gap-1.5">
                   <div className="w-4 h-4 bg-[#E2136E] text-white rounded-full flex items-center justify-center text-[10px] font-black">
                     ৳
                   </div>
-                  <span>বিকাশ পেমেন্ট (PAID)</span>
+                  <span>bKash (Paid)</span>
                 </div>
               ) : (
                 <div className="text-sm font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
                   <Banknote className="w-4 h-4" />
-                  <span>ক্যাশ অন ডেলিভারি (COD)</span>
+                  <span>Cash on Delivery</span>
                 </div>
               )}
             </div>
 
             <div>
-              <div className="text-xs text-muted-foreground">অর্ডার স্ট্যাটাস:</div>
+              <div className="text-xs text-muted-foreground font-medium">Order Status:</div>
               <span
-                className={`text-xs font-bold px-2 py-0.5 rounded border ${
+                className={`text-xs font-bold px-2.5 py-0.5 rounded border ${
                   isOrderBkash
                     ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
                     : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
@@ -334,13 +322,13 @@ export default function CartPage() {
             </div>
           </div>
 
-          {/* If bKash, display verified TrxID banner */}
+          {/* bKash Verified TrxID banner */}
           {isOrderBkash && placedOrder.trxId && (
             <div className="p-3 bg-pink-50 dark:bg-pink-950/30 border border-pink-200 dark:border-pink-800/50 rounded-xl flex items-center justify-between text-xs text-left">
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-[#E2136E]" />
-                <span className="text-slate-700 dark:text-slate-300">
-                  বিকাশ ট্রানজেকশন আইডি (TrxID):
+                <span className="text-slate-700 dark:text-slate-300 font-medium">
+                  Transaction ID (TrxID):
                 </span>
                 <span className="font-black text-[#E2136E] tracking-wider text-sm">
                   {placedOrder.trxId}
@@ -357,24 +345,24 @@ export default function CartPage() {
             <div className="space-y-1.5">
               <div className="font-bold text-foreground text-sm flex items-center gap-1.5 text-primary">
                 <User className="w-4 h-4" />
-                <span>গ্রাহকের বিবরণ:</span>
+                <span>Customer Details:</span>
               </div>
-              <p><span className="text-muted-foreground">নাম:</span> <strong>{placedOrder.customerName}</strong></p>
-              <p><span className="text-muted-foreground">ফোন:</span> <strong>{placedOrder.customerPhone}</strong></p>
+              <p><span className="text-muted-foreground">Name:</span> <strong>{placedOrder.customerName}</strong></p>
+              <p><span className="text-muted-foreground">Phone:</span> <strong>{placedOrder.customerPhone}</strong></p>
             </div>
             <div className="space-y-1.5">
               <div className="font-bold text-foreground text-sm flex items-center gap-1.5 text-primary">
                 <MapPin className="w-4 h-4" />
-                <span>ডেলিভারি ঠিকানা:</span>
+                <span>Delivery Address:</span>
               </div>
-              <p><span className="text-muted-foreground">জেলা / এরিয়া:</span> <strong>{placedOrder.district}, {placedOrder.area}</strong></p>
-              <p><span className="text-muted-foreground">ঠিকানা:</span> <strong>{placedOrder.address}</strong></p>
+              <p><span className="text-muted-foreground">Location:</span> <strong>{placedOrder.district}, {placedOrder.area}</strong></p>
+              <p><span className="text-muted-foreground">Address:</span> <strong>{placedOrder.address}</strong></p>
             </div>
           </div>
 
           {/* Ordered Items Summary */}
           <div className="text-left space-y-3">
-            <h4 className="font-bold text-sm text-foreground">অর্ডারকৃত প্রোডাক্টসমূহ:</h4>
+            <h4 className="font-bold text-sm text-foreground">Order Items:</h4>
             <div className="divide-y divide-border border border-border rounded-xl overflow-hidden bg-card">
               {placedOrder.itemsSummary?.map((item: any) => (
                 <div key={item.id} className="p-3.5 flex items-center justify-between text-xs gap-3">
@@ -402,16 +390,16 @@ export default function CartPage() {
           {/* Total Payable Summary */}
           <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 space-y-2 text-xs text-left">
             <div className="flex justify-between text-muted-foreground">
-              <span>প্রোডাক্ট সাবটোটাল:</span>
+              <span>Item Subtotal:</span>
               <span className="font-semibold text-foreground">{formatBdt(placedOrder.totalPayableBdt || 0)}</span>
             </div>
             <div className="flex justify-between text-muted-foreground">
-              <span>ডেলিভারি চার্জ:</span>
+              <span>Delivery Charge:</span>
               <span className="font-semibold text-foreground">৳{placedOrder.deliveryFee || 70}</span>
             </div>
             <div className="pt-2 border-t border-primary/20 flex justify-between items-baseline">
               <span className="font-black text-sm text-foreground">
-                {isOrderBkash ? "পরিশোধিত সর্বমোট (বিকাশ):" : "পণ্য হাতে পেয়ে সর্বমোট প্রদেয়:"}
+                {isOrderBkash ? "Total Paid (bKash):" : "Total Payable on Delivery:"}
               </span>
               <span className="text-xl font-black text-primary">
                 {formatBdt((placedOrder.totalPayableBdt || 0) + (placedOrder.deliveryFee || 70))}
@@ -419,8 +407,8 @@ export default function CartPage() {
             </div>
             {isOrderBkash && (
               <div className="flex justify-between items-center text-emerald-600 font-bold pt-1">
-                <span>বকেয়া মূল্য:</span>
-                <span>৳০ (সম্পূর্ণ পরিশোধিত)</span>
+                <span>Amount Due:</span>
+                <span>৳0 (Fully Paid)</span>
               </div>
             )}
           </div>
@@ -432,14 +420,14 @@ export default function CartPage() {
               className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-white font-bold px-6 py-3 rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-primary/20 transition-all"
             >
               <ShoppingCart className="w-4 h-4" />
-              <span>আরও কেনাকাটা করুন (Continue Shopping)</span>
+              <span>Continue Shopping</span>
             </Link>
             <button
               onClick={() => window.print()}
               className="w-full sm:w-auto bg-muted text-foreground border border-border hover:bg-muted/80 font-bold px-6 py-3 rounded-xl text-xs flex items-center justify-center gap-2 transition-all"
             >
               <Printer className="w-4 h-4" />
-              <span>রসিদ প্রিন্ট করুন (Print Invoice)</span>
+              <span>Print Invoice</span>
             </button>
           </div>
         </div>
@@ -450,52 +438,55 @@ export default function CartPage() {
   // EMPTY CART SCREEN
   if (items.length === 0) {
     return (
-      <div className="container mx-auto px-4 py-16 text-center space-y-4">
-        <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto text-muted-foreground">
-          <ShoppingCart className="w-8 h-8 stroke-1" />
+      <div className="container mx-auto px-4 py-20 text-center space-y-4 max-w-md">
+        <div className="w-16 h-16 bg-muted/60 rounded-full flex items-center justify-center mx-auto text-muted-foreground">
+          <ShoppingCart className="w-8 h-8 stroke-1 text-primary" />
         </div>
-        <h2 className="text-2xl font-black text-foreground">আপনার শপিং কার্ট খালি (Your Cart is Empty)</h2>
-        <p className="text-sm text-muted-foreground max-w-md mx-auto">
-          আপনার কার্টে বর্তমানে কোনো প্রোডাক্ট যোগ করা নেই। আমাদের প্রোডাক্ট ক্যাটালগ থেকে আপনার পছন্দের আইটেম বেছে নিন।
+        <h2 className="text-2xl font-black text-foreground">Your Shopping Cart is Empty</h2>
+        <p className="text-sm text-muted-foreground leading-relaxed">
+          Looks like you haven&apos;t added any products to your cart yet. Explore our high-performance hardware catalog or build your custom PC.
         </p>
         <div className="flex items-center justify-center gap-3 pt-2">
           <Link
             href="/products"
-            className="bg-primary text-white font-bold px-6 py-2.5 rounded-xl text-xs hover:bg-primary/90 shadow-md shadow-primary/20"
+            className="bg-primary hover:bg-primary/90 text-white font-bold px-6 py-2.5 rounded-xl text-xs shadow-md shadow-primary/20 transition-all"
           >
-            প্রোডাক্ট দেখুন (Browse Products)
+            Browse Products
           </Link>
           <Link
             href="/pc-builder"
-            className="bg-muted text-foreground border border-border font-bold px-6 py-2.5 rounded-xl text-xs hover:bg-muted/80 flex items-center gap-1.5"
+            className="bg-muted text-foreground border border-border font-bold px-6 py-2.5 rounded-xl text-xs hover:bg-muted/80 flex items-center gap-1.5 transition-all"
           >
             <Cpu className="w-4 h-4 text-primary" />
-            <span>পিসি বিল্ডার (PC Builder)</span>
+            <span>PC Builder</span>
           </Link>
         </div>
       </div>
     );
   }
 
-  // CART & GUEST CHECKOUT SCREEN
+  // STANDARD ONE-PAGE CHECKOUT LAYOUT
+  // Side 1: Customer Details + Delivery + Payment (Left: 7 cols)
+  // Side 2: Selected Products + Order Summary (Right: 5 cols)
   return (
-    <div className="container mx-auto px-4 py-8 space-y-8 max-w-7xl">
+    <div className="container mx-auto px-4 py-8 space-y-6 max-w-7xl">
+      {/* Header */}
       <div className="flex items-center justify-between pb-4 border-b border-border">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight flex items-center gap-2">
+          <h1 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight flex items-center gap-2.5">
             <ShoppingCart className="w-7 h-7 text-primary" />
-            <span>শপিং কার্ট ও চেকআউট</span>
+            <span>Checkout</span>
           </h1>
           <p className="text-xs text-muted-foreground mt-1">
-            লগইন ছাড়াই সহজে বিকাশ বা ক্যাশ অন ডেলিভারিতে অর্ডার করুন।
+            Complete your order quickly. No account registration required.
           </p>
         </div>
         <button
           onClick={clearCart}
-          className="text-xs text-muted-foreground hover:text-destructive flex items-center gap-1 transition-colors"
+          className="text-xs text-muted-foreground hover:text-destructive flex items-center gap-1.5 transition-colors py-1.5 px-2.5 rounded-lg border border-border hover:border-destructive/30"
         >
           <Trash2 className="w-3.5 h-3.5" />
-          <span>কার্ট খালি করুন</span>
+          <span>Clear Cart</span>
         </button>
       </div>
 
@@ -507,94 +498,23 @@ export default function CartPage() {
       )}
 
       <form onSubmit={handlePlaceOrder} className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Left Side: Cart Items + Guest Details (8 cols) */}
-        <div className="lg:col-span-8 space-y-6">
-          {/* Cart Items List */}
-          <div className="bg-card rounded-2xl border border-border p-5 space-y-4 shadow-sm">
-            <h3 className="font-bold text-base text-foreground flex items-center justify-between pb-3 border-b border-border">
-              <span>সিলেক্ট করা প্রোডাক্টসমূহ ({items.length})</span>
-              <span className="text-xs font-normal text-muted-foreground">ক্যাশ ডিসকাউন্ট মূল্য</span>
-            </h3>
-
-            <div className="divide-y divide-border/60">
-              {items.map((item) => (
-                <div
-                  key={item.id}
-                  className="py-4 flex flex-col sm:flex-row items-center gap-4 justify-between"
-                >
-                  <div className="flex items-center gap-4 w-full sm:w-auto">
-                    <div className="w-16 h-16 bg-muted/30 rounded-xl p-2 shrink-0 border border-border/50 flex items-center justify-center">
-                      <img
-                        src={item.thumbnailUrl}
-                        alt={item.name}
-                        className="max-h-full max-w-full object-contain"
-                      />
-                    </div>
-                    <div className="space-y-1 text-left">
-                      <div className="text-[10px] font-semibold text-muted-foreground uppercase">
-                        SKU: {item.sku}
-                      </div>
-                      <h4 className="font-bold text-sm text-foreground line-clamp-1">
-                        {item.name}
-                      </h4>
-                      <div className="text-xs font-bold text-primary">
-                        {formatBdt(item.cashPriceBdt)}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Quantity & Delete */}
-                  <div className="flex items-center justify-between sm:justify-end gap-5 w-full sm:w-auto border-t sm:border-t-0 pt-3 sm:pt-0 border-border/60">
-                    <div className="flex items-center border border-border rounded-lg bg-muted/20 p-0.5">
-                      <button
-                        type="button"
-                        onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                        className="w-7 h-7 flex items-center justify-center rounded hover:bg-muted font-bold text-xs"
-                      >
-                        -
-                      </button>
-                      <span className="w-8 text-center text-xs font-bold text-foreground">
-                        {item.quantity}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                        className="w-7 h-7 flex items-center justify-center rounded hover:bg-muted font-bold text-xs"
-                      >
-                        +
-                      </button>
-                    </div>
-
-                    <div className="text-right min-w-[80px]">
-                      <div className="text-sm font-extrabold text-foreground">
-                        {formatBdt(item.cashPriceBdt * item.quantity)}
-                      </div>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => removeItem(item.id)}
-                      className="text-muted-foreground hover:text-destructive p-1.5 transition-colors"
-                      title="Remove item"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Guest Checkout Information Form */}
+        {/* SIDE 1 (LEFT 7 COLS): CUSTOMER INFO, DELIVERY & PAYMENT METHOD */}
+        <div className="lg:col-span-7 space-y-6">
+          {/* Section 1: Customer & Delivery Information */}
           <div className="bg-card rounded-2xl border border-border p-5 sm:p-6 space-y-5 shadow-sm text-left">
-            <div className="pb-3 border-b border-border">
-              <h3 className="font-bold text-base text-foreground flex items-center gap-2">
-                <MapPin className="w-5 h-5 text-primary" />
-                <span>ডেলিভারি ও কাস্টমার তথ্য (লগইন প্রয়োজন নেই)</span>
-              </h3>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                অর্ডার পৌঁছানোর জন্য আপনার সঠিক তথ্য প্রদান করুন।
-              </p>
+            <div className="pb-3 border-b border-border flex items-center justify-between">
+              <div>
+                <h3 className="font-bold text-base text-foreground flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-primary" />
+                  <span>1. Delivery & Customer Details</span>
+                </h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Enter your delivery address and contact information
+                </p>
+              </div>
+              <span className="text-[10px] uppercase font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                Guest Checkout
+              </span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -602,34 +522,34 @@ export default function CartPage() {
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-foreground flex items-center gap-1.5">
                   <User className="w-3.5 h-3.5 text-primary" />
-                  <span>আপনার পূর্ণ নাম <span className="text-rose-500">*</span></span>
+                  <span>Full Name <span className="text-rose-500">*</span></span>
                 </label>
                 <input
                   type="text"
                   required
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
-                  placeholder="যেমন: সায়াদ খান"
+                  placeholder="e.g. Sayad Khan"
                   className="w-full bg-background border border-border focus:border-primary rounded-xl px-3.5 py-2.5 text-xs text-foreground outline-none transition-colors"
                 />
               </div>
 
-              {/* Phone Number */}
+              {/* Mobile Phone */}
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-foreground flex items-center gap-1.5">
                   <Phone className="w-3.5 h-3.5 text-primary" />
-                  <span>মোবাইল নম্বর <span className="text-rose-500">*</span></span>
+                  <span>Mobile Phone <span className="text-rose-500">*</span></span>
                 </label>
                 <input
                   type="tel"
                   required
                   value={customerPhone}
                   onChange={(e) => setCustomerPhone(e.target.value)}
-                  placeholder="যেমন: 01712345678"
+                  placeholder="e.g. 01712345678"
                   className="w-full bg-background border border-border focus:border-primary rounded-xl px-3.5 py-2.5 text-xs text-foreground outline-none transition-colors"
                 />
                 <div className="text-[10px] text-muted-foreground">
-                  ডেলিভারির জন্য এই নম্বরে কল করে কনফার্ম করা হবে।
+                  Required for delivery call and verification.
                 </div>
               </div>
             </div>
@@ -638,7 +558,7 @@ export default function CartPage() {
             <div className="space-y-2">
               <label className="text-xs font-bold text-foreground flex items-center gap-1.5">
                 <Truck className="w-3.5 h-3.5 text-primary" />
-                <span>ডেলিভারি এলাকা নির্বাচন করুন <span className="text-rose-500">*</span></span>
+                <span>Delivery Zone <span className="text-rose-500">*</span></span>
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                 <div
@@ -650,10 +570,10 @@ export default function CartPage() {
                   }`}
                 >
                   <div>
-                    <div className="text-foreground">ঢাকার ভিতরে (Inside Dhaka)</div>
-                    <div className="text-[10px] text-muted-foreground">হোম ডেলিভারি: ২৪-৪৮ ঘণ্টা</div>
+                    <div className="text-foreground">Inside Dhaka City</div>
+                    <div className="text-[10px] text-muted-foreground">Standard Home Delivery: 24-48 hrs</div>
                   </div>
-                  <div className="text-primary font-black text-sm">৳৭০</div>
+                  <div className="text-primary font-black text-sm">৳70</div>
                 </div>
 
                 <div
@@ -665,10 +585,10 @@ export default function CartPage() {
                   }`}
                 >
                   <div>
-                    <div className="text-foreground">ঢাকার বাইরে (Outside Dhaka)</div>
-                    <div className="text-[10px] text-muted-foreground">পাঠাও / স্টিডফাস্ট কুরিয়ার: ৪৮-৭২ ঘণ্টা</div>
+                    <div className="text-foreground">Outside Dhaka (All Districts)</div>
+                    <div className="text-[10px] text-muted-foreground">Courier Delivery: 48-72 hrs</div>
                   </div>
-                  <div className="text-primary font-black text-sm">৳১৪০</div>
+                  <div className="text-primary font-black text-sm">৳140</div>
                 </div>
               </div>
             </div>
@@ -678,7 +598,7 @@ export default function CartPage() {
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-foreground flex items-center gap-1.5">
                   <Building className="w-3.5 h-3.5 text-primary" />
-                  <span>জেলা (District) <span className="text-rose-500">*</span></span>
+                  <span>District <span className="text-rose-500">*</span></span>
                 </label>
                 <select
                   value={district}
@@ -697,14 +617,14 @@ export default function CartPage() {
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-foreground flex items-center gap-1.5">
                   <MapPin className="w-3.5 h-3.5 text-primary" />
-                  <span>থানা / এরিয়া (Area/Thana) <span className="text-rose-500">*</span></span>
+                  <span>Area / Thana <span className="text-rose-500">*</span></span>
                 </label>
                 <input
                   type="text"
                   required
                   value={area}
                   onChange={(e) => setArea(e.target.value)}
-                  placeholder="যেমন: মিরপুর / ধানমন্ডি / উত্তরা"
+                  placeholder="e.g. Dhanmondi / Gulshan / Mirpur"
                   className="w-full bg-background border border-border focus:border-primary rounded-xl px-3.5 py-2.5 text-xs text-foreground outline-none transition-colors"
                 />
               </div>
@@ -713,14 +633,14 @@ export default function CartPage() {
             {/* Street Address */}
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-foreground">
-                পূর্ণ ডেলিভারি ঠিকানা (বাসা/রোড/ব্লক) <span className="text-rose-500">*</span>
+                Detailed Delivery Address <span className="text-rose-500">*</span>
               </label>
               <textarea
                 required
                 rows={2}
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
-                placeholder="যেমন: বাড়ি #১২, রোড #০৪, সেক্টর #০৭"
+                placeholder="House #, Road #, Sector / Block details"
                 className="w-full bg-background border border-border focus:border-primary rounded-xl px-3.5 py-2 text-xs text-foreground outline-none transition-colors resize-none"
               />
             </div>
@@ -728,23 +648,23 @@ export default function CartPage() {
             {/* Order Notes (Optional) */}
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">
-                বিশেষ কোনো নির্দেশনা (ঐচ্ছিক / Optional)
+                Special Delivery Instructions (Optional)
               </label>
               <input
                 type="text"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="যেমন: বিকেল ৫টার পর ডেলিভারি দিলে ভালো হয়"
+                placeholder="e.g. Deliver after 4:00 PM"
                 className="w-full bg-background border border-border focus:border-primary rounded-xl px-3.5 py-2 text-xs text-foreground outline-none transition-colors"
               />
             </div>
           </div>
 
-          {/* Payment Method Selection: COD vs bKash Payment Gateway */}
-          <div className="bg-card rounded-2xl border border-border p-5 space-y-4 text-left shadow-sm">
+          {/* Section 2: Payment Method */}
+          <div className="bg-card rounded-2xl border border-border p-5 sm:p-6 space-y-4 text-left shadow-sm">
             <h3 className="font-bold text-base text-foreground flex items-center gap-2 pb-3 border-b border-border">
-              <Banknote className="w-5 h-5 text-primary" />
-              <span>পেমেন্ট পদ্ধতি নির্বাচন করুন (Payment Method)</span>
+              <Banknote className="w-4 h-4 text-primary" />
+              <span>2. Payment Method</span>
             </h3>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -770,16 +690,16 @@ export default function CartPage() {
                       }`}
                     />
                     <span className="font-bold text-sm text-foreground">
-                      ক্যাশ অন ডেলিভারি (COD)
+                      Cash on Delivery (COD)
                     </span>
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground pl-6 leading-relaxed">
-                  পণ্য হাতে পেয়ে দেখে ডেলিভারি ম্যানের কাছে মূল্য পরিশোধ করুন।
+                  Pay with cash after receiving and inspecting your parcel.
                 </p>
               </div>
 
-              {/* Option 2: bKash Payment Gateway */}
+              {/* Option 2: bKash Payment */}
               <div
                 onClick={() => setPaymentMethod("BKASH")}
                 className={`p-4 rounded-xl border-2 cursor-pointer transition-all relative overflow-hidden ${
@@ -798,7 +718,7 @@ export default function CartPage() {
                       }`}
                     />
                     <div className="flex items-center gap-1.5">
-                      <span className="font-black text-sm text-foreground">বিকাশ পেমেন্ট</span>
+                      <span className="font-black text-sm text-foreground">bKash Payment</span>
                       <span className="px-1.5 py-0.5 rounded text-[10px] font-black bg-[#E2136E] text-white tracking-wide">
                         bKash
                       </span>
@@ -806,12 +726,12 @@ export default function CartPage() {
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground pl-6 leading-relaxed">
-                  বিকাশ অনলাইন গেটওয়ে অথবা মার্চেন্ট পে দিয়ে ইনস্ট্যান্ট ক্যাশলেস পেমেন্ট।
+                  Fast cashless payment via bKash gateway or merchant number.
                 </p>
               </div>
             </div>
 
-            {/* bKash Details & Gateway Trigger Card */}
+            {/* bKash Details Card */}
             {paymentMethod === "BKASH" && (
               <div className="p-4 bg-pink-50 dark:bg-pink-950/20 border border-pink-200 dark:border-pink-800/40 rounded-xl space-y-3">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -821,7 +741,7 @@ export default function CartPage() {
                       <span>bKash Official Merchant Payment</span>
                     </h4>
                     <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
-                      অফিসিয়াল গেটওয়ের মাধ্যমে আপনার বিকাশ অ্যাকাউন্ট থেকে সরাসরি পেমেন্ট করুন।
+                      Make direct online payment from your personal bKash account.
                     </p>
                   </div>
 
@@ -833,31 +753,30 @@ export default function CartPage() {
                     }}
                     className="bg-[#E2136E] hover:bg-[#c20f5d] text-white font-extrabold px-4 py-2.5 rounded-xl text-xs flex items-center justify-center gap-2 shadow-md shadow-pink-500/25 transition-all whitespace-nowrap"
                   >
-                    <span>{bkashTrxId ? "পেমেন্ট পরিবর্তন করুন" : "বিকাশ দিয়ে পে করুন"}</span>
+                    <span>{bkashTrxId ? "Change Payment" : "Pay with bKash"}</span>
                     <ExternalLink className="w-3.5 h-3.5" />
                   </button>
                 </div>
 
-                {/* If already verified TrxID */}
                 {bkashTrxId ? (
                   <div className="p-2.5 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-lg flex items-center gap-2 text-xs text-emerald-700 dark:text-emerald-400 font-bold">
                     <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
-                    <span>বিকাশ পেমেন্ট কনফার্ম হয়েছে! TrxID: {bkashTrxId}</span>
+                    <span>Payment Verified! Transaction ID: {bkashTrxId}</span>
                   </div>
                 ) : (
                   <div className="text-[11px] text-slate-500 dark:text-slate-400 bg-white/60 dark:bg-slate-900/40 p-2.5 rounded-lg border border-pink-100 dark:border-pink-900/50">
-                    💡 আপনি &quot;অর্ডার নিশ্চিত করুন&quot; বাটনে ক্লিক করলেও সরাসরি বিকাশ পেমেন্ট পপ-আপ ওপেন হবে।
+                    💡 Clicking &quot;Place Order&quot; below will also launch the secure bKash checkout popup.
                   </div>
                 )}
               </div>
             )}
 
-            {/* Rule 4.5 Alert if Outside Dhaka & High Value for COD */}
+            {/* Outside Dhaka Rule 4.5 Deposit Notice */}
             {paymentMethod === "COD" && depositCheck.requiresDeposit && (
               <div className="p-3.5 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-start gap-3 text-xs text-amber-600 dark:text-amber-400">
                 <ShieldAlert className="w-5 h-5 shrink-0 mt-0.5" />
                 <div>
-                  <div className="font-bold">ঢাকার বাইরের ডেলিভারি পলিসি (Rule 4.5):</div>
+                  <div className="font-bold">Outside-Dhaka Delivery Policy:</div>
                   <p className="text-[11px] mt-0.5 opacity-90 leading-relaxed">
                     {depositCheck.reason}
                   </p>
@@ -867,92 +786,166 @@ export default function CartPage() {
           </div>
         </div>
 
-        {/* Right Side: Order Summary & Place Order Button (4 cols) */}
-        <div className="lg:col-span-4 bg-card rounded-2xl border border-border p-6 space-y-5 sticky top-24 shadow-md text-left">
-          <h3 className="font-black text-lg text-foreground pb-3 border-b border-border">
-            অর্ডার সামারি (Order Summary)
-          </h3>
-
-          <div className="space-y-3 text-xs">
-            <div className="flex justify-between text-muted-foreground">
-              <span>প্রোডাক্ট সাবটোটাল ({items.length}টি)</span>
-              <span className="font-bold text-foreground">{formatBdt(cashSubtotal)}</span>
-            </div>
-            <div className="flex justify-between text-muted-foreground">
-              <span>
-                ডেলিভারি চার্জ ({deliveryZone === "INSIDE_DHAKA" ? "ঢাকা সিটি" : "ঢাকার বাইরে"})
-              </span>
-              <span className="font-bold text-foreground">৳{deliveryFee}</span>
+        {/* SIDE 2 (RIGHT 5 COLS): SELECTED PRODUCTS & ORDER SUMMARY */}
+        <div className="lg:col-span-5 space-y-6 lg:sticky lg:top-24">
+          {/* Selected Products List */}
+          <div className="bg-card rounded-2xl border border-border p-5 space-y-4 shadow-sm text-left">
+            <div className="flex items-center justify-between pb-3 border-b border-border">
+              <h3 className="font-bold text-sm sm:text-base text-foreground flex items-center gap-2">
+                <ShoppingCart className="w-4 h-4 text-primary" />
+                <span>Selected Products ({items.length})</span>
+              </h3>
+              <span className="text-xs font-semibold text-primary">Cash Price</span>
             </div>
 
-            <div className="flex justify-between text-muted-foreground">
-              <span>নির্বাচিত পেমেন্ট মেথড:</span>
-              <span className="font-bold text-foreground">
-                {paymentMethod === "BKASH" ? "বিকাশ পেমেন্ট (bKash)" : "ক্যাশ অন ডেলিভারি (COD)"}
-              </span>
-            </div>
+            <div className="divide-y divide-border/60 max-h-[380px] overflow-y-auto pr-1">
+              {items.map((item) => (
+                <div key={item.id} className="py-3.5 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-14 h-14 bg-muted/30 rounded-xl p-1.5 shrink-0 border border-border/50 flex items-center justify-center">
+                      <img
+                        src={item.thumbnailUrl}
+                        alt={item.name}
+                        className="max-h-full max-w-full object-contain"
+                      />
+                    </div>
+                    <div className="min-w-0 space-y-0.5">
+                      <div className="text-[10px] font-semibold text-muted-foreground uppercase">
+                        SKU: {item.sku}
+                      </div>
+                      <h4 className="font-bold text-xs text-foreground truncate max-w-[190px]">
+                        {item.name}
+                      </h4>
+                      <div className="text-xs font-bold text-primary">
+                        {formatBdt(item.cashPriceBdt)}
+                      </div>
+                    </div>
+                  </div>
 
-            {paymentMethod === "COD" && depositCheck.requiresDeposit && (
-              <div className="flex justify-between text-amber-500 font-semibold bg-amber-500/10 p-2.5 rounded-lg border border-amber-500/20">
-                <span>অগ্রিম বুকিং ডিপোজিট</span>
-                <span>৳{depositCheck.depositAmountBdt}</span>
-              </div>
-            )}
+                  <div className="flex items-center gap-3 shrink-0">
+                    {/* Quantity controls */}
+                    <div className="flex items-center border border-border rounded-lg bg-muted/20 p-0.5">
+                      <button
+                        type="button"
+                        onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                        className="w-6 h-6 flex items-center justify-center rounded hover:bg-muted font-bold text-xs"
+                      >
+                        -
+                      </button>
+                      <span className="w-6 text-center text-xs font-bold text-foreground">
+                        {item.quantity}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                        className="w-6 h-6 flex items-center justify-center rounded hover:bg-muted font-bold text-xs"
+                      >
+                        +
+                      </button>
+                    </div>
 
-            <div className="pt-3 border-t border-border flex justify-between items-baseline">
-              <div>
-                <span className="font-extrabold text-sm text-foreground block">
-                  সর্বমোট প্রদেয় টাকা
-                </span>
-                <span className="text-[10px] text-muted-foreground">
-                  {paymentMethod === "BKASH" ? "বিকাশ ইনস্ট্যান্ট পেমেন্ট" : "ক্যাশ অন ডেলিভারি"}
-                </span>
-              </div>
-              <span className="text-2xl font-black text-primary">{formatBdt(grandTotal)}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeItem(item.id)}
+                      className="text-muted-foreground hover:text-destructive p-1 transition-colors"
+                      title="Remove item"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 
-          {/* Place Order CTA Button */}
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className={`w-full text-white font-black py-3.5 px-4 rounded-xl text-sm flex items-center justify-center gap-2 shadow-xl transition-all hover:scale-[1.01] active:scale-95 disabled:opacity-60 ${
-              paymentMethod === "BKASH"
-                ? "bg-[#E2136E] hover:bg-[#c20f5d] shadow-pink-600/25"
-                : "bg-[#1340b8] hover:bg-blue-800 shadow-blue-600/20"
-            }`}
-          >
-            {isSubmitting ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span>অর্ডার প্রসেস হচ্ছে...</span>
-              </>
-            ) : paymentMethod === "BKASH" && !bkashTrxId ? (
-              <>
-                <span>বিকাশ দিয়ে পে করুন ({formatBdt(grandTotal)})</span>
-                <ArrowRight className="w-4 h-4" />
-              </>
-            ) : (
-              <>
-                <Banknote className="w-4 h-4" />
-                <span>অর্ডার নিশ্চিত করুন (Confirm Order)</span>
-              </>
-            )}
-          </button>
+          {/* Order Summary Card */}
+          <div className="bg-card rounded-2xl border border-border p-5 sm:p-6 space-y-5 shadow-sm text-left">
+            <h3 className="font-black text-base text-foreground pb-3 border-b border-border">
+              Order Summary
+            </h3>
 
-          {/* Trust Badges */}
-          <div className="space-y-2.5 pt-3 border-t border-border/80 text-[11px] text-muted-foreground">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-              <span>১০০% অফিসিয়াল ওয়ারেন্টিযুক্ত প্রোডাক্ট</span>
+            <div className="space-y-3 text-xs">
+              <div className="flex justify-between text-muted-foreground">
+                <span>Items Subtotal</span>
+                <span className="font-bold text-foreground">{formatBdt(cashSubtotal)}</span>
+              </div>
+
+              <div className="flex justify-between text-muted-foreground">
+                <span>
+                  Delivery Charge ({deliveryZone === "INSIDE_DHAKA" ? "Inside Dhaka" : "Outside Dhaka"})
+                </span>
+                <span className="font-bold text-foreground">৳{deliveryFee}</span>
+              </div>
+
+              <div className="flex justify-between text-muted-foreground">
+                <span>Payment Mode</span>
+                <span className="font-bold text-foreground">
+                  {paymentMethod === "BKASH" ? "bKash Online" : "Cash on Delivery"}
+                </span>
+              </div>
+
+              {paymentMethod === "COD" && depositCheck.requiresDeposit && (
+                <div className="flex justify-between text-amber-500 font-semibold bg-amber-500/10 p-2.5 rounded-lg border border-amber-500/20">
+                  <span>Advance Deposit via bKash</span>
+                  <span>৳{depositCheck.depositAmountBdt}</span>
+                </div>
+              )}
+
+              <div className="pt-3 border-t border-border flex justify-between items-baseline">
+                <div>
+                  <span className="font-extrabold text-sm text-foreground block">
+                    Total Payable
+                  </span>
+                  <span className="text-[10px] text-muted-foreground">
+                    {paymentMethod === "BKASH" ? "Instant bKash Payment" : "Due on Delivery"}
+                  </span>
+                </div>
+                <span className="text-2xl font-black text-primary">{formatBdt(grandTotal)}</span>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Truck className="w-4 h-4 text-blue-500 shrink-0" />
-              <span>২৪-৪৮ ঘণ্টার মধ্যে দ্রুত হোম ডেলিভারি</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />
-              <span>নিরাপদ বিকাশ পেমেন্ট ও ক্যাশ অন ডেলিভারি</span>
+
+            {/* Place Order CTA Button */}
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className={`w-full text-white font-black py-3.5 px-4 rounded-xl text-sm flex items-center justify-center gap-2 shadow-xl transition-all hover:scale-[1.01] active:scale-95 disabled:opacity-60 ${
+                paymentMethod === "BKASH"
+                  ? "bg-[#E2136E] hover:bg-[#c20f5d] shadow-pink-600/25"
+                  : "bg-[#1340b8] hover:bg-blue-800 shadow-blue-600/20"
+              }`}
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Processing Order...</span>
+                </>
+              ) : paymentMethod === "BKASH" && !bkashTrxId ? (
+                <>
+                  <span>Pay with bKash ({formatBdt(grandTotal)})</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              ) : (
+                <>
+                  <Banknote className="w-4 h-4" />
+                  <span>Confirm Order</span>
+                </>
+              )}
+            </button>
+
+            {/* Trust Badges */}
+            <div className="space-y-2 pt-3 border-t border-border/80 text-[11px] text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                <span>100% Genuine Products with Official Warranty</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Truck className="w-4 h-4 text-blue-500 shrink-0" />
+                <span>Fast 24-48 Hours Express Delivery</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />
+                <span>Secure Cash on Delivery & bKash Gateway</span>
+              </div>
             </div>
           </div>
         </div>

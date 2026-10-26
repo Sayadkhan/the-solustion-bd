@@ -9,7 +9,6 @@ import {
   Copy,
   Check,
   Loader2,
-  ArrowRight,
   PhoneCall,
   Lock,
 } from "lucide-react";
@@ -63,14 +62,14 @@ export function BkashModal({
     setError(null);
     const clean = walletNumber.trim().replace(/[\s-]/g, "");
     if (!/^(?:\+88|88)?01[3-9]\d{8}$/.test(clean)) {
-      setError("অনুগ্রহ করে সঠিক বিকাশ মোবাইল নম্বর দিন (যেমন: 01712345678)");
+      setError("Please enter a valid Bangladeshi mobile number (e.g. 01712345678)");
       return;
     }
     setLoading(true);
     setTimeout(() => {
       setLoading(false);
       setStep(2);
-    }, 600);
+    }, 500);
   };
 
   // Step 2: Submit OTP to go to PIN
@@ -78,14 +77,14 @@ export function BkashModal({
     e.preventDefault();
     setError(null);
     if (!otp || otp.trim().length < 4) {
-      setError("অনুগ্রহ করে সঠিক বিকাশ ভেরিফিকেশন কোড দিন (যেমন: 123456)");
+      setError("Please enter the 6-digit verification code sent to your mobile");
       return;
     }
     setLoading(true);
     setTimeout(() => {
       setLoading(false);
       setStep(3);
-    }, 600);
+    }, 500);
   };
 
   // Step 3: Confirm PIN & Execute Payment
@@ -93,7 +92,7 @@ export function BkashModal({
     e.preventDefault();
     setError(null);
     if (!pin || pin.trim().length < 4) {
-      setError("অনুগ্রহ করে আপনার বিকাশ পিন নম্বর দিন");
+      setError("Please enter your 5-digit bKash PIN");
       return;
     }
 
@@ -117,10 +116,10 @@ export function BkashModal({
       if (execRes?.success && execRes.data?.trxID) {
         onPaymentSuccess(execRes.data.trxID, execRes.data);
       } else {
-        setError(execRes?.message || "পেমেন্ট সম্পন্ন হতে ব্যর্থ হয়েছে। পুনরায় চেষ্টা করুন।");
+        setError(execRes?.message || "Payment execution failed. Please try again.");
       }
     } catch (err: any) {
-      setError(err.message || "পেমেন্ট প্রক্রিয়াকরণে সমস্যা হয়েছে।");
+      setError(err.message || "An error occurred while processing payment.");
     } finally {
       setLoading(false);
     }
@@ -131,7 +130,7 @@ export function BkashModal({
     e.preventDefault();
     setError(null);
     if (!manualTrxId.trim() || manualTrxId.trim().length < 8) {
-      setError("অনুগ্রহ করে সঠিক ৮-১২ ডিজিটের বিকাশ TrxID লিখুন (যেমন: BLA92KJ831)");
+      setError("Please enter a valid 8-12 character TrxID (e.g. BLA92KJ831)");
       return;
     }
 
@@ -146,10 +145,10 @@ export function BkashModal({
           payerPhone: manualPhone,
         });
       } else {
-        setError(res?.message || "TrxID ভেরিফাই করা সম্ভব হয়নি।");
+        setError(res?.message || "Invalid TrxID. Could not verify payment.");
       }
     } catch (err: any) {
-      setError(err.message || "TrxID ভেরিফিকেশনে ত্রুটি হয়েছে।");
+      setError(err.message || "An error occurred while verifying TrxID.");
     } finally {
       setLoading(false);
     }
@@ -161,7 +160,6 @@ export function BkashModal({
         {/* bKash Official Header Banner */}
         <div className="bg-[#E2136E] text-white px-5 py-4 flex items-center justify-between relative shadow-md">
           <div className="flex items-center gap-3">
-            {/* Authentic bKash Bird Logo Icon */}
             <div className="w-10 h-10 bg-white rounded-xl p-1 flex items-center justify-center shadow-sm">
               <svg viewBox="0 0 48 48" className="w-full h-full" fill="none">
                 <path
@@ -172,7 +170,7 @@ export function BkashModal({
             </div>
             <div className="text-left">
               <h3 className="font-extrabold text-base tracking-wide flex items-center gap-1.5">
-                <span>bKash Payment</span>
+                <span>bKash Payment Gateway</span>
               </h3>
               <p className="text-[11px] text-pink-100 font-medium">The Solusation BD Official Merchant</p>
             </div>
@@ -189,11 +187,15 @@ export function BkashModal({
         {/* Amount & Invoice Bar */}
         <div className="bg-pink-50 border-b border-pink-100 px-5 py-3 flex items-center justify-between text-xs">
           <div>
-            <span className="text-slate-500 block text-[10px]">Merchant Invoice</span>
+            <span className="text-slate-500 block text-[10px] font-semibold uppercase tracking-wider">
+              Merchant Invoice
+            </span>
             <span className="font-bold text-slate-800">#{invoiceNo}</span>
           </div>
           <div className="text-right">
-            <span className="text-slate-500 block text-[10px]">Payable Amount</span>
+            <span className="text-slate-500 block text-[10px] font-semibold uppercase tracking-wider">
+              Payable Amount
+            </span>
             <span className="text-base font-black text-[#E2136E]">{formatBdt(amount)}</span>
           </div>
         </div>
@@ -212,7 +214,7 @@ export function BkashModal({
                 : "text-slate-600 hover:text-slate-900"
             }`}
           >
-            বিকাশ অনলাইন গেটওয়ে
+            Online Payment Gateway
           </button>
           <button
             type="button"
@@ -226,7 +228,7 @@ export function BkashModal({
                 : "text-slate-600 hover:text-slate-900"
             }`}
           >
-            মার্চেন্ট পে / সেন্ড মানি (ম্যানুয়াল)
+            Manual Payment / TrxID
           </button>
         </div>
 
@@ -245,7 +247,7 @@ export function BkashModal({
               <form onSubmit={handleProceedToOtp} className="space-y-4">
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-slate-700 block">
-                    আপনার বিকাশ অ্যাকাউন্ট নম্বর দিন:
+                    Your bKash Account Number:
                   </label>
                   <div className="relative">
                     <input
@@ -254,7 +256,7 @@ export function BkashModal({
                       autoFocus
                       value={walletNumber}
                       onChange={(e) => setWalletNumber(e.target.value)}
-                      placeholder="e.g. 017XXXXXXXX"
+                      placeholder="e.g. 01712345678"
                       className="w-full bg-slate-50 border-2 border-slate-300 focus:border-[#E2136E] text-slate-900 rounded-xl px-4 py-3 text-sm font-bold tracking-wider outline-none transition-all placeholder:font-normal"
                     />
                     <span className="absolute right-3 top-3 text-[11px] font-bold text-[#E2136E] bg-pink-100 px-2 py-0.5 rounded">
@@ -262,7 +264,7 @@ export function BkashModal({
                     </span>
                   </div>
                   <p className="text-[11px] text-slate-500">
-                    আপনার অ্যাকাউন্টে একটি ৬-ডিজিটের ভেরিফিকেশন ওটিপি পাঠানো হবে।
+                    A 6-digit verification code will be sent to this number.
                   </p>
                 </div>
 
@@ -273,7 +275,7 @@ export function BkashModal({
                     onChange={(e) => setAgreed(e.target.checked)}
                     className="mt-0.5 rounded accent-[#E2136E]"
                   />
-                  <span>আমি বিকাশ পেমেন্ট শর্তাবলী ও নিয়ামাবলী মেনে নিচ্ছি।</span>
+                  <span>I agree to the terms and conditions of bKash payment.</span>
                 </label>
 
                 <div className="flex items-center gap-3 pt-2">
@@ -300,14 +302,14 @@ export function BkashModal({
               <form onSubmit={handleProceedToPin} className="space-y-4">
                 <div className="bg-pink-50/60 p-3 rounded-xl border border-pink-100 text-center space-y-1">
                   <span className="text-[11px] text-slate-600 block">
-                    ভেরিফিকেশন কোড পাঠানো হয়েছে:
+                    Verification code sent to:
                   </span>
                   <span className="text-sm font-bold text-slate-800">{walletNumber}</span>
                 </div>
 
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-slate-700 block">
-                    ৬-ডিজিটের ভেরিফিকেশন কোড (OTP) লিখুন:
+                    Enter 6-Digit Verification Code (OTP):
                   </label>
                   <input
                     type="text"
@@ -320,13 +322,13 @@ export function BkashModal({
                     className="w-full text-center bg-slate-50 border-2 border-slate-300 focus:border-[#E2136E] text-slate-900 rounded-xl px-4 py-2.5 text-base font-black tracking-[0.5em] outline-none transition-all placeholder:tracking-normal placeholder:font-normal placeholder:text-sm"
                   />
                   <div className="flex justify-between items-center text-[10px] text-slate-500 pt-1">
-                    <span>কোড পাননি?</span>
+                    <span>Didn&apos;t receive code?</span>
                     <button
                       type="button"
                       onClick={() => setOtp("123456")}
                       className="text-[#E2136E] font-bold hover:underline"
                     >
-                      কোড পুনরায় পাঠান (Resend)
+                      Resend Code
                     </button>
                   </div>
                 </div>
@@ -356,10 +358,10 @@ export function BkashModal({
                 <div className="bg-pink-50/60 p-3 rounded-xl border border-pink-100 text-center space-y-1">
                   <div className="flex items-center justify-center gap-1.5 text-xs text-slate-600 font-semibold">
                     <Lock className="w-3.5 h-3.5 text-[#E2136E]" />
-                    <span>আপনার বিকাশ পিন নম্বর দিন</span>
+                    <span>Enter Your 5-Digit bKash PIN</span>
                   </div>
                   <span className="text-[11px] text-slate-500">
-                    নিরাপদ ও এনক্রিপ্টেড পেমেন্ট গেটওয়ে
+                    Encrypted and secure payment checkout
                   </span>
                 </div>
 
@@ -396,10 +398,10 @@ export function BkashModal({
                     {loading ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>প্রসেসিং হচ্ছে...</span>
+                        <span>Processing...</span>
                       </>
                     ) : (
-                      <span>পেমেন্ট কনফার্ম করুন</span>
+                      <span>CONFIRM PAYMENT</span>
                     )}
                   </button>
                 </div>
@@ -411,19 +413,18 @@ export function BkashModal({
         {/* TAB 2: MANUAL BKASH MERCHANT PAY / SEND MONEY */}
         {tab === "MANUAL" && (
           <div className="p-5 text-left space-y-4">
-            {/* Step-by-step instructions */}
             <div className="bg-slate-50 rounded-xl p-3.5 border border-slate-200 space-y-2 text-xs">
               <div className="font-bold text-slate-800 flex items-center gap-1.5">
                 <span className="w-4 h-4 rounded-full bg-[#E2136E] text-white flex items-center justify-center text-[10px]">
-                  ১
+                  1
                 </span>
-                <span>বিকাশ অ্যাপ অথবা *247# ডায়াল করে Payment/Send Money করুন:</span>
+                <span>Send Money or Make Payment from bKash App or dial *247#:</span>
               </div>
 
               {/* Merchant Number Box */}
               <div className="flex items-center justify-between bg-white p-2.5 rounded-lg border border-pink-200">
                 <div>
-                  <div className="text-[10px] text-slate-500">অফিসিয়াল বিকাশ নম্বর:</div>
+                  <div className="text-[10px] text-slate-500">Official bKash Number:</div>
                   <div className="text-sm font-black text-[#E2136E]">{merchantNumber}</div>
                 </div>
                 <button
@@ -432,16 +433,16 @@ export function BkashModal({
                   className="px-2.5 py-1.5 bg-pink-100 hover:bg-pink-200 text-[#E2136E] font-bold rounded text-[11px] flex items-center gap-1 transition-colors"
                 >
                   {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                  <span>{copied ? "কপি হয়েছে" : "কপি করুন"}</span>
+                  <span>{copied ? "Copied" : "Copy"}</span>
                 </button>
               </div>
 
               <div className="text-[11px] text-slate-600 space-y-1 pl-1">
                 <div>
-                  • টাকার পরিমাণ: <strong>{formatBdt(amount)}</strong>
+                  • Amount: <strong>{formatBdt(amount)}</strong>
                 </div>
                 <div>
-                  • রেফারেন্স: <strong>{invoiceNo.slice(0, 10)}</strong>
+                  • Reference: <strong>{invoiceNo.slice(0, 10)}</strong>
                 </div>
               </div>
             </div>
@@ -450,18 +451,18 @@ export function BkashModal({
             <form onSubmit={handleVerifyManualTrx} className="space-y-3.5">
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-700 block">
-                  বিকাশ TrxID (Transaction ID) লিখুন: <span className="text-rose-500">*</span>
+                  Enter bKash TrxID (Transaction ID): <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
                   required
                   value={manualTrxId}
                   onChange={(e) => setManualTrxId(e.target.value.toUpperCase())}
-                  placeholder="যেমন: BLA92KJ831 বা 9K8B7C6D"
+                  placeholder="e.g. BLA92KJ831 or 9K8B7C6D"
                   className="w-full bg-slate-50 border-2 border-slate-300 focus:border-[#E2136E] text-slate-900 rounded-xl px-4 py-2.5 text-sm font-black uppercase tracking-wider outline-none transition-all placeholder:normal-case placeholder:font-normal placeholder:tracking-normal"
                 />
                 <p className="text-[10px] text-slate-500">
-                  পেমেন্ট সফল হওয়ার পর বিকাশ এসএমএস থেকে ৮-১২ অক্ষরের TrxID দিন।
+                  Enter the 8-12 character TrxID received in your bKash SMS confirmation.
                 </p>
               </div>
 
@@ -481,7 +482,7 @@ export function BkashModal({
                   {loading ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
                   ) : (
-                    <span>ভেরিফাই ও অর্ডার সম্পন্ন</span>
+                    <span>Verify & Place Order</span>
                   )}
                 </button>
               </div>
@@ -492,7 +493,7 @@ export function BkashModal({
         {/* Footer Support Notice */}
         <div className="bg-slate-50 px-5 py-2.5 border-t border-slate-200 text-center text-[10px] text-slate-500 flex items-center justify-center gap-1.5">
           <PhoneCall className="w-3 h-3 text-[#E2136E]" />
-          <span>যেকোনো প্রয়োজনে বিকাশ হেল্পলাইন ১৬২৪৭ অথবা আমাদের সাপোর্ট: 01711-319090</span>
+          <span>Need help? Call bKash Helpline 16247 or Support: 01711-319090</span>
         </div>
       </div>
     </div>
