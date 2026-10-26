@@ -237,11 +237,23 @@ export const savedPcBuilds = pgTable(
 // 9. Site Settings Table (Single-row configuration)
 export const siteSettings = pgTable("site_settings", {
   id: uuid("id").defaultRandom().primaryKey(),
-  logoLightUrl: text("logo_light_url").notNull().default("/images/logo-light.png"),
-  logoDarkUrl: text("logo_dark_url").notNull().default("/images/logo-dark.png"),
-  contactEmail: text("contact_email").notNull().default("support@thesolusationbd.com"),
-  whatsappNumber: text("whatsapp_number").notNull().default("+8801700000000"),
-  hotlineNumber: text("hotline_number").notNull().default("+8801700000000"),
+  logoLightUrl: text("logo_light_url").notNull().default("/logo.png"),
+  logoDarkUrl: text("logo_dark_url").notNull().default("/logo.png"),
+  contactEmail: text("contact_email").notNull().default("thesolutionsbd@gmail.com"),
+  whatsappNumber: text("whatsapp_number").notNull().default("01922-730343"),
+  hotlineNumber: text("hotline_number").notNull().default("01711-319090"),
+  secondaryPhone: text("secondary_phone").default("01711-319090"),
+  landlinePhone: text("landline_phone").default("9183295"),
+  ceoName: text("ceo_name").default("Md. Raihan Kabir"),
+  ceoDesignation: text("ceo_designation").default("CEO, BSC. Eng (Hons.) in CSE"),
+  ceoPhone: text("ceo_phone").default("01922-730343"),
+  gulshanAddress: text("gulshan_address").default(
+    "House- NWH- 12, Road- 53, Circle- 2, Gulshan Avenue, Dhaka- 1212"
+  ),
+  idbAddress: text("idb_address").default(
+    "SR- 140, BCS Computer City, IDB Bhaban (1st Floor), Agargaon, Dhaka- 1207"
+  ),
+  websiteUrl: text("website_url").default("https://thesolutionsbd.com"),
   headerNoticeText: text("header_notice_text")
     .notNull()
     .default(

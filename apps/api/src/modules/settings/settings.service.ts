@@ -32,18 +32,19 @@ export class SettingsService {
   }
 
   async updateSiteSettings(data: any) {
+    const { id, createdAt, updatedAt, ...allowedData } = data || {};
     const existing = await db.query.siteSettings.findFirst();
     let updated;
 
     if (existing) {
       const [res] = await db
         .update(siteSettings)
-        .set({ ...data, updatedAt: new Date() })
+        .set({ ...allowedData, updatedAt: new Date() })
         .where(eq(siteSettings.id, existing.id))
         .returning();
       updated = res;
     } else {
-      const [res] = await db.insert(siteSettings).values(data).returning();
+      const [res] = await db.insert(siteSettings).values(allowedData).returning();
       updated = res;
     }
 

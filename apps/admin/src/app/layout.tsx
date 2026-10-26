@@ -1,15 +1,8 @@
 import type { Metadata } from "next";
-import "./globals.css";
-import { ThemeProvider } from "@/components/theme-provider";
-
-export const metadata: Metadata = {
-  title: "The Solutions BD Admin & POS Dashboard",
-  description:
-    "Omnichannel Point of Sale, multi-branch inventory, serial number warranty management, and outside-Dhaka COD deposit queue.",
-};
-
 import { Roboto } from "next/font/google";
 import { Suspense } from "react";
+import "./globals.css";
+import { ThemeProvider } from "@/components/theme-provider";
 import { PageLoader } from "@/components/page-loader";
 
 const roboto = Roboto({
@@ -18,6 +11,12 @@ const roboto = Roboto({
   display: "swap",
   variable: "--font-roboto",
 });
+
+export const metadata: Metadata = {
+  title: "The Solutions BD Admin & POS Dashboard",
+  description:
+    "Omnichannel Point of Sale, multi-branch inventory, serial number warranty management, and outside-Dhaka COD deposit queue.",
+};
 
 export default function RootLayout({
   children,

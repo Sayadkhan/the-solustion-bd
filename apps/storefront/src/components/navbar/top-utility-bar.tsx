@@ -34,11 +34,11 @@ export function TopUtilityBar() {
         {/* Left: Hotline & Dhaka Time */}
         <div className="flex items-center space-x-5">
           <a
-            href="tel:+8801700000000"
+            href="tel:+8801711319090"
             className="flex items-center space-x-1.5 hover:text-white transition-colors"
           >
             <Phone className="w-3.5 h-3.5 text-blue-500" />
-            <span className="font-medium text-slate-200">+880 1700-000000</span>
+            <span className="font-medium text-slate-200">01711-319090 / 01922-730343</span>
             <span className="text-slate-500 hidden sm:inline">(10 AM - 8 PM)</span>
           </a>
 

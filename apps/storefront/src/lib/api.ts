@@ -40,6 +40,14 @@ export interface ApiSiteSettings {
   contactEmail: string;
   whatsappNumber: string;
   hotlineNumber: string;
+  secondaryPhone?: string;
+  landlinePhone?: string;
+  ceoName?: string;
+  ceoDesignation?: string;
+  ceoPhone?: string;
+  gulshanAddress?: string;
+  idbAddress?: string;
+  websiteUrl?: string;
   headerNoticeText: string;
   usdToBdtRate: string;
 }

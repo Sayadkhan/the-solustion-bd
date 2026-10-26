@@ -55,15 +55,20 @@ export function InvoiceModal({ order, onClose }: InvoiceModalProps) {
                 <img src="/logo.png" alt="The Solutions BD" className="h-9 w-auto object-contain" />
               </div>
               <h1 className="text-xl font-black tracking-tight text-primary">THE SOLUTIONS BD</h1>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                An Incomparable IT Solution Provider & Official Warranty Service
+              <p className="text-xs text-muted-foreground mt-0.5 font-medium">
+                An Incomparable IT Solution Provider & Official Warranty Center
               </p>
-              <p className="text-xs text-muted-foreground">
-                Central Outlet & Warehouse: Shop 412, Level 4, Multiplan Center, Elephant Road, Dhaka
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Hotline: +880 1700-000000 | Email: support@thesolutionsbd.com
-              </p>
+              <div className="text-[11px] text-muted-foreground space-y-0.5 mt-1 leading-snug">
+                <p>
+                  <span className="font-bold text-foreground">Gulshan Office:</span> House- NWH- 12, Road- 53, Circle- 2, Gulshan Avenue, Dhaka- 1212.
+                </p>
+                <p>
+                  <span className="font-bold text-foreground">IDB Office:</span> SR- 140, BCS Computer City, IDB Bhaban (1st Floor), Agargaon, Dhaka- 1207.
+                </p>
+                <p>
+                  Hotline: 01711-319090, 01922-730343 | Tel: 9183295 | Email: thesolutionsbd@gmail.com | Web: thesolutionsbd.com
+                </p>
+              </div>
             </div>
             <div className="text-right">
               <span className="inline-block px-3 py-1 text-xs font-bold uppercase rounded bg-muted text-foreground border border-border">

@@ -45,6 +45,7 @@ export const getSiteSettings = async (req: Request, res: Response): Promise<void
 
 export const updateSiteSettings = async (req: Request, res: Response): Promise<void> => {
   try {
+    const { id, createdAt, updatedAt, ...allowedData } = req.body || {};
     const existing = await db.query.siteSettings.findFirst();
     let updated;
 
@@ -52,7 +53,7 @@ export const updateSiteSettings = async (req: Request, res: Response): Promise<v
       const [res] = await db
         .update(siteSettings)
         .set({
-          ...req.body,
+          ...allowedData,
           updatedAt: new Date(),
         })
         .where(eq(siteSettings.id, existing.id))
@@ -61,7 +62,7 @@ export const updateSiteSettings = async (req: Request, res: Response): Promise<v
     } else {
       const [res] = await db
         .insert(siteSettings)
-        .values(req.body)
+        .values(allowedData)
         .returning();
       updated = res;
     }
