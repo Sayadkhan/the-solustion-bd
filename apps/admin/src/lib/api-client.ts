@@ -279,5 +279,62 @@ export const adminApi = {
       url: json.url ? `http://localhost:4000${json.url}` : "",
     };
   },
+
+  // Banners Management
+  async getBanners(type?: string) {
+    try {
+      const url = type ? `${API_BASE}/banners/admin?type=${encodeURIComponent(type)}` : `${API_BASE}/banners/admin`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("Failed to fetch banners");
+      return await res.json();
+    } catch {
+      return null;
+    }
+  },
+
+  async createBanner(payload: {
+    type?: string;
+    tag?: string;
+    title: string;
+    subtitle?: string;
+    image: string;
+    buttonText?: string;
+    buttonLink?: string;
+    bgGradient?: string;
+    sortOrder?: number;
+    isActive?: boolean;
+  }) {
+    const res = await fetch(`${API_BASE}/banners`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    return await res.json();
+  },
+
+  async updateBanner(id: string, payload: any) {
+    const res = await fetch(`${API_BASE}/banners/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    return await res.json();
+  },
+
+  async deleteBanner(id: string) {
+    const res = await fetch(`${API_BASE}/banners/${id}`, {
+      method: "DELETE",
+    });
+    return await res.json();
+  },
+
+  async reorderBanners(orders: Array<{ id: string; sortOrder: number }>) {
+    const res = await fetch(`${API_BASE}/banners/reorder`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orders }),
+    });
+    return await res.json();
+  },
 };
 

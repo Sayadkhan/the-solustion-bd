@@ -265,6 +265,33 @@ export const siteSettings = pgTable("site_settings", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
+// 9.1 Banners Table (Hero Carousel & Promotional Banners)
+export const banners = pgTable(
+  "banners",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    type: varchar("type", { length: 50 }).notNull().default("HERO"), // 'HERO' | 'PROMO_SIDE' | 'POPUP'
+    tag: varchar("tag", { length: 100 }),
+    title: text("title").notNull(),
+    subtitle: text("subtitle"),
+    image: text("image").notNull(),
+    buttonText: varchar("button_text", { length: 100 }).default("Shop Now"),
+    buttonLink: varchar("button_link", { length: 255 }).default("/products"),
+    bgGradient: varchar("bg_gradient", { length: 255 }).default(
+      "from-blue-700 via-indigo-900 to-slate-950"
+    ),
+    sortOrder: integer("sort_order").notNull().default(0),
+    isActive: boolean("is_active").notNull().default(true),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (t) => [
+    index("idx_banners_type").on(t.type),
+    index("idx_banners_is_active").on(t.isActive),
+    index("idx_banners_sort_order").on(t.sortOrder),
+  ]
+);
+
 // 10. Users Table
 export const users = pgTable(
   "users",

@@ -10,6 +10,7 @@ import { SettingsModule } from "./modules/settings/settings.module";
 import { HealthModule } from "./modules/health/health.module";
 import { UploadModule } from "./modules/upload/upload.module";
 import { BlogModule } from "./modules/blog/blog.module";
+import { BannersModule } from "./modules/banners/banners.module";
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { BlogModule } from "./modules/blog/blog.module";
     HealthModule,
     UploadModule,
     BlogModule,
+    BannersModule,
   ],
 })
 export class AppModule {}

@@ -98,18 +98,32 @@ export default function StorefrontHomePage() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [siteSettings, setSiteSettings] = useState<ApiSiteSettings | null>(null);
   const [productsList, setProductsList] = useState<Product[]>(CATALOG_PRODUCTS);
+  const [heroSlides, setHeroSlides] = useState<any[]>(HERO_SLIDES);
+  const [promoSideBanners, setPromoSideBanners] = useState<any[]>([]);
 
-  // Fetch live products and settings from API on mount
+  // Fetch live products, settings, and banners from API on mount
   useEffect(() => {
     async function loadLiveData() {
       try {
-        const [liveProds, settings] = await Promise.all([
+        const [liveProds, settings, banners] = await Promise.all([
           storefrontApi.getProducts({ limit: 40 }),
           storefrontApi.getSettings(),
+          storefrontApi.getBanners(),
         ]);
 
         if (settings) {
           setSiteSettings(settings);
+        }
+
+        if (banners && banners.length > 0) {
+          const hero = banners.filter((b) => b.type === "HERO" && b.isActive);
+          if (hero.length > 0) {
+            setHeroSlides(hero);
+          }
+          const side = banners.filter((b) => b.type === "PROMO_SIDE" && b.isActive);
+          if (side.length > 0) {
+            setPromoSideBanners(side);
+          }
         }
 
         if (liveProds && liveProds.length > 0) {
@@ -154,11 +168,12 @@ export default function StorefrontHomePage() {
 
   // Auto rotate carousel every 5 seconds
   useEffect(() => {
+    if (heroSlides.length <= 1) return;
     const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % HERO_SLIDES.length);
+      setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
     }, 5000);
     return () => clearInterval(timer);
-  }, []);
+  }, [heroSlides.length]);
 
   // Flash Mega Deal Countdown State (5 Days)
   const [countdown, setCountdown] = useState({
@@ -198,102 +213,114 @@ export default function StorefrontHomePage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
           {/* Left: 8 Cols Carousel Slider */}
           <div className="lg:col-span-8 relative rounded-xl overflow-hidden shadow-lg min-h-[320px] sm:min-h-[400px] md:min-h-[440px] flex items-center group">
-            {HERO_SLIDES.map((slide, idx) => (
+            {heroSlides.map((slide, idx) => (
               <div
-                key={slide.id}
+                key={slide.id || idx}
                 className={`absolute inset-0 transition-opacity duration-700 bg-gradient-to-r ${
-                  slide.bgGradient
+                  slide.bgGradient || "from-blue-700 via-indigo-900 to-slate-950"
                 } flex items-center p-6 sm:p-10 text-white ${
                   idx === currentSlide ? "opacity-100 z-10" : "opacity-0 z-0 pointer-events-none"
                 }`}
               >
                 <div className="relative z-10 max-w-lg space-y-4 text-left">
-                  <div className="inline-block bg-white/20 backdrop-blur-md text-white font-extrabold text-[11px] uppercase px-3 py-1 rounded-full border border-white/30">
-                    {slide.tag}
-                  </div>
+                  {slide.tag && (
+                    <div className="inline-block bg-white/20 backdrop-blur-md text-white font-extrabold text-[11px] uppercase px-3 py-1 rounded-full border border-white/30">
+                      {slide.tag}
+                    </div>
+                  )}
                   <h2 className="text-2xl sm:text-4xl md:text-5xl font-black tracking-tight leading-tight">
                     {slide.title}
                   </h2>
-                  <p className="text-slate-200 text-xs sm:text-sm font-medium line-clamp-2 sm:line-clamp-3">
-                    {slide.subtitle}
-                  </p>
+                  {slide.subtitle && (
+                    <p className="text-slate-200 text-xs sm:text-sm font-medium line-clamp-2 sm:line-clamp-3">
+                      {slide.subtitle}
+                    </p>
+                  )}
                   <div className="pt-2">
                     <Link
-                      href={slide.buttonLink}
+                      href={slide.buttonLink || "/products"}
                       className="inline-flex items-center gap-2 bg-white text-slate-900 hover:bg-slate-100 font-extrabold px-6 py-3 rounded-md text-xs shadow-xl hover:scale-105 transition-all"
                     >
-                      <span>{slide.buttonText}</span>
+                      <span>{slide.buttonText || "Shop Now"}</span>
                       <ArrowRight className="w-4 h-4 text-blue-600" />
                     </Link>
                   </div>
                 </div>
 
                 {/* Banner Graphic Background Image */}
-                <div className="absolute right-0 top-0 bottom-0 w-1/2 opacity-30 md:opacity-50 overflow-hidden pointer-events-none">
-                  <img
-                    src={slide.image}
-                    alt={slide.title}
-                    className="w-full h-full object-cover object-center"
-                  />
-                </div>
+                {slide.image && (
+                  <div className="absolute right-0 top-0 bottom-0 w-1/2 opacity-30 md:opacity-50 overflow-hidden pointer-events-none">
+                    <img
+                      src={slide.image}
+                      alt={slide.title}
+                      className="w-full h-full object-cover object-center"
+                    />
+                  </div>
+                )}
               </div>
             ))}
 
             {/* Carousel Slider Controls */}
-            <button
-              onClick={() =>
-                setCurrentSlide((prev) => (prev - 1 + HERO_SLIDES.length) % HERO_SLIDES.length)
-              }
-              className="absolute left-3 z-20 p-2 rounded-full bg-black/40 text-white hover:bg-black/70 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity"
-              aria-label="Previous Slide"
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
-            <button
-              onClick={() => setCurrentSlide((prev) => (prev + 1) % HERO_SLIDES.length)}
-              className="absolute right-3 z-20 p-2 rounded-full bg-black/40 text-white hover:bg-black/70 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity"
-              aria-label="Next Slide"
-            >
-              <ChevronRight className="w-5 h-5" />
-            </button>
-
-            {/* Slider Dots */}
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2">
-              {HERO_SLIDES.map((_, i) => (
+            {heroSlides.length > 1 && (
+              <>
                 <button
-                  key={i}
-                  onClick={() => setCurrentSlide(i)}
-                  className={`h-2 rounded-full transition-all ${
-                    i === currentSlide ? "w-8 bg-blue-600" : "w-2 bg-white/50"
-                  }`}
-                  aria-label={`Slide ${i + 1}`}
-                />
-              ))}
-            </div>
+                  onClick={() =>
+                    setCurrentSlide((prev) => (prev - 1 + heroSlides.length) % heroSlides.length)
+                  }
+                  className="absolute left-3 z-20 p-2 rounded-full bg-black/40 text-white hover:bg-black/70 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity"
+                  aria-label="Previous Slide"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={() => setCurrentSlide((prev) => (prev + 1) % heroSlides.length)}
+                  className="absolute right-3 z-20 p-2 rounded-full bg-black/40 text-white hover:bg-black/70 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity"
+                  aria-label="Next Slide"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+
+                {/* Slider Dots */}
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2">
+                  {heroSlides.map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setCurrentSlide(i)}
+                      className={`h-2 rounded-full transition-all ${
+                        i === currentSlide ? "w-8 bg-blue-600" : "w-2 bg-white/50"
+                      }`}
+                      aria-label={`Slide ${i + 1}`}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
           </div>
 
           {/* Right: 4 Cols Stacked Promo Banners (Star Tech Style) */}
           <div className="lg:col-span-4 flex flex-col gap-4">
             {/* Promo Card 1: Blue Customer Care & After Sales */}
-            <div className="flex-1 rounded-xl p-6 bg-gradient-to-br from-[#0e3c88] to-[#122444] text-white flex flex-col justify-between shadow-lg relative overflow-hidden group">
+            <div className={`flex-1 rounded-xl p-6 bg-gradient-to-br ${
+              promoSideBanners[0]?.bgGradient || "from-[#0e3c88] to-[#122444]"
+            } text-white flex flex-col justify-between shadow-lg relative overflow-hidden group`}>
               <div className="relative z-10 space-y-2">
                 <div className="flex items-center gap-2 text-blue-300 text-xs font-bold uppercase tracking-wider">
                   <MessageSquare className="w-4 h-4 text-blue-400" />
-                  <span>Customer Support & RMA</span>
+                  <span>{promoSideBanners[0]?.tag || "Customer Support & RMA"}</span>
                 </div>
                 <h3 className="text-lg sm:text-xl font-black leading-snug">
-                  আপনার যেকোনো অভিযোগ বা মতামত জানান
+                  {promoSideBanners[0]?.title || "আপনার যেকোনো অভিযোগ বা মতামত জানান"}
                 </h3>
                 <p className="text-slate-300 text-xs">
-                  বক্স সিরিয়াল ওয়ারেন্টি ও আফটার সেলস সাপোর্ট পান দ্রুততম সময়ে।
+                  {promoSideBanners[0]?.subtitle || "বক্স সিরিয়াল ওয়ারেন্টি ও আফটার সেলস সাপোর্ট পান দ্রুততম সময়ে।"}
                 </p>
               </div>
               <div className="relative z-10 pt-4">
                 <Link
-                  href="/track-order"
+                  href={promoSideBanners[0]?.buttonLink || "/track-order"}
                   className="inline-block bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold px-4 py-2 rounded text-xs shadow-md transition-colors"
                 >
-                  জানান এখানে 👉
+                  {promoSideBanners[0]?.buttonText || "জানান এখানে 👉"}
                 </Link>
               </div>
               {/* Background ambient shape */}
@@ -301,25 +328,27 @@ export default function StorefrontHomePage() {
             </div>
 
             {/* Promo Card 2: Deep Blue Corporate Solutions & PC Builder */}
-            <div className="flex-1 rounded-xl p-6 bg-gradient-to-br from-[#1e3a8a] to-[#0f172a] text-white flex flex-col justify-between shadow-lg relative overflow-hidden group">
+            <div className={`flex-1 rounded-xl p-6 bg-gradient-to-br ${
+              promoSideBanners[1]?.bgGradient || "from-[#1e3a8a] to-[#0f172a]"
+            } text-white flex flex-col justify-between shadow-lg relative overflow-hidden group`}>
               <div className="relative z-10 space-y-2">
                 <div className="flex items-center gap-2 text-cyan-300 text-xs font-bold uppercase tracking-wider">
                   <Cpu className="w-4 h-4 text-cyan-400" />
-                  <span>Custom Rig & B2B Solutions</span>
+                  <span>{promoSideBanners[1]?.tag || "Custom Rig & B2B Solutions"}</span>
                 </div>
                 <h3 className="text-lg sm:text-xl font-black leading-snug">
-                  Shape Your Dream Battlestation With Us!
+                  {promoSideBanners[1]?.title || "Shape Your Dream Battlestation With Us!"}
                 </h3>
                 <p className="text-slate-300 text-xs">
-                  Official distributor warranty & 0% bank EMI facilities across Bangladesh.
+                  {promoSideBanners[1]?.subtitle || "Official distributor warranty & 0% bank EMI facilities across Bangladesh."}
                 </p>
               </div>
               <div className="relative z-10 pt-4">
                 <Link
-                  href="/pc-builder"
+                  href={promoSideBanners[1]?.buttonLink || "/pc-builder"}
                   className="inline-block bg-white hover:bg-slate-100 text-blue-700 font-extrabold px-4 py-2 rounded text-xs shadow-md transition-colors"
                 >
-                  Configure Rig Now
+                  {promoSideBanners[1]?.buttonText || "Configure Rig Now"}
                 </Link>
               </div>
               {/* Background ambient shape */}

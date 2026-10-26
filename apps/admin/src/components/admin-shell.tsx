@@ -22,6 +22,7 @@ import {
   X,
   Store,
   ChevronRight,
+  ImageIcon,
 } from "lucide-react";
 
 interface AdminShellProps {
@@ -107,6 +108,13 @@ export function AdminShell({
       href: "/leads",
       icon: Building2,
       activePattern: /^\/leads/,
+    },
+    {
+      name: "Banners & Hero",
+      badge: "Promos",
+      href: "/banners",
+      icon: ImageIcon,
+      activePattern: /^\/banners/,
     },
     {
       name: "Store Settings",

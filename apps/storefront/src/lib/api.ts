@@ -125,4 +125,34 @@ export const storefrontApi = {
       return [];
     }
   },
+
+  // Fetch banners from backend (Hero Slider, Side Promos)
+  async getBanners(type?: string): Promise<ApiBanner[]> {
+    try {
+      const url = type ? `${API_BASE}/banners?type=${encodeURIComponent(type)}` : `${API_BASE}/banners`;
+      const res = await fetch(url, { cache: "no-store" });
+      if (!res.ok) throw new Error("Failed to fetch banners");
+      const json = await res.json();
+      return json?.data || [];
+    } catch (e) {
+      console.warn("[STOREFRONT_API] getBanners error:", e);
+      return [];
+    }
+  },
 };
+
+export interface ApiBanner {
+  id: string;
+  type: string;
+  tag?: string | null;
+  title: string;
+  subtitle?: string | null;
+  image: string;
+  buttonText?: string | null;
+  buttonLink?: string | null;
+  bgGradient?: string | null;
+  sortOrder: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
