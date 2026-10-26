@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, use } from "react";
+import React, { useState, useEffect, use } from "react";
 import Link from "next/link";
-import { notFound, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import {
   ShieldCheck,
   Truck,
@@ -12,18 +12,16 @@ import {
   ShoppingCart,
   Zap,
   GitCompare,
-  ArrowRight,
   ChevronRight,
-  Layers,
   HelpCircle,
-  Share2,
-  Calendar,
+  Loader2,
 } from "lucide-react";
-import { CATALOG_PRODUCTS, getProductBySlug } from "@/lib/catalog";
+import { CATALOG_PRODUCTS, getProductBySlug, Product } from "@/lib/catalog";
 import { formatBdt } from "@solusation/shared-types";
 import { useCartStore } from "@/stores/cart-store";
 import { useCompareStore } from "@/stores/compare-store";
 import { ProductCard } from "@/components/product-card";
+import { storefrontApi } from "@/lib/api";
 
 interface ProductPageProps {
   params: Promise<{ slug: string }>;
@@ -33,11 +31,10 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
   const { slug } = use(params);
   const router = useRouter();
 
-  const product = getProductBySlug(slug);
-
-  const [selectedImage, setSelectedImage] = useState<string>(
-    product ? (product.images[0] || product.thumbnailUrl) : ""
-  );
+  // Load product from catalog or API
+  const [product, setProduct] = useState<Product | null>(() => getProductBySlug(slug) || null);
+  const [loading, setLoading] = useState<boolean>(!product);
+  const [selectedImage, setSelectedImage] = useState<string>("");
   const [quantity, setQuantity] = useState<number>(1);
   const [selectedPricingTier, setSelectedPricingTier] = useState<"CASH" | "REGULAR">("CASH");
   const [activeTab, setActiveTab] = useState<"specs" | "branches" | "warranty">("specs");
@@ -46,28 +43,119 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
   const addItem = useCartStore((s) => s.addItem);
   const { addComponent, isSelected } = useCompareStore();
 
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchProductData = async () => {
+      // 1. Check static catalog
+      const catalogMatch = getProductBySlug(slug);
+      if (catalogMatch) {
+        if (isMounted) {
+          setProduct(catalogMatch);
+          setSelectedImage(catalogMatch.images[0] || catalogMatch.thumbnailUrl);
+          setLoading(false);
+        }
+        return;
+      }
+
+      // 2. Fetch from backend database API
+      setLoading(true);
+      try {
+        const apiData = await storefrontApi.getProductBySlug(slug);
+        if (isMounted && apiData) {
+          const normalized: Product = {
+            id: apiData.id,
+            name: apiData.name,
+            slug: apiData.slug,
+            sku: apiData.sku,
+            brand: apiData.brand?.name || "Official Brand",
+            categorySlug: apiData.category?.slug || "components",
+            categoryName: apiData.category?.name || "Components",
+            cashPriceBdt: apiData.cashPriceBdt,
+            regularPriceBdt: apiData.regularPriceBdt,
+            costPriceBdt: apiData.costPriceBdt,
+            isEmiAvailable: apiData.isEmiAvailable ?? true,
+            totalStock: apiData.totalStock ?? 10,
+            stockStatus: apiData.stockStatus || "IN_STOCK",
+            thumbnailUrl:
+              apiData.images?.[0] ||
+              "https://images.unsplash.com/photo-1591799264318-7e6ef8ddb7ea?w=800",
+            images:
+              apiData.images && apiData.images.length > 0
+                ? apiData.images
+                : ["https://images.unsplash.com/photo-1591799264318-7e6ef8ddb7ea?w=800"],
+            keyFeatures: apiData.keyFeatures || [],
+            warrantyDurationMonths: apiData.warrantyDurationMonths || 36,
+            warrantyNotice:
+              apiData.warrantyTerms ||
+              `${apiData.warrantyDurationMonths || 36} Months Official Warranty`,
+            branchStocks: {
+              IDB: apiData.branchInventory?.find((b: any) => b.branchCode === "IDB")?.stock ?? 5,
+              MULTIPLAN:
+                apiData.branchInventory?.find((b: any) => b.branchCode === "MULTIPLAN")?.stock ?? 5,
+              UTTARA:
+                apiData.branchInventory?.find((b: any) => b.branchCode === "UTTARA")?.stock ?? 4,
+              AGRABAD:
+                apiData.branchInventory?.find((b: any) => b.branchCode === "AGRABAD")?.stock ?? 2,
+              ONLINE_WAREHOUSE:
+                apiData.branchInventory?.find((b: any) => b.branchCode === "ONLINE_WAREHOUSE")
+                  ?.stock ?? 10,
+            },
+            specifications: apiData.specifications || [],
+            compatibility: apiData.compatibility || {},
+          };
+
+          setProduct(normalized);
+          setSelectedImage(normalized.images[0] || normalized.thumbnailUrl);
+        }
+      } catch (err) {
+        console.error("Failed to load product by slug:", err);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    fetchProductData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [slug]);
+
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-24 text-center space-y-4">
+        <Loader2 className="w-10 h-10 animate-spin text-primary mx-auto" />
+        <p className="text-sm text-muted-foreground font-medium">
+          Loading product specifications...
+        </p>
+      </div>
+    );
+  }
+
   if (!product) {
     return (
       <div className="container mx-auto px-4 py-20 text-center space-y-5">
         <div className="w-16 h-16 bg-muted/60 rounded-full flex items-center justify-center mx-auto text-muted-foreground">
           <HelpCircle className="w-8 h-8 stroke-1 text-primary" />
         </div>
-        <h2 className="text-2xl font-black text-foreground">পণ্যটি খুঁজে পাওয়া যায়নি (Product Not Found)</h2>
+        <h2 className="text-2xl font-black text-foreground">Product Not Found</h2>
         <p className="text-sm text-muted-foreground max-w-md mx-auto">
-          আপনি যে প্রডাক্টটি খুঁজছেন তা বর্তমানে উপলব্ধ নয় অথবা লিংকটি পরিবর্তিত হয়েছে। আমাদের সম্পূর্ণ প্রোডাক্ট ক্যাটালগ ঘুরে দেখুন।
+          The product you are looking for is currently unavailable or the link may have been updated.
+          Browse our complete hardware catalog to find what you need.
         </p>
         <div className="flex items-center justify-center gap-3 pt-2">
           <Link
             href="/products"
-            className="bg-primary hover:bg-primary/90 text-white font-bold px-6 py-2.5 rounded-xl text-xs shadow-md shadow-primary/20"
+            className="bg-primary hover:bg-primary/90 text-white font-bold px-6 py-2.5 rounded-xl text-xs shadow-md shadow-primary/20 transition-all"
           >
-            সকল প্রোডাক্ট দেখুন (Browse Products)
+            Browse All Products
           </Link>
           <Link
             href="/"
-            className="bg-muted text-foreground border border-border font-bold px-6 py-2.5 rounded-xl text-xs hover:bg-muted/80"
+            className="bg-muted text-foreground border border-border font-bold px-6 py-2.5 rounded-xl text-xs hover:bg-muted/80 transition-all"
           >
-            হোম পেজে ফিরে যান (Home)
+            Back to Home
           </Link>
         </div>
       </div>
@@ -157,7 +245,7 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
         <div className="lg:col-span-5 space-y-4">
           <div className="bg-card rounded-2xl border border-border p-6 flex items-center justify-center h-80 sm:h-96 relative overflow-hidden shadow-sm">
             <img
-              src={selectedImage}
+              src={selectedImage || product.thumbnailUrl}
               alt={product.name}
               className="max-h-full max-w-full object-contain transition-transform duration-300 hover:scale-105"
             />
@@ -177,29 +265,30 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
                   onClick={() => setSelectedImage(img)}
                   className={`w-16 h-16 rounded-xl border p-1 bg-card transition-all ${
                     selectedImage === img
-                      ? "border-primary shadow-md ring-2 ring-primary/20"
-                      : "border-border hover:border-muted-foreground/50 opacity-70 hover:opacity-100"
+                      ? "border-primary ring-2 ring-primary/20"
+                      : "border-border hover:border-border/80"
                   }`}
                 >
-                  <img src={img} alt="thumb" className="w-full h-full object-contain" />
+                  <img src={img} alt="" className="w-full h-full object-contain" />
                 </button>
               ))}
             </div>
           )}
 
-          {/* Trust Guarantees */}
-          <div className="grid grid-cols-2 gap-3 pt-2">
-            <div className="p-3 bg-muted/40 rounded-xl border border-border/60 flex items-center gap-2.5 text-xs text-foreground">
+          {/* Value Badges */}
+          <div className="grid grid-cols-2 gap-3 pt-2 text-xs">
+            <div className="flex items-center gap-2.5 p-3 rounded-xl bg-muted/30 border border-border/60">
               <ShieldCheck className="w-5 h-5 text-primary shrink-0" />
               <div>
-                <div className="font-bold">100% Genuine Box</div>
-                <div className="text-[10px] text-muted-foreground">Scan serial for warranty</div>
+                <div className="font-bold">Official Warranty</div>
+                <div className="text-[10px] text-muted-foreground">{product.warrantyNotice}</div>
               </div>
             </div>
-            <div className="p-3 bg-muted/40 rounded-xl border border-border/60 flex items-center gap-2.5 text-xs text-foreground">
+
+            <div className="flex items-center gap-2.5 p-3 rounded-xl bg-muted/30 border border-border/60">
               <Truck className="w-5 h-5 text-emerald-500 shrink-0" />
               <div>
-                <div className="font-bold">Fast BD Delivery</div>
+                <div className="font-bold">Fast Delivery</div>
                 <div className="text-[10px] text-muted-foreground">Pathao & Steadfast Courier</div>
               </div>
             </div>
@@ -223,7 +312,7 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
             </h1>
           </div>
 
-          {/* Bangladeshi Dual Pricing Hero Box */}
+          {/* Dual Pricing Option Box */}
           <div className="bg-gradient-to-br from-card to-muted/30 p-5 rounded-2xl border-2 border-primary/20 shadow-lg space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Cash Discount Option */}
@@ -247,7 +336,7 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
                   {formatBdt(product.cashPriceBdt)}
                 </div>
                 <div className="text-[11px] text-muted-foreground mt-1">
-                  Applicable for Cash, bKash, Nagad, or Bank Transfer
+                  Applicable for Cash, bKash, or Bank Transfer
                 </div>
               </div>
 
@@ -296,19 +385,24 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
           </div>
 
           {/* Key Features Bullet List */}
-          <div className="space-y-2">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              Key Highlights
-            </h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-              {product.keyFeatures.map((feat, idx) => (
-                <div key={idx} className="flex items-center gap-2 p-2 bg-card rounded-lg border border-border/60">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-                  <span className="text-foreground">{feat}</span>
-                </div>
-              ))}
+          {product.keyFeatures && product.keyFeatures.length > 0 && (
+            <div className="space-y-2">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                Key Highlights
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                {product.keyFeatures.map((feat, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center gap-2 p-2 bg-card rounded-lg border border-border/60"
+                  >
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                    <span className="text-foreground">{feat}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Action buttons */}
           <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
@@ -412,19 +506,27 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
             <div className="space-y-4 max-w-4xl">
               <table className="w-full text-xs text-left border-collapse">
                 <tbody>
-                  {product.specifications.map((spec, index) => (
-                    <tr
-                      key={index}
-                      className={index % 2 === 0 ? "bg-muted/30" : "bg-transparent"}
-                    >
-                      <td className="py-2.5 px-4 font-semibold text-muted-foreground w-1/3 border-b border-border/50">
-                        {spec.label}
-                      </td>
-                      <td className="py-2.5 px-4 font-bold text-foreground border-b border-border/50">
-                        {spec.value}
+                  {product.specifications && product.specifications.length > 0 ? (
+                    product.specifications.map((spec, index) => (
+                      <tr
+                        key={index}
+                        className={index % 2 === 0 ? "bg-muted/30" : "bg-transparent"}
+                      >
+                        <td className="py-2.5 px-4 font-semibold text-muted-foreground w-1/3 border-b border-border/50">
+                          {spec.label}
+                        </td>
+                        <td className="py-2.5 px-4 font-bold text-foreground border-b border-border/50">
+                          {spec.value}
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={2} className="py-4 text-center text-muted-foreground">
+                        Standard manufacturer specifications apply for this product.
                       </td>
                     </tr>
-                  ))}
+                  )}
                 </tbody>
               </table>
             </div>
@@ -433,28 +535,35 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
           {activeTab === "branches" && (
             <div className="space-y-4 max-w-3xl">
               <p className="text-xs text-muted-foreground">
-                Current physical stock in our retail outlets across Dhaka and Chattogram. You can pick up directly or order online.
+                Current physical stock in our retail outlets across Dhaka and Chattogram. You can pick
+                up directly or order online.
               </p>
               <div className="divide-y divide-border border border-border rounded-xl overflow-hidden">
-                {Object.entries(product.branchStocks).map(([code, stock]) => (
-                  <div key={code} className="p-3.5 flex items-center justify-between bg-card text-xs">
-                    <div className="flex items-center gap-2">
-                      <Building2 className="w-4 h-4 text-primary" />
-                      <span className="font-bold text-foreground">{BRANCH_NAMES[code] || code}</span>
-                    </div>
-                    <div>
-                      {stock > 0 ? (
-                        <span className="px-2 py-0.5 rounded font-extrabold text-[11px] bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
-                          In Stock ({stock} Units)
+                {product.branchStocks &&
+                  Object.entries(product.branchStocks).map(([code, stock]) => (
+                    <div
+                      key={code}
+                      className="p-3.5 flex items-center justify-between bg-card text-xs"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Building2 className="w-4 h-4 text-primary" />
+                        <span className="font-bold text-foreground">
+                          {BRANCH_NAMES[code] || code}
                         </span>
-                      ) : (
-                        <span className="px-2 py-0.5 rounded font-extrabold text-[11px] bg-rose-500/10 text-rose-500 border border-rose-500/20">
-                          Out of Stock
-                        </span>
-                      )}
+                      </div>
+                      <div>
+                        {stock > 0 ? (
+                          <span className="px-2 py-0.5 rounded font-extrabold text-[11px] bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                            In Stock ({stock} Units)
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded font-extrabold text-[11px] bg-rose-500/10 text-rose-500 border border-rose-500/20">
+                            Out of Stock
+                          </span>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
               </div>
             </div>
           )}
@@ -465,12 +574,22 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
                 Official Bangladesh Warranty Terms (Rule 4.4)
               </h4>
               <p>
-                This product includes <strong>{product.warrantyNotice}</strong> directly honored by the official Bangladesh importer and The Solusation BD service center.
+                This product includes <strong>{product.warrantyNotice}</strong> directly honored by
+                the official Bangladesh importer and The Solusation BD service center.
               </p>
               <ul className="list-disc pl-5 space-y-1">
-                <li>Every box carries a unique serial number sticker. Please retain the outer box packaging for warranty claims.</li>
-                <li>Physical burns, liquid damage, cracked pins, or unauthorized tampering void the official warranty.</li>
-                <li>To check or claim warranty, enter your box serial number on our Warranty Tracking portal.</li>
+                <li>
+                  Every box carries a unique serial number sticker. Please retain the outer box
+                  packaging for warranty claims.
+                </li>
+                <li>
+                  Physical burns, liquid damage, cracked pins, or unauthorized tampering void the
+                  official warranty.
+                </li>
+                <li>
+                  To check or claim warranty, enter your box serial number on our Warranty Tracking
+                  portal.
+                </li>
               </ul>
             </div>
           )}

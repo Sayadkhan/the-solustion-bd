@@ -97,7 +97,7 @@ export default function BannersPage() {
   const [formData, setFormData] = useState({
     type: "HERO",
     tag: "10.10 MEGA SALE",
-    title: "১০.১০ টেক মেগা অফার!",
+    title: "10.10 Tech Mega Deals!",
     subtitle: "Up to 40% Off on Gaming Laptops, RTX 40 Series & AMD AM5 BattleStations",
     image: "https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=1000&auto=format&fit=crop&q=80",
     buttonText: "Shop Mega Deals",
@@ -137,11 +137,11 @@ export default function BannersPage() {
     setFormData({
       type,
       tag: type === "HERO" ? "SPECIAL CAMPAIGN" : "CUSTOMER SERVICE",
-      title: type === "HERO" ? "নতুন ধামাকা টেক অফার!" : "আপনার মতামত জানান",
+      title: type === "HERO" ? "Exclusive Tech Offers!" : "We Value Your Feedback",
       subtitle:
         type === "HERO"
           ? "Best Price Guarantee on Genuine Tech Hardware & Official Warranty across Bangladesh."
-          : "দ্রুততম সময়ে নির্ভরযোগ্য কাস্টমার কেয়ার ও বিক্রয়োত্তর সেবা পান।",
+          : "Get fast, reliable customer support and after-sales service.",
       image:
         type === "HERO"
           ? "https://images.unsplash.com/photo-1591799264318-7e6ef8ddb7ea?w=1000&auto=format&fit=crop&q=80"
@@ -715,7 +715,7 @@ export default function BannersPage() {
                     required
                     value={formData.title}
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    placeholder="e.g. ১০.১০ টেক মেগা অফার! বা Build Your Dream PC"
+                    placeholder="e.g. 10.10 Tech Mega Deals! or Build Your Dream PC"
                     className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-background text-foreground font-semibold outline-none focus:ring-2 focus:ring-primary/20"
                   />
                 </div>

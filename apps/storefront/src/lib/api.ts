@@ -167,6 +167,18 @@ export const storefrontApi = {
     }
   },
 
+  // Lookup order by invoice/order number
+  async getOrderByNumber(orderNumber: string): Promise<any | null> {
+    try {
+      const res = await fetch(`${API_BASE}/orders/${encodeURIComponent(orderNumber.trim())}`, { cache: "no-store" });
+      if (!res.ok) return null;
+      const json = await res.json();
+      return json?.data || null;
+    } catch (e) {
+      return null;
+    }
+  },
+
   // bKash Payment Gateway: Fetch merchant config
   async getBkashConfig(): Promise<{ success: boolean; data?: any }> {
     try {

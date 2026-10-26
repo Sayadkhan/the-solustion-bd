@@ -44,7 +44,7 @@ const HERO_SLIDES = [
   {
     id: 1,
     tag: "10.10 MEGA SALE",
-    title: "১০.১০ টেক মেগা অফার!",
+    title: "10.10 Tech Mega Sale!",
     subtitle: "Up to 40% Off on Gaming Laptops, RTX 40 Series & AMD AM5 BattleStations",
     bgGradient: "from-blue-700 via-indigo-900 to-slate-950",
     buttonText: "Shop Mega Deals",
@@ -309,10 +309,10 @@ export default function StorefrontHomePage() {
                   <span>{promoSideBanners[0]?.tag || "Customer Support & RMA"}</span>
                 </div>
                 <h3 className="text-lg sm:text-xl font-black leading-snug">
-                  {promoSideBanners[0]?.title || "আপনার যেকোনো অভিযোগ বা মতামত জানান"}
+                  {promoSideBanners[0]?.title || "Customer Support & RMA Inquiries"}
                 </h3>
                 <p className="text-slate-300 text-xs">
-                  {promoSideBanners[0]?.subtitle || "বক্স সিরিয়াল ওয়ারেন্টি ও আফটার সেলস সাপোর্ট পান দ্রুততম সময়ে।"}
+                  {promoSideBanners[0]?.subtitle || "Get genuine box serial warranty tracking and dedicated after-sales support."}
                 </p>
               </div>
               <div className="relative z-10 pt-4">
@@ -320,7 +320,7 @@ export default function StorefrontHomePage() {
                   href={promoSideBanners[0]?.buttonLink || "/track-order"}
                   className="inline-block bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold px-4 py-2 rounded text-xs shadow-md transition-colors"
                 >
-                  {promoSideBanners[0]?.buttonText || "জানান এখানে 👉"}
+                  {promoSideBanners[0]?.buttonText || "Contact Support"}
                 </Link>
               </div>
               {/* Background ambient shape */}
