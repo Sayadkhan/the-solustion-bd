@@ -330,18 +330,16 @@ export function MainNavbar() {
 
   return (
     <header className="w-full z-40 sticky top-0 shadow-md">
-      {/* 1. Main Star Tech Style Dark Navy Bar (#081621) */}
-      <div className="bg-[#081621] text-white py-3 px-4">
+      {/* 1. Main Header Bar - Clean White matching the corporate logo */}
+      <div className="bg-white text-slate-900 py-3 px-4 border-b border-slate-200/80 shadow-sm transition-colors">
         <div className="max-w-[1600px] mx-auto flex items-center justify-between gap-4">
-          {/* Logo */}
-          <Link href="/" className="flex items-center shrink-0 group">
-            <div className="bg-white hover:bg-slate-50 px-3 py-1.5 rounded-lg shadow-sm transition-all flex items-center justify-center border border-white/20 group-hover:shadow-md">
-              <img
-                src="/logo.png"
-                alt="The Solutions BD - An Incomparable IT Solution Provider"
-                className="h-8 sm:h-9 w-auto object-contain transition-transform group-hover:scale-105"
-              />
-            </div>
+          {/* Logo - Sitting naturally on clean white background */}
+          <Link href="/" className="flex items-center shrink-0 group py-0.5">
+            <img
+              src="/logo.png"
+              alt="The Solutions BD - An Incomparable IT Solution Provider"
+              className="h-9 sm:h-10 w-auto object-contain transition-transform group-hover:scale-105"
+            />
           </Link>
 
           {/* Search Bar (Star Tech Style) */}
@@ -356,11 +354,11 @@ export function MainNavbar() {
                 }}
                 onFocus={() => setSearchOpen(true)}
                 placeholder="Search components, laptops, gaming rigs..."
-                className="w-full bg-white text-slate-900 placeholder-slate-500 pl-4 pr-12 py-2.5 text-sm rounded-md outline-none focus:ring-2 focus:ring-blue-500 transition-all shadow-inner"
+                className="w-full bg-slate-50 hover:bg-slate-100/60 focus:bg-white text-slate-900 placeholder-slate-400 pl-4 pr-12 py-2.5 text-sm rounded-md border border-slate-300 focus:border-blue-600 outline-none focus:ring-2 focus:ring-blue-100 transition-all shadow-sm"
               />
               <button
                 type="submit"
-                className="absolute right-0 top-0 bottom-0 px-3.5 flex items-center justify-center text-slate-700 hover:text-blue-600 transition-colors"
+                className="absolute right-0 top-0 bottom-0 px-3.5 flex items-center justify-center text-slate-600 hover:text-blue-600 transition-colors"
                 title="Search"
               >
                 <Search className="w-4 h-4" />
@@ -416,54 +414,54 @@ export function MainNavbar() {
             )}
           </div>
 
-          {/* Right Header Navigation Icons (Star Tech Style) */}
+          {/* Right Header Navigation Icons */}
           <div className="hidden lg:flex items-center gap-6 shrink-0">
             {/* Offers */}
             <Link
               href="/products?discount=true"
-              className="flex items-center gap-2 hover:text-blue-400 transition-colors group text-left"
+              className="flex items-center gap-2 hover:text-blue-600 transition-colors group text-left"
             >
-              <div className="p-2 rounded-full bg-slate-800 text-blue-400 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+              <div className="p-2 rounded-full bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
                 <Gift className="w-4 h-4" />
               </div>
               <div className="flex flex-col leading-tight">
-                <span className="font-bold text-white text-sm">Offers</span>
-                <span className="text-[11px] text-slate-400">Latest Deals</span>
+                <span className="font-bold text-slate-900 text-sm">Offers</span>
+                <span className="text-[11px] text-slate-500">Latest Deals</span>
               </div>
             </Link>
 
             {/* Super Hour / Deals */}
             <Link
               href="/products?deals=true"
-              className="flex items-center gap-2 hover:text-amber-400 transition-colors group text-left"
+              className="flex items-center gap-2 hover:text-amber-600 transition-colors group text-left"
             >
-              <div className="p-2 rounded-full bg-slate-800 text-amber-500 group-hover:bg-amber-500 group-hover:text-white transition-colors">
+              <div className="p-2 rounded-full bg-amber-50 text-amber-600 group-hover:bg-amber-500 group-hover:text-white transition-colors">
                 <Zap className="w-4 h-4" />
               </div>
               <div className="flex flex-col leading-tight">
-                <span className="font-bold text-white text-sm">Super Hour</span>
-                <span className="text-[11px] text-slate-400">Special Flash</span>
+                <span className="font-bold text-slate-900 text-sm">Super Hour</span>
+                <span className="text-[11px] text-slate-500">Special Flash</span>
               </div>
             </Link>
 
             {/* Account */}
             <Link
               href="/cart"
-              className="flex items-center gap-2 hover:text-cyan-400 transition-colors group text-left"
+              className="flex items-center gap-2 hover:text-blue-600 transition-colors group text-left"
             >
-              <div className="p-2 rounded-full bg-slate-800 text-cyan-400 group-hover:bg-cyan-500 group-hover:text-white transition-colors">
+              <div className="p-2 rounded-full bg-slate-100 text-slate-700 group-hover:bg-blue-600 group-hover:text-white transition-colors">
                 <User className="w-4 h-4" />
               </div>
               <div className="flex flex-col leading-tight">
-                <span className="font-bold text-white text-sm">Account</span>
-                <span className="text-[11px] text-slate-400">Register / Login</span>
+                <span className="font-bold text-slate-900 text-sm">Account</span>
+                <span className="text-[11px] text-slate-500">Register / Login</span>
               </div>
             </Link>
 
             {/* Star Tech Signature Royal Blue PC Builder Button */}
             <Link
               href="/pc-builder"
-              className="bg-[#1340b8] hover:bg-blue-800 text-white font-bold px-4 py-2.5 rounded text-sm flex items-center gap-2 shadow-md hover:shadow-lg transition-all"
+              className="bg-[#1340b8] hover:bg-blue-800 text-white font-bold px-4 py-2.5 rounded text-sm flex items-center gap-2 shadow-sm hover:shadow transition-all"
             >
               <Cpu className="w-4 h-4" />
               <span>PC Builder</span>
@@ -472,12 +470,12 @@ export function MainNavbar() {
             {/* Cart Header Button */}
             <Link
               href="/cart"
-              className="relative p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-white transition-colors flex items-center justify-center"
+              className="relative p-2.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 transition-colors flex items-center justify-center border border-slate-200"
               title="View Cart"
             >
               <ShoppingCart className="w-5 h-5" />
               {cartCount > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 bg-blue-600 text-white text-[10px] font-black rounded-full h-4 w-4 flex items-center justify-center">
+                <span className="absolute -top-1.5 -right-1.5 bg-blue-600 text-white text-[10px] font-black rounded-full h-4 w-4 flex items-center justify-center shadow">
                   {cartCount}
                 </span>
               )}
@@ -491,7 +489,7 @@ export function MainNavbar() {
             <ThemeToggle />
             <Link
               href="/cart"
-              className="relative p-2 rounded bg-slate-800 text-white"
+              className="relative p-2 rounded-lg bg-slate-100 text-slate-800 border border-slate-200"
             >
               <ShoppingCart className="w-5 h-5" />
               {cartCount > 0 && (
@@ -502,7 +500,7 @@ export function MainNavbar() {
             </Link>
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 rounded bg-slate-800 text-white hover:bg-slate-700"
+              className="p-2 rounded-lg bg-slate-100 text-slate-800 hover:bg-slate-200 border border-slate-200"
               aria-label="Toggle Menu"
             >
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -511,8 +509,8 @@ export function MainNavbar() {
         </div>
       </div>
 
-      {/* 2. Star Tech Horizontal Category Mega Menu Bar - Exactly 10 Items */}
-      <nav className="bg-white dark:bg-[#0c1319] border-b border-slate-200 dark:border-slate-800 hidden lg:block text-slate-800 dark:text-slate-200 font-semibold text-sm relative">
+      {/* 2. Horizontal Category Mega Menu Bar - Styled with Navbar Deep Navy (#081621) */}
+      <nav className="bg-[#081621] text-white border-b border-slate-900 hidden lg:block font-semibold text-sm relative shadow-md">
         <div className="max-w-[1440px] mx-auto px-4 flex items-center justify-center">
           <ul className="flex items-center justify-center gap-1 lg:gap-2 xl:gap-3">
             {navCategories.slice(0, 10).map((cat) => (
@@ -524,22 +522,22 @@ export function MainNavbar() {
               >
                 <Link
                   href={cat.href}
-                  className="px-3 py-1.5 rounded hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors flex items-center gap-1.5 whitespace-nowrap text-[13.5px] lg:text-sm font-semibold"
+                  className="px-3 py-1.5 rounded text-slate-200 hover:text-white hover:bg-slate-800 transition-colors flex items-center gap-1.5 whitespace-nowrap text-[13.5px] lg:text-sm font-semibold"
                 >
                   <span>{cat.name}</span>
                   {cat.badge && (
-                    <span className="bg-blue-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full uppercase leading-none">
+                    <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full uppercase leading-none shadow-sm">
                       {cat.badge}
                     </span>
                   )}
                   {cat.subcategories && cat.subcategories.length > 0 && (
-                    <ChevronDown className="w-3.5 h-3.5 text-slate-400 group-hover:rotate-180 transition-transform" />
+                    <ChevronDown className="w-3.5 h-3.5 text-slate-400 group-hover:text-white transition-transform" />
                   )}
                 </Link>
 
                 {/* Subcategory Dropdown Panel */}
                 {activeDropdown === cat.name && cat.subcategories && (
-                  <div className="absolute top-full left-0 min-w-[280px] bg-white dark:bg-[#0d1620] border border-slate-200 dark:border-slate-800 shadow-2xl rounded-b-md z-50 py-2 divide-y divide-slate-100 dark:divide-slate-800 animate-in fade-in slide-in-from-top-1 duration-150">
+                  <div className="absolute top-full left-0 min-w-[280px] bg-[#0c1926] border border-slate-700 shadow-2xl rounded-b-md z-50 py-2 divide-y divide-slate-800 animate-in fade-in slide-in-from-top-1 duration-150">
                     <div className="px-4 py-2 text-xs font-bold text-slate-400 uppercase tracking-wider">
                       {cat.name} Categories
                     </div>
@@ -549,7 +547,7 @@ export function MainNavbar() {
                           key={sub.name}
                           href={sub.href}
                           onClick={() => setActiveDropdown(null)}
-                          className="block px-4 py-2.5 text-sm font-normal text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                          className="block px-4 py-2.5 text-sm font-normal text-slate-200 hover:bg-slate-800 hover:text-blue-400 transition-colors"
                         >
                           {sub.name}
                         </Link>
