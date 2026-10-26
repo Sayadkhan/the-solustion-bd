@@ -20,10 +20,13 @@ import {
   Building,
   AlertCircle,
   Loader2,
+  Check,
+  ExternalLink,
 } from "lucide-react";
 import { useCartStore } from "@/stores/cart-store";
 import { formatBdt, calculateAdvanceDepositRequirement, isValidBdPhone } from "@solusation/shared-types";
 import { storefrontApi } from "@/lib/api";
+import { BkashModal } from "@/components/bkash-modal";
 
 const BD_DISTRICTS = [
   "Dhaka",
@@ -104,6 +107,11 @@ export default function CartPage() {
   const [notes, setNotes] = useState("");
   const [deliveryZone, setDeliveryZone] = useState<"INSIDE_DHAKA" | "OUTSIDE_DHAKA">("INSIDE_DHAKA");
 
+  // Payment method state
+  const [paymentMethod, setPaymentMethod] = useState<"COD" | "BKASH">("COD");
+  const [bkashTrxId, setBkashTrxId] = useState<string | null>(null);
+  const [isBkashModalOpen, setIsBkashModalOpen] = useState(false);
+
   // Order submission state
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -137,18 +145,14 @@ export default function CartPage() {
   const depositCheck = calculateAdvanceDepositRequirement({
     district: deliveryZone === "OUTSIDE_DHAKA" ? district : "Dhaka",
     totalBdt: grandTotal,
-    paymentMethod: "COD",
+    paymentMethod: paymentMethod === "BKASH" ? "BKASH" : "COD",
   });
 
-  // Handle Guest Checkout Submission
-  const handlePlaceOrder = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrorMessage(null);
-
-    // 1. Validation
+  // Common customer validation
+  const validateForm = () => {
     if (!customerName.trim() || customerName.trim().length < 2) {
       setErrorMessage("অনুগ্রহ করে আপনার পূর্ণ নাম লিখুন (Please enter your full name).");
-      return;
+      return false;
     }
 
     const cleanPhone = customerPhone.trim().replace(/[\s-]/g, "");
@@ -156,36 +160,54 @@ export default function CartPage() {
       setErrorMessage(
         "অনুগ্রহ করে একটি সঠিক বাংলাদেশী মোবাইল নম্বর লিখুন (e.g. 01712345678)."
       );
-      return;
+      return false;
     }
 
     if (!area.trim() || area.trim().length < 2) {
       setErrorMessage("অনুগ্রহ করে আপনার থানা বা এলাকা লিখুন (Please enter your area/thana).");
-      return;
+      return false;
     }
 
     if (!address.trim() || address.trim().length < 5) {
       setErrorMessage(
         "অনুগ্রহ করে পূর্ণ ডেলিভারি ঠিকানা লিখুন যেমন বাসা/রোড নম্বর (Please enter detailed delivery address)."
       );
-      return;
+      return false;
     }
 
     if (items.length === 0) {
       setErrorMessage("আপনার কার্টে কোনো প্রোডাক্ট নেই (Your cart is empty).");
-      return;
+      return false;
     }
 
+    return true;
+  };
+
+  // Callback when bKash payment succeeds inside the modal
+  const handleBkashPaymentSuccess = async (trxId: string, paymentDetails: any) => {
+    setBkashTrxId(trxId);
+    setIsBkashModalOpen(false);
+
+    // Place the order immediately with bKash TrxID
+    await executeOrderPlacement(trxId);
+  };
+
+  // Execute Order Placement to backend API
+  const executeOrderPlacement = async (verifiedTrxId?: string | null) => {
     setIsSubmitting(true);
+    setErrorMessage(null);
+
+    const cleanPhone = customerPhone.trim().replace(/[\s-]/g, "");
+    const formattedPhone = cleanPhone.startsWith("+88")
+      ? cleanPhone
+      : cleanPhone.startsWith("88")
+      ? `+${cleanPhone}`
+      : `+88${cleanPhone}`;
+
+    const activeTrxId = verifiedTrxId || bkashTrxId;
+    const isPayingWithBkash = paymentMethod === "BKASH";
 
     try {
-      // 2. Prepare payload for API
-      const formattedPhone = cleanPhone.startsWith("+88")
-        ? cleanPhone
-        : cleanPhone.startsWith("88")
-        ? `+${cleanPhone}`
-        : `+88${cleanPhone}`;
-
       const payload = {
         customerName: customerName.trim(),
         customerPhone: formattedPhone,
@@ -193,9 +215,13 @@ export default function CartPage() {
         district: district.trim(),
         area: area.trim(),
         address: `${address.trim()}${notes.trim() ? ` (Note: ${notes.trim()})` : ""}`,
-        paymentMethod: "COD",
+        paymentMethod: isPayingWithBkash ? "BKASH" : "COD",
         pricingTierUsed: "CASH",
         totalPayableBdt: grandTotal,
+        paidAmountBdt: isPayingWithBkash ? grandTotal : 0,
+        dueAmountBdt: isPayingWithBkash ? 0 : grandTotal,
+        trxId: isPayingWithBkash ? activeTrxId : null,
+        orderStatus: isPayingWithBkash && activeTrxId ? "CONFIRMED" : "PENDING",
         items: items.map((i) => ({
           productId: i.productId,
           productName: i.name,
@@ -212,6 +238,8 @@ export default function CartPage() {
           itemsSummary: items,
           deliveryFee,
           deliveryZone,
+          paymentMethodUsed: isPayingWithBkash ? "BKASH" : "COD",
+          trxId: activeTrxId || res.data.trxId,
         });
         clearCart();
         window.scrollTo({ top: 0, behavior: "smooth" });
@@ -225,8 +253,26 @@ export default function CartPage() {
     }
   };
 
+  // Form submit handler
+  const handlePlaceOrder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMessage(null);
+
+    if (!validateForm()) return;
+
+    // If bKash is selected but TrxID is not yet verified, open the bKash Gateway Modal
+    if (paymentMethod === "BKASH" && !bkashTrxId) {
+      setIsBkashModalOpen(true);
+      return;
+    }
+
+    await executeOrderPlacement();
+  };
+
   // SUCCESS SCREEN: When order is placed successfully
   if (placedOrder) {
+    const isOrderBkash = placedOrder.paymentMethodUsed === "BKASH";
+
     return (
       <div className="container mx-auto px-4 py-12 max-w-3xl space-y-8">
         <div className="bg-card rounded-2xl border-2 border-emerald-500/30 p-6 sm:p-8 text-center space-y-6 shadow-xl relative overflow-hidden">
@@ -242,7 +288,9 @@ export default function CartPage() {
               আপনার অর্ডারটি সফলভাবে গ্রহণ করা হয়েছে!
             </h1>
             <p className="text-sm text-muted-foreground max-w-lg mx-auto">
-              ধন্যবাদ! আমাদের কাস্টমার সাপোর্ট টিম শীঘ্রই আপনার মোবাইল নম্বরে ফোন করে অর্ডারটি কনফার্ম করবেন।
+              {isOrderBkash
+                ? "বিকাশ পেমেন্ট সফলভাবে ভেরিফাই হয়েছে। আপনার অর্ডার কনফার্ম করে দ্রুত প্যাকেজিং শুরু করা হয়েছে।"
+                : "ধন্যবাদ! আমাদের কাস্টমার সাপোর্ট টিম শীঘ্রই আপনার মোবাইল নম্বরে ফোন করে অর্ডারটি কনফার্ম করবেন।"}
             </p>
           </div>
 
@@ -254,20 +302,55 @@ export default function CartPage() {
                 #{placedOrder.invoiceNo}
               </div>
             </div>
+
             <div>
               <div className="text-xs text-muted-foreground">পেমেন্ট মেথড:</div>
-              <div className="text-sm font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
-                <Banknote className="w-4 h-4" />
-                <span>ক্যাশ অন ডেলিভারি (COD)</span>
-              </div>
+              {isOrderBkash ? (
+                <div className="text-sm font-bold text-[#E2136E] flex items-center gap-1.5">
+                  <div className="w-4 h-4 bg-[#E2136E] text-white rounded-full flex items-center justify-center text-[10px] font-black">
+                    ৳
+                  </div>
+                  <span>বিকাশ পেমেন্ট (PAID)</span>
+                </div>
+              ) : (
+                <div className="text-sm font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                  <Banknote className="w-4 h-4" />
+                  <span>ক্যাশ অন ডেলিভারি (COD)</span>
+                </div>
+              )}
             </div>
+
             <div>
               <div className="text-xs text-muted-foreground">অর্ডার স্ট্যাটাস:</div>
-              <span className="text-xs font-bold px-2 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
-                {placedOrder.orderStatus || "PENDING"}
+              <span
+                className={`text-xs font-bold px-2 py-0.5 rounded border ${
+                  isOrderBkash
+                    ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                    : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
+                }`}
+              >
+                {isOrderBkash ? "CONFIRMED" : placedOrder.orderStatus || "PENDING"}
               </span>
             </div>
           </div>
+
+          {/* If bKash, display verified TrxID banner */}
+          {isOrderBkash && placedOrder.trxId && (
+            <div className="p-3 bg-pink-50 dark:bg-pink-950/30 border border-pink-200 dark:border-pink-800/50 rounded-xl flex items-center justify-between text-xs text-left">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-[#E2136E]" />
+                <span className="text-slate-700 dark:text-slate-300">
+                  বিকাশ ট্রানজেকশন আইডি (TrxID):
+                </span>
+                <span className="font-black text-[#E2136E] tracking-wider text-sm">
+                  {placedOrder.trxId}
+                </span>
+              </div>
+              <span className="px-2 py-0.5 rounded bg-[#E2136E] text-white font-bold text-[10px]">
+                VERIFIED
+              </span>
+            </div>
+          )}
 
           {/* Customer & Delivery Information */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left text-xs bg-card p-4 rounded-xl border border-border">
@@ -327,11 +410,19 @@ export default function CartPage() {
               <span className="font-semibold text-foreground">৳{placedOrder.deliveryFee || 70}</span>
             </div>
             <div className="pt-2 border-t border-primary/20 flex justify-between items-baseline">
-              <span className="font-black text-sm text-foreground">পণ্য হাতে পেয়ে সর্বমোট প্রদেয়:</span>
+              <span className="font-black text-sm text-foreground">
+                {isOrderBkash ? "পরিশোধিত সর্বমোট (বিকাশ):" : "পণ্য হাতে পেয়ে সর্বমোট প্রদেয়:"}
+              </span>
               <span className="text-xl font-black text-primary">
                 {formatBdt((placedOrder.totalPayableBdt || 0) + (placedOrder.deliveryFee || 70))}
               </span>
             </div>
+            {isOrderBkash && (
+              <div className="flex justify-between items-center text-emerald-600 font-bold pt-1">
+                <span>বকেয়া মূল্য:</span>
+                <span>৳০ (সম্পূর্ণ পরিশোধিত)</span>
+              </div>
+            )}
           </div>
 
           {/* Action buttons */}
@@ -393,10 +484,10 @@ export default function CartPage() {
         <div>
           <h1 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight flex items-center gap-2">
             <ShoppingCart className="w-7 h-7 text-primary" />
-            <span>শপিং কার্ট ও ক্যাশ অন ডেলিভারি চেকআউট</span>
+            <span>শপিং কার্ট ও চেকআউট</span>
           </h1>
           <p className="text-xs text-muted-foreground mt-1">
-            লগইন ছাড়াই সহজে অর্ডার করুন। পণ্য হাতে পেয়ে দেখে টাকা পরিশোধ করুন।
+            লগইন ছাড়াই সহজে বিকাশ বা ক্যাশ অন ডেলিভারিতে অর্ডার করুন।
           </p>
         </div>
         <button
@@ -649,33 +740,120 @@ export default function CartPage() {
             </div>
           </div>
 
-          {/* Payment Method: Cash on Delivery */}
+          {/* Payment Method Selection: COD vs bKash Payment Gateway */}
           <div className="bg-card rounded-2xl border border-border p-5 space-y-4 text-left shadow-sm">
             <h3 className="font-bold text-base text-foreground flex items-center gap-2 pb-3 border-b border-border">
-              <Banknote className="w-5 h-5 text-emerald-500" />
-              <span>পেমেন্ট মেথড (Payment Method)</span>
+              <Banknote className="w-5 h-5 text-primary" />
+              <span>পেমেন্ট পদ্ধতি নির্বাচন করুন (Payment Method)</span>
             </h3>
 
-            {/* Cash on Delivery Selection (Default & Pre-selected) */}
-            <div className="p-4 rounded-xl border-2 border-emerald-500 bg-emerald-500/5 relative space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-4 h-4 rounded-full border-4 border-emerald-500 bg-white" />
-                  <span className="font-bold text-sm text-foreground">
-                    ক্যাশ অন ডেলিভারি (Cash on Delivery)
-                  </span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Option 1: Cash on Delivery */}
+              <div
+                onClick={() => {
+                  setPaymentMethod("COD");
+                  setBkashTrxId(null);
+                }}
+                className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                  paymentMethod === "COD"
+                    ? "border-emerald-500 bg-emerald-500/5 shadow-sm"
+                    : "border-border hover:bg-muted/30"
+                }`}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2.5">
+                    <div
+                      className={`w-4 h-4 rounded-full border-4 flex items-center justify-center ${
+                        paymentMethod === "COD"
+                          ? "border-emerald-500 bg-white"
+                          : "border-slate-300 dark:border-slate-600"
+                      }`}
+                    />
+                    <span className="font-bold text-sm text-foreground">
+                      ক্যাশ অন ডেলিভারি (COD)
+                    </span>
+                  </div>
                 </div>
-                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500 text-white">
-                  ডিফল্ট মেথড
-                </span>
+                <p className="text-xs text-muted-foreground pl-6 leading-relaxed">
+                  পণ্য হাতে পেয়ে দেখে ডেলিভারি ম্যানের কাছে মূল্য পরিশোধ করুন।
+                </p>
               </div>
-              <p className="text-xs text-muted-foreground pl-6">
-                পণ্য হাতে পেয়ে পুরোপুরি দেখে ডেলিভারি ম্যানের কাছে মূল্য পরিশোধ করুন। কোনো অগ্রিম চার্জ নেই।
-              </p>
+
+              {/* Option 2: bKash Payment Gateway */}
+              <div
+                onClick={() => setPaymentMethod("BKASH")}
+                className={`p-4 rounded-xl border-2 cursor-pointer transition-all relative overflow-hidden ${
+                  paymentMethod === "BKASH"
+                    ? "border-[#E2136E] bg-pink-500/5 shadow-md shadow-pink-500/10"
+                    : "border-border hover:bg-muted/30"
+                }`}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2.5">
+                    <div
+                      className={`w-4 h-4 rounded-full border-4 flex items-center justify-center ${
+                        paymentMethod === "BKASH"
+                          ? "border-[#E2136E] bg-white"
+                          : "border-slate-300 dark:border-slate-600"
+                      }`}
+                    />
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-black text-sm text-foreground">বিকাশ পেমেন্ট</span>
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-black bg-[#E2136E] text-white tracking-wide">
+                        bKash
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground pl-6 leading-relaxed">
+                  বিকাশ অনলাইন গেটওয়ে অথবা মার্চেন্ট পে দিয়ে ইনস্ট্যান্ট ক্যাশলেস পেমেন্ট।
+                </p>
+              </div>
             </div>
 
-            {/* Rule 4.5 Alert if Outside Dhaka & High Value */}
-            {depositCheck.requiresDeposit && (
+            {/* bKash Details & Gateway Trigger Card */}
+            {paymentMethod === "BKASH" && (
+              <div className="p-4 bg-pink-50 dark:bg-pink-950/20 border border-pink-200 dark:border-pink-800/40 rounded-xl space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <h4 className="font-bold text-sm text-[#E2136E] flex items-center gap-1.5">
+                      <ShieldCheck className="w-4 h-4" />
+                      <span>bKash Official Merchant Payment</span>
+                    </h4>
+                    <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+                      অফিসিয়াল গেটওয়ের মাধ্যমে আপনার বিকাশ অ্যাকাউন্ট থেকে সরাসরি পেমেন্ট করুন।
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!validateForm()) return;
+                      setIsBkashModalOpen(true);
+                    }}
+                    className="bg-[#E2136E] hover:bg-[#c20f5d] text-white font-extrabold px-4 py-2.5 rounded-xl text-xs flex items-center justify-center gap-2 shadow-md shadow-pink-500/25 transition-all whitespace-nowrap"
+                  >
+                    <span>{bkashTrxId ? "পেমেন্ট পরিবর্তন করুন" : "বিকাশ দিয়ে পে করুন"}</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                {/* If already verified TrxID */}
+                {bkashTrxId ? (
+                  <div className="p-2.5 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-lg flex items-center gap-2 text-xs text-emerald-700 dark:text-emerald-400 font-bold">
+                    <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+                    <span>বিকাশ পেমেন্ট কনফার্ম হয়েছে! TrxID: {bkashTrxId}</span>
+                  </div>
+                ) : (
+                  <div className="text-[11px] text-slate-500 dark:text-slate-400 bg-white/60 dark:bg-slate-900/40 p-2.5 rounded-lg border border-pink-100 dark:border-pink-900/50">
+                    💡 আপনি &quot;অর্ডার নিশ্চিত করুন&quot; বাটনে ক্লিক করলেও সরাসরি বিকাশ পেমেন্ট পপ-আপ ওপেন হবে।
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Rule 4.5 Alert if Outside Dhaka & High Value for COD */}
+            {paymentMethod === "COD" && depositCheck.requiresDeposit && (
               <div className="p-3.5 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-start gap-3 text-xs text-amber-600 dark:text-amber-400">
                 <ShieldAlert className="w-5 h-5 shrink-0 mt-0.5" />
                 <div>
@@ -707,7 +885,14 @@ export default function CartPage() {
               <span className="font-bold text-foreground">৳{deliveryFee}</span>
             </div>
 
-            {depositCheck.requiresDeposit && (
+            <div className="flex justify-between text-muted-foreground">
+              <span>নির্বাচিত পেমেন্ট মেথড:</span>
+              <span className="font-bold text-foreground">
+                {paymentMethod === "BKASH" ? "বিকাশ পেমেন্ট (bKash)" : "ক্যাশ অন ডেলিভারি (COD)"}
+              </span>
+            </div>
+
+            {paymentMethod === "COD" && depositCheck.requiresDeposit && (
               <div className="flex justify-between text-amber-500 font-semibold bg-amber-500/10 p-2.5 rounded-lg border border-amber-500/20">
                 <span>অগ্রিম বুকিং ডিপোজিট</span>
                 <span>৳{depositCheck.depositAmountBdt}</span>
@@ -719,7 +904,9 @@ export default function CartPage() {
                 <span className="font-extrabold text-sm text-foreground block">
                   সর্বমোট প্রদেয় টাকা
                 </span>
-                <span className="text-[10px] text-muted-foreground">ক্যাশ অন ডেলিভারি</span>
+                <span className="text-[10px] text-muted-foreground">
+                  {paymentMethod === "BKASH" ? "বিকাশ ইনস্ট্যান্ট পেমেন্ট" : "ক্যাশ অন ডেলিভারি"}
+                </span>
               </div>
               <span className="text-2xl font-black text-primary">{formatBdt(grandTotal)}</span>
             </div>
@@ -729,12 +916,21 @@ export default function CartPage() {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full bg-[#1340b8] hover:bg-blue-800 disabled:opacity-60 text-white font-black py-3.5 px-4 rounded-xl text-sm flex items-center justify-center gap-2 shadow-xl shadow-blue-600/20 transition-all hover:scale-[1.01] active:scale-95"
+            className={`w-full text-white font-black py-3.5 px-4 rounded-xl text-sm flex items-center justify-center gap-2 shadow-xl transition-all hover:scale-[1.01] active:scale-95 disabled:opacity-60 ${
+              paymentMethod === "BKASH"
+                ? "bg-[#E2136E] hover:bg-[#c20f5d] shadow-pink-600/25"
+                : "bg-[#1340b8] hover:bg-blue-800 shadow-blue-600/20"
+            }`}
           >
             {isSubmitting ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
                 <span>অর্ডার প্রসেস হচ্ছে...</span>
+              </>
+            ) : paymentMethod === "BKASH" && !bkashTrxId ? (
+              <>
+                <span>বিকাশ দিয়ে পে করুন ({formatBdt(grandTotal)})</span>
+                <ArrowRight className="w-4 h-4" />
               </>
             ) : (
               <>
@@ -756,11 +952,21 @@ export default function CartPage() {
             </div>
             <div className="flex items-center gap-2">
               <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />
-              <span>পণ্য হাতে পেয়ে মূল্য পরিশোধ (ক্যাশ অন ডেলিভারি)</span>
+              <span>নিরাপদ বিকাশ পেমেন্ট ও ক্যাশ অন ডেলিভারি</span>
             </div>
           </div>
         </div>
       </form>
+
+      {/* bKash Payment Modal */}
+      <BkashModal
+        isOpen={isBkashModalOpen}
+        onClose={() => setIsBkashModalOpen(false)}
+        amount={grandTotal}
+        invoiceNo={`SOL-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`}
+        customerPhone={customerPhone}
+        onPaymentSuccess={handleBkashPaymentSuccess}
+      />
     </div>
   );
 }

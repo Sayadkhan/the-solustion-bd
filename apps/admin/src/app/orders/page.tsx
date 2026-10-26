@@ -266,10 +266,22 @@ export default function OrdersPage() {
 
                       {/* Payment & Location */}
                       <td className="px-5 py-3.5">
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-mono font-bold text-foreground uppercase">
-                            {ord.paymentMethod || "COD"}
-                          </span>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {ord.paymentMethod === "BKASH" ? (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-black bg-[#E2136E] text-white tracking-wide shadow-sm inline-flex items-center gap-1">
+                              <span>bKash</span>
+                              {ord.trxId && (
+                                <span className="opacity-90 font-mono text-[9px]">
+                                  ({ord.trxId})
+                                </span>
+                              )}
+                            </span>
+                          ) : (
+                            <span className="font-mono font-bold text-foreground uppercase">
+                              {ord.paymentMethod || "COD"}
+                            </span>
+                          )}
+
                           {isOutsideDhaka ? (
                             <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
                               Outside Dhaka

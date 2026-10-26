@@ -166,6 +166,70 @@ export const storefrontApi = {
       return { success: false, message: e.message || "Failed to place order" };
     }
   },
+
+  // bKash Payment Gateway: Fetch merchant config
+  async getBkashConfig(): Promise<{ success: boolean; data?: any }> {
+    try {
+      const res = await fetch(`${API_BASE}/bkash/config`, { cache: "no-store" });
+      const json = await res.json();
+      return json;
+    } catch (e: any) {
+      return { success: false };
+    }
+  },
+
+  // bKash Payment Gateway: Create tokenized payment session
+  async createBkashPayment(payload: {
+    amount: number;
+    invoiceNo?: string;
+    customerPhone?: string;
+    callbackUrl?: string;
+  }): Promise<{ success: boolean; data?: any; message?: string }> {
+    try {
+      const res = await fetch(`${API_BASE}/bkash/create`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const json = await res.json();
+      return json;
+    } catch (e: any) {
+      return { success: false, message: e.message || "Failed to initiate bKash payment" };
+    }
+  },
+
+  // bKash Payment Gateway: Execute payment
+  async executeBkashPayment(payload: {
+    paymentID: string;
+    invoiceNo?: string;
+  }): Promise<{ success: boolean; data?: any; message?: string }> {
+    try {
+      const res = await fetch(`${API_BASE}/bkash/execute`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const json = await res.json();
+      return json;
+    } catch (e: any) {
+      return { success: false, message: e.message || "Failed to execute bKash payment" };
+    }
+  },
+
+  // bKash Payment Gateway: Verify manual TrxID
+  async verifyBkashTrx(trxId: string): Promise<{ success: boolean; data?: any; message?: string }> {
+    try {
+      const res = await fetch(`${API_BASE}/bkash/verify-trx`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ trxId }),
+      });
+      const json = await res.json();
+      return json;
+    } catch (e: any) {
+      return { success: false, message: e.message || "Invalid bKash TrxID" };
+    }
+  },
 };
 
 export interface ApiBanner {

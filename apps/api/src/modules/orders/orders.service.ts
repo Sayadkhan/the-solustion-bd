@@ -35,6 +35,30 @@ export class OrdersService {
     const normalizedPhone = normalizeBdPhone(input.customerPhone) || input.customerPhone;
 
     // 5. Atomic transaction creating order and order items
+    const isBkash = input.paymentMethod === "BKASH";
+    const initialPaidAmount =
+      input.paidAmountBdt && input.paidAmountBdt > 0
+        ? input.paidAmountBdt
+        : isBkash && input.trxId
+        ? totalPayableBdt
+        : depositCheck.requiresDeposit
+        ? depositCheck.depositAmountBdt
+        : 0;
+
+    const initialDueAmount =
+      input.dueAmountBdt !== undefined
+        ? input.dueAmountBdt
+        : Math.max(0, totalPayableBdt - initialPaidAmount);
+
+    const initialStatus =
+      input.orderStatus && input.orderStatus !== "PENDING"
+        ? input.orderStatus
+        : isBkash && input.trxId
+        ? "CONFIRMED"
+        : depositCheck.requiresDeposit
+        ? "PENDING"
+        : "CONFIRMED";
+
     const createdOrder = await db.transaction(async (tx) => {
       const [newOrder] = await tx
         .insert(orders)
@@ -50,19 +74,12 @@ export class OrdersService {
           pricingTierUsed: input.pricingTierUsed || "CASH",
           emiTenureMonths: input.emiTenureMonths || 0,
           totalPayableBdt,
-          paidAmountBdt:
-            input.paidAmountBdt ||
-            (depositCheck.requiresDeposit ? depositCheck.depositAmountBdt : 0),
-          dueAmountBdt:
-            input.dueAmountBdt ??
-            (totalPayableBdt -
-              (input.paidAmountBdt ||
-                (depositCheck.requiresDeposit ? depositCheck.depositAmountBdt : 0))),
+          paidAmountBdt: initialPaidAmount,
+          dueAmountBdt: initialDueAmount,
           trxId: input.trxId,
           courierProvider: input.courierProvider || "STEADFAST",
           consignmentId: input.consignmentId,
-          orderStatus:
-            input.orderStatus || (depositCheck.requiresDeposit ? "PENDING" : "CONFIRMED"),
+          orderStatus: initialStatus,
         })
         .returning();
 
