@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ShoppingCart, GitCompare, ShieldCheck, CheckCircle2 } from "lucide-react";
 import { formatBdt } from "@solusation/shared-types";
 import { useCartStore } from "@/stores/cart-store";
@@ -14,6 +15,7 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product, viewMode = "grid" }: ProductCardProps) {
+  const router = useRouter();
   const addItem = useCartStore((s) => s.addItem);
   const { addComponent, isSelected } = useCompareStore();
   const compared = isSelected(product.id);
@@ -38,6 +40,22 @@ export function ProductCard({ product, viewMode = "grid" }: ProductCardProps) {
       quantity: 1,
       pricingType: "CASH",
     });
+  };
+
+  const handleBuyNow = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    addItem({
+      productId: product.id,
+      name: product.name,
+      sku: product.sku,
+      cashPriceBdt: product.cashPriceBdt,
+      regularPriceBdt: product.regularPriceBdt,
+      thumbnailUrl: product.thumbnailUrl,
+      quantity: 1,
+      pricingType: "CASH",
+    });
+    router.push("/cart");
   };
 
   const handleCompare = (e: React.MouseEvent) => {
@@ -121,7 +139,7 @@ export function ProductCard({ product, viewMode = "grid" }: ProductCardProps) {
 
           <div className="flex items-center gap-2 mt-4">
             <button
-              onClick={handleAddToCart}
+              onClick={handleBuyNow}
               className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded text-xs flex items-center justify-center gap-1.5 shadow transition-all"
             >
               <ShoppingCart className="w-3.5 h-3.5" />
@@ -224,7 +242,7 @@ export function ProductCard({ product, viewMode = "grid" }: ProductCardProps) {
 
         {/* Action button (Star Tech Style Buy Now) */}
         <button
-          onClick={handleAddToCart}
+          onClick={handleBuyNow}
           className="w-full bg-[#1340b8] hover:bg-blue-800 text-white font-bold py-2.5 px-3 rounded text-sm flex items-center justify-center gap-1.5 shadow transition-all active:scale-95"
         >
           <ShoppingCart className="w-4 h-4" />

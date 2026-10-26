@@ -34,19 +34,46 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
   const router = useRouter();
 
   const product = getProductBySlug(slug);
-  if (!product) {
-    notFound();
-  }
 
   const [selectedImage, setSelectedImage] = useState<string>(
-    product.images[0] || product.thumbnailUrl
+    product ? (product.images[0] || product.thumbnailUrl) : ""
   );
   const [quantity, setQuantity] = useState<number>(1);
   const [selectedPricingTier, setSelectedPricingTier] = useState<"CASH" | "REGULAR">("CASH");
   const [activeTab, setActiveTab] = useState<"specs" | "branches" | "warranty">("specs");
+  const [addedToast, setAddedToast] = useState(false);
 
   const addItem = useCartStore((s) => s.addItem);
   const { addComponent, isSelected } = useCompareStore();
+
+  if (!product) {
+    return (
+      <div className="container mx-auto px-4 py-20 text-center space-y-5">
+        <div className="w-16 h-16 bg-muted/60 rounded-full flex items-center justify-center mx-auto text-muted-foreground">
+          <HelpCircle className="w-8 h-8 stroke-1 text-primary" />
+        </div>
+        <h2 className="text-2xl font-black text-foreground">পণ্যটি খুঁজে পাওয়া যায়নি (Product Not Found)</h2>
+        <p className="text-sm text-muted-foreground max-w-md mx-auto">
+          আপনি যে প্রডাক্টটি খুঁজছেন তা বর্তমানে উপলব্ধ নয় অথবা লিংকটি পরিবর্তিত হয়েছে। আমাদের সম্পূর্ণ প্রোডাক্ট ক্যাটালগ ঘুরে দেখুন।
+        </p>
+        <div className="flex items-center justify-center gap-3 pt-2">
+          <Link
+            href="/products"
+            className="bg-primary hover:bg-primary/90 text-white font-bold px-6 py-2.5 rounded-xl text-xs shadow-md shadow-primary/20"
+          >
+            সকল প্রোডাক্ট দেখুন (Browse Products)
+          </Link>
+          <Link
+            href="/"
+            className="bg-muted text-foreground border border-border font-bold px-6 py-2.5 rounded-xl text-xs hover:bg-muted/80"
+          >
+            হোম পেজে ফিরে যান (Home)
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   const compared = isSelected(product.id);
 
   // EMI monthly amounts
@@ -65,6 +92,8 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
       quantity,
       pricingType: selectedPricingTier,
     });
+    setAddedToast(true);
+    setTimeout(() => setAddedToast(false), 2500);
   };
 
   const handleBuyNow = () => {
@@ -314,8 +343,17 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
               onClick={handleAddToCart}
               className="flex-1 w-full sm:w-auto bg-card hover:bg-muted text-foreground border-2 border-border hover:border-primary/50 font-bold py-3 px-6 rounded-xl text-sm flex items-center justify-center gap-2 transition-all"
             >
-              <ShoppingCart className="w-4 h-4 text-primary" />
-              <span>Add to Cart</span>
+              {addedToast ? (
+                <>
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                  <span className="text-emerald-500 font-bold">Added to Cart!</span>
+                </>
+              ) : (
+                <>
+                  <ShoppingCart className="w-4 h-4 text-primary" />
+                  <span>Add to Cart</span>
+                </>
+              )}
             </button>
 
             <button

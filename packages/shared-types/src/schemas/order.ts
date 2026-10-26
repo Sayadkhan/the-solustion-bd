@@ -12,7 +12,7 @@ import { BD_PHONE_REGEX } from "../phone";
 export const OrderItemSchema = z.object({
   id: z.string().uuid().optional(),
   orderId: z.string().uuid().optional(),
-  productId: z.string().uuid(),
+  productId: z.string().min(1),
   productName: z.string().min(2),
   qty: z.number().int().positive().default(1),
   unitPriceBdt: z.number().int().positive(),

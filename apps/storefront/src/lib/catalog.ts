@@ -587,7 +587,21 @@ export const CATEGORIES = [
 ];
 
 export function getProductBySlug(slug: string): Product | undefined {
-  return CATALOG_PRODUCTS.find((p) => p.slug === slug);
+  if (!slug) return undefined;
+  const decoded = decodeURIComponent(slug).toLowerCase().trim();
+  const exact = CATALOG_PRODUCTS.find((p) => p.slug.toLowerCase() === decoded);
+  if (exact) return exact;
+
+  // Match by cleaning common keywords
+  const clean = decoded.replace(/-processor|-am5|-gaming|-intel|-amd/g, "");
+  return CATALOG_PRODUCTS.find((p) => {
+    const pClean = p.slug.toLowerCase().replace(/-processor|-am5|-gaming|-intel|-amd/g, "");
+    return (
+      p.slug.toLowerCase().includes(clean) ||
+      clean.includes(pClean) ||
+      p.name.toLowerCase().includes(clean.replace(/-/g, " "))
+    );
+  });
 }
 
 export function getProductsByCategory(categorySlug: string): Product[] {

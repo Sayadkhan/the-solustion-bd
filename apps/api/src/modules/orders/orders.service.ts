@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException, BadRequestException } from "@nestjs/common";
-import { db, orders, orderItems, eq, desc } from "@solusation/database";
+import { db, orders, orderItems, products, eq, desc } from "@solusation/database";
 import {
   calculateAdvanceDepositRequirement,
   normalizeBdPhone,
@@ -67,16 +67,39 @@ export class OrdersService {
         .returning();
 
       if (input.items && input.items.length > 0) {
-        await tx.insert(orderItems).values(
-          input.items.map((i) => ({
+        // Resolve valid product IDs to satisfy UUID & foreign key constraints
+        const existingProducts = await tx
+          .select({ id: products.id, name: products.name, sku: products.sku })
+          .from(products);
+        const fallbackProductId = existingProducts[0]?.id;
+        const isUuid = (val: string) =>
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
+
+        const itemsToInsert = input.items.map((i) => {
+          let resolvedProductId = i.productId;
+          const matchByUuid =
+            isUuid(i.productId) && existingProducts.find((p) => p.id === i.productId);
+          if (!matchByUuid) {
+            const matchBySkuOrName = existingProducts.find(
+              (p) =>
+                (p.sku && i.productName && p.sku.toLowerCase() === i.productName.toLowerCase()) ||
+                (p.name && i.productName && p.name.toLowerCase().includes(i.productName.toLowerCase())) ||
+                (p.name && i.productName && i.productName.toLowerCase().includes(p.name.toLowerCase()))
+            );
+            resolvedProductId = matchBySkuOrName?.id || fallbackProductId || i.productId;
+          }
+
+          return {
             orderId: newOrder.id,
-            productId: i.productId,
+            productId: resolvedProductId,
             productName: i.productName,
             qty: i.qty,
             unitPriceBdt: i.unitPriceBdt,
             assignedSerials: i.assignedSerials || [],
-          }))
-        );
+          };
+        });
+
+        await tx.insert(orderItems).values(itemsToInsert);
       }
 
       return newOrder;

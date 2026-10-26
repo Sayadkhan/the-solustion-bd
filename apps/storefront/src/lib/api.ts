@@ -139,6 +139,33 @@ export const storefrontApi = {
       return [];
     }
   },
+
+  // Fetch product by slug from backend
+  async getProductBySlug(slug: string): Promise<any | null> {
+    try {
+      const res = await fetch(`${API_BASE}/products/${encodeURIComponent(slug)}`, { cache: "no-store" });
+      if (!res.ok) throw new Error("Product not found");
+      const json = await res.json();
+      return json?.data || null;
+    } catch (e) {
+      return null;
+    }
+  },
+
+  // Place customer order (supports guest checkout without login)
+  async createOrder(payload: any): Promise<{ success: boolean; message?: string; data?: any }> {
+    try {
+      const res = await fetch(`${API_BASE}/orders`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const json = await res.json();
+      return json;
+    } catch (e: any) {
+      return { success: false, message: e.message || "Failed to place order" };
+    }
+  },
 };
 
 export interface ApiBanner {
