@@ -19,6 +19,7 @@ export function ProductCard({ product, viewMode = "grid" }: ProductCardProps) {
   const addItem = useCartStore((s) => s.addItem);
   const { addComponent, isSelected } = useCompareStore();
   const compared = isSelected(product.id);
+  const [imageLoaded, setImageLoaded] = React.useState(false);
 
   // Calculate discount amount and percentage
   const discountAmount = Math.max(0, product.regularPriceBdt - product.cashPriceBdt);
@@ -83,13 +84,22 @@ export function ProductCard({ product, viewMode = "grid" }: ProductCardProps) {
           href={`/products/${product.slug}`}
           className="relative w-full md:w-48 h-40 shrink-0 bg-slate-50 dark:bg-slate-900/50 rounded-lg overflow-hidden flex items-center justify-center p-3"
         >
+          {!imageLoaded && (
+            <div className="absolute inset-0 bg-slate-100 dark:bg-slate-800/60 animate-pulse flex items-center justify-center">
+              <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700/50" />
+            </div>
+          )}
           <img
             src={product.thumbnailUrl}
             alt={product.name}
-            className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
+            loading="lazy"
+            onLoad={() => setImageLoaded(true)}
+            className={`w-full h-full object-contain group-hover:scale-105 transition-all duration-300 ${
+              imageLoaded ? "opacity-100" : "opacity-0"
+            }`}
           />
           {discountAmount > 0 && (
-            <span className="absolute top-2 left-2 px-2 py-0.5 rounded text-[10px] font-bold bg-[#673ab7] text-white">
+            <span className="absolute top-2 left-2 px-2 py-0.5 rounded text-[10px] font-bold bg-[#673ab7] text-white z-10">
               Save: {formatBdt(discountAmount)} (-{discountPercent}%)
             </span>
           )}
@@ -195,14 +205,23 @@ export function ProductCard({ product, viewMode = "grid" }: ProductCardProps) {
         href={`/products/${product.slug}`}
         className="relative w-full h-44 bg-slate-50 dark:bg-slate-900/40 rounded-lg overflow-hidden flex items-center justify-center p-3 my-2"
       >
+        {!imageLoaded && (
+          <div className="absolute inset-0 bg-slate-100 dark:bg-slate-800/60 animate-pulse flex items-center justify-center">
+            <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700/50" />
+          </div>
+        )}
         <img
           src={product.thumbnailUrl}
           alt={product.name}
-          className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
+          loading="lazy"
+          onLoad={() => setImageLoaded(true)}
+          className={`w-full h-full object-contain group-hover:scale-105 transition-all duration-300 ${
+            imageLoaded ? "opacity-100" : "opacity-0"
+          }`}
         />
 
         {/* Star Tech Official Warranty Badge */}
-        <div className="absolute bottom-1 right-1 flex items-center gap-1 bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-800 text-[9px] font-bold text-blue-600 dark:text-blue-400 shadow-sm">
+        <div className="absolute bottom-1 right-1 flex items-center gap-1 bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-800 text-[9px] font-bold text-blue-600 dark:text-blue-400 shadow-sm z-10">
           <ShieldCheck className="w-3 h-3 text-blue-600" />
           <span>OFFICIAL</span>
         </div>

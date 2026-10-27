@@ -15,8 +15,39 @@ import {
 } from "lucide-react";
 import { CATALOG_PRODUCTS, CATEGORIES, Product } from "@/lib/catalog";
 import { ProductCard } from "@/components/product-card";
+import { ProductCardSkeleton } from "@/components/product-card-skeleton";
 import { formatBdt } from "@solusation/shared-types";
 import { storefrontApi } from "@/lib/api";
+
+function formatRawProduct(p: any): Product {
+  return {
+    id: p.id,
+    name: p.name,
+    slug: p.slug,
+    sku: p.sku || `SKU-${p.id.slice(0, 6)}`,
+    brand: p.brand?.name || p.brand || "Authentic",
+    categorySlug: p.category?.slug || p.categorySlug || "processor",
+    categoryName: p.category?.name || p.categoryName || "Hardware",
+    cashPriceBdt: Number(p.cashPriceBdt) || 0,
+    regularPriceBdt: Number(p.regularPriceBdt) || Number(p.cashPriceBdt) || 0,
+    costPriceBdt: Number(p.costPriceBdt) || 0,
+    isEmiAvailable: Boolean(p.isEmiAvailable),
+    totalStock: Number(p.totalStock) || 10,
+    stockStatus: p.stockStatus || "IN_STOCK",
+    thumbnailUrl: p.thumbnailUrl || p.images?.[0] || "https://images.unsplash.com/photo-1591799264318-7e6ef8ddb7ea?w=800",
+    images: p.images || [p.thumbnailUrl || ""],
+    keyFeatures: p.keyFeatures || [
+      "Official Distributor Warranty",
+      "Box Serial Number Tracking",
+      "100% Genuine Box Pack",
+    ],
+    warrantyDurationMonths: p.warrantyDurationMonths || 36,
+    warrantyNotice: p.warrantyNotice || "3 Years Official Warranty",
+    branchStocks: p.branchStocks || {},
+    specifications: p.specifications || [],
+    compatibility: p.compatibility || { componentType: "OTHER" },
+  };
+}
 
 function ProductsContent() {
   const searchParams = useSearchParams();
@@ -26,52 +57,68 @@ function ProductsContent() {
   const selectedBrand = searchParams.get("brand") || "all";
   const searchQuery = searchParams.get("q") || "";
 
-  // Local products state
-  const [productsList, setProductsList] = useState<Product[]>(CATALOG_PRODUCTS);
+  // Progressive products state: fast initial batch + background hydration
+  const [productsList, setProductsList] = useState<Product[]>([]);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [isStreamingMore, setIsStreamingMore] = useState(false);
 
-  // Fetch live products from backend
+  // Progressive live products fetch
   useEffect(() => {
-    async function fetchLiveProducts() {
-      try {
-        const live = await storefrontApi.getProducts({ limit: 100 });
-        if (live && live.length > 0) {
-          const formatted: Product[] = live.map((p: any) => ({
-            id: p.id,
-            name: p.name,
-            slug: p.slug,
-            sku: p.sku || `SKU-${p.id.slice(0, 6)}`,
-            brand: p.brand?.name || p.brand || "Authentic",
-            categorySlug: p.category?.slug || p.categorySlug || "processor",
-            categoryName: p.category?.name || p.categoryName || "Hardware",
-            cashPriceBdt: Number(p.cashPriceBdt) || 0,
-            regularPriceBdt: Number(p.regularPriceBdt) || Number(p.cashPriceBdt) || 0,
-            costPriceBdt: Number(p.costPriceBdt) || 0,
-            isEmiAvailable: Boolean(p.isEmiAvailable),
-            totalStock: Number(p.totalStock) || 10,
-            stockStatus: p.stockStatus || "IN_STOCK",
-            thumbnailUrl: p.thumbnailUrl || p.images?.[0] || "https://images.unsplash.com/photo-1591799264318-7e6ef8ddb7ea?w=800",
-            images: p.images || [p.thumbnailUrl || ""],
-            keyFeatures: p.keyFeatures || [
-              "Official Distributor Warranty",
-              "Box Serial Number Tracking",
-              "100% Genuine Box Pack",
-            ],
-            warrantyDurationMonths: p.warrantyDurationMonths || 36,
-            warrantyNotice: p.warrantyNotice || "3 Years Official Warranty",
-            branchStocks: p.branchStocks || {},
-            specifications: p.specifications || [],
-            compatibility: p.compatibility || { componentType: "OTHER" },
-          }));
+    let isCancelled = false;
 
-          setProductsList(formatted);
+    async function loadProgressiveProducts() {
+      setIsInitialLoading(true);
+      try {
+        // Step 1: Instant Fast Batch (First 12 products for instant 0-wait screen render)
+        const initialBatch = await storefrontApi.getProducts({
+          category: selectedCategory !== "all" ? selectedCategory : undefined,
+          search: searchQuery || undefined,
+          limit: 12,
+          page: 1,
+        });
+
+        if (isCancelled) return;
+
+        if (initialBatch && initialBatch.length > 0) {
+          setProductsList(initialBatch.map(formatRawProduct));
+          setIsInitialLoading(false);
+          setIsStreamingMore(true);
+        }
+
+        // Step 2: Background Full Batch (Stream up to 100 products to smoothly replace skeletons)
+        const fullBatch = await storefrontApi.getProducts({
+          category: selectedCategory !== "all" ? selectedCategory : undefined,
+          search: searchQuery || undefined,
+          limit: 100,
+          page: 1,
+        });
+
+        if (isCancelled) return;
+
+        if (fullBatch && fullBatch.length > 0) {
+          setProductsList(fullBatch.map(formatRawProduct));
+        } else if (!initialBatch || initialBatch.length === 0) {
+          setProductsList(CATALOG_PRODUCTS);
         }
       } catch (err) {
-        console.warn("Failed to fetch live products in products catalog:", err);
+        console.warn("Progressive products catalog fetch fallback:", err);
+        if (!isCancelled && productsList.length === 0) {
+          setProductsList(CATALOG_PRODUCTS);
+        }
+      } finally {
+        if (!isCancelled) {
+          setIsInitialLoading(false);
+          setIsStreamingMore(false);
+        }
       }
     }
 
-    fetchLiveProducts();
-  }, []);
+    loadProgressiveProducts();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [selectedCategory, searchQuery]);
 
   // Local filter states
   const [minPrice, setMinPrice] = useState<number>(0);
@@ -398,8 +445,20 @@ function ProductsContent() {
             </div>
           </div>
 
-          {/* Products Render */}
-          {filteredProducts.length === 0 ? (
+          {/* Products Render: Progressive Streaming & Skeletons */}
+          {isInitialLoading ? (
+            <div
+              className={
+                viewMode === "grid"
+                  ? "grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5"
+                  : "space-y-4"
+              }
+            >
+              {Array.from({ length: 12 }).map((_, i) => (
+                <ProductCardSkeleton key={`init-skel-${i}`} viewMode={viewMode} />
+              ))}
+            </div>
+          ) : filteredProducts.length === 0 ? (
             <div className="p-12 text-center bg-card rounded-xl border border-dashed border-border space-y-3">
               <Search className="w-10 h-10 text-muted-foreground mx-auto stroke-1" />
               <h3 className="text-base font-bold text-foreground">No components found</h3>
@@ -418,12 +477,48 @@ function ProductsContent() {
               {filteredProducts.map((p) => (
                 <ProductCard key={p.id} product={p} viewMode="grid" />
               ))}
+
+              {/* Progressive Streaming Skeletons */}
+              {isStreamingMore && (
+                <>
+                  <div className="col-span-full py-2.5 px-4 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-between text-xs text-blue-600 dark:text-blue-400">
+                    <div className="flex items-center gap-2 font-medium">
+                      <span className="w-2 h-2 rounded-full bg-blue-600 animate-ping" />
+                      <span>Loaded first {productsList.length} products. Streaming remaining catalog...</span>
+                    </div>
+                    <span className="text-[10px] uppercase font-mono tracking-wider opacity-75 font-bold">
+                      Progressive Loading
+                    </span>
+                  </div>
+                  {Array.from({ length: 6 }).map((_, idx) => (
+                    <ProductCardSkeleton key={`stream-skel-${idx}`} viewMode="grid" />
+                  ))}
+                </>
+              )}
             </div>
           ) : (
             <div className="space-y-4">
               {filteredProducts.map((p) => (
                 <ProductCard key={p.id} product={p} viewMode="list" />
               ))}
+
+              {/* Progressive Streaming Skeletons in List View */}
+              {isStreamingMore && (
+                <>
+                  <div className="py-2.5 px-4 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-between text-xs text-blue-600 dark:text-blue-400">
+                    <div className="flex items-center gap-2 font-medium">
+                      <span className="w-2 h-2 rounded-full bg-blue-600 animate-ping" />
+                      <span>Loaded first {productsList.length} products. Streaming remaining catalog...</span>
+                    </div>
+                    <span className="text-[10px] uppercase font-mono tracking-wider opacity-75 font-bold">
+                      Progressive Loading
+                    </span>
+                  </div>
+                  {Array.from({ length: 4 }).map((_, idx) => (
+                    <ProductCardSkeleton key={`stream-skel-list-${idx}`} viewMode="list" />
+                  ))}
+                </>
+              )}
             </div>
           )}
         </main>

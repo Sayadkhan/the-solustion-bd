@@ -7,6 +7,7 @@ import { adminApi } from "@/lib/api-client";
 import { formatBdt } from "@solusation/shared-types";
 import { AddProductModal } from "@/components/add-product-modal";
 import { ConfirmDeleteModal } from "@/components/confirm-delete-modal";
+import { AdminTableRowSkeleton } from "@/components/table-row-skeleton";
 import {
   Package,
   Search,
@@ -26,6 +27,7 @@ export default function ProductsPage() {
   const [categories, setCategories] = useState<any[]>([]);
   const [brands, setBrands] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isStreamingMore, setIsStreamingMore] = useState(false);
 
   // Filters
   const [searchTerm, setSearchTerm] = useState("");
@@ -51,14 +53,17 @@ export default function ProductsPage() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [prodRes, catRes, brandRes] = await Promise.all([
-        adminApi.getProducts({ limit: 200 }),
+      // Step 1: Fast initial batch (First 15 products + categories + brands for instant 0-wait table render)
+      const [quickProd, catRes, brandRes] = await Promise.all([
+        adminApi.getProducts({ limit: 15 }),
         adminApi.getCategories(),
         adminApi.getBrands(),
       ]);
 
-      if (prodRes?.data && Array.isArray(prodRes.data)) {
-        setProducts(prodRes.data);
+      if (quickProd?.data && Array.isArray(quickProd.data)) {
+        setProducts(quickProd.data);
+        setLoading(false);
+        setIsStreamingMore(true);
       }
       if (catRes?.data && Array.isArray(catRes.data)) {
         setCategories(catRes.data);
@@ -66,10 +71,17 @@ export default function ProductsPage() {
       if (brandRes?.data && Array.isArray(brandRes.data)) {
         setBrands(brandRes.data);
       }
+
+      // Step 2: Background stream (Fetch full 200 products to complete the table)
+      const fullRes = await adminApi.getProducts({ limit: 200 });
+      if (fullRes?.data && Array.isArray(fullRes.data)) {
+        setProducts(fullRes.data);
+      }
     } catch (err) {
       console.error("Failed to load products data:", err);
     } finally {
       setLoading(false);
+      setIsStreamingMore(false);
     }
   };
 
@@ -212,6 +224,12 @@ export default function ProductsPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {isStreamingMore && (
+            <span className="flex items-center gap-1.5 text-[11px] font-medium text-blue-600 dark:text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2.5 py-1 rounded-full animate-pulse">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-ping" />
+              <span>Hydrating full catalog...</span>
+            </span>
+          )}
           <span className="text-xs font-mono px-2.5 py-1 rounded-full bg-muted text-foreground font-semibold">
             Total Products: {products.length}
           </span>
@@ -335,11 +353,7 @@ export default function ProductsPage() {
             </thead>
             <tbody className="divide-y divide-border/50">
               {loading ? (
-                <tr>
-                  <td colSpan={9} className="text-center py-12 text-muted-foreground">
-                    Loading products...
-                  </td>
-                </tr>
+                <AdminTableRowSkeleton rows={itemsPerPage} type="products" cols={9} />
               ) : paginatedProducts.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="text-center py-12 text-muted-foreground">

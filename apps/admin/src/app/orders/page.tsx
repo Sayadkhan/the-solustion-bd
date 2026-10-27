@@ -6,6 +6,7 @@ import { Pagination } from "@/components/pagination";
 import { adminApi } from "@/lib/api-client";
 import { formatBdt } from "@solusation/shared-types";
 import { InvoiceModal } from "@/components/invoice-modal";
+import { AdminTableRowSkeleton } from "@/components/table-row-skeleton";
 import {
   ShoppingCart,
   Search,
@@ -20,6 +21,7 @@ import {
 export default function OrdersPage() {
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isStreamingMore, setIsStreamingMore] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [currentPage, setCurrentPage] = useState(1);
@@ -37,14 +39,24 @@ export default function OrdersPage() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const res = await adminApi.getOrders({ limit: 100 });
-      if (res?.data && Array.isArray(res.data)) {
-        setOrders(res.data);
+      // Step 1: Fast batch (First 15 orders for instant 0-wait table render)
+      const quickRes = await adminApi.getOrders({ limit: 15 });
+      if (quickRes?.data && Array.isArray(quickRes.data)) {
+        setOrders(quickRes.data);
+        setLoading(false);
+        setIsStreamingMore(true);
+      }
+
+      // Step 2: Background hydration (Fetch full 100 orders to smoothly complete the list)
+      const fullRes = await adminApi.getOrders({ limit: 100 });
+      if (fullRes?.data && Array.isArray(fullRes.data)) {
+        setOrders(fullRes.data);
       }
     } catch (err) {
       console.error("Failed to load orders:", err);
     } finally {
       setLoading(false);
+      setIsStreamingMore(false);
     }
   };
 
@@ -187,6 +199,12 @@ export default function OrdersPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {isStreamingMore && (
+            <span className="flex items-center gap-1.5 text-[11px] font-medium text-blue-600 dark:text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2.5 py-1 rounded-full animate-pulse">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-ping" />
+              <span>Hydrating full list...</span>
+            </span>
+          )}
           <span className="text-xs font-mono px-3 py-1.5 rounded-full bg-primary/10 text-primary border border-primary/20 font-bold">
             Total Orders: {orders.length}
           </span>
@@ -293,11 +311,7 @@ export default function OrdersPage() {
             </thead>
             <tbody className="divide-y divide-border/50">
               {loading ? (
-                <tr>
-                  <td colSpan={7} className="text-center py-12 text-muted-foreground">
-                    Loading orders...
-                  </td>
-                </tr>
+                <AdminTableRowSkeleton rows={itemsPerPage} type="orders" />
               ) : paginatedOrders.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="text-center py-12 text-muted-foreground">
