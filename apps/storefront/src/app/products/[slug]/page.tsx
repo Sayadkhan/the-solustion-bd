@@ -164,11 +164,6 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
 
   const compared = isSelected(product.id);
 
-  // EMI monthly amounts
-  const emi3 = Math.round(product.regularPriceBdt / 3);
-  const emi6 = Math.round(product.regularPriceBdt / 6);
-  const emi12 = Math.round(product.regularPriceBdt / 12);
-
   const handleAddToCart = () => {
     addItem({
       productId: product.id,
@@ -178,7 +173,7 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
       regularPriceBdt: product.regularPriceBdt,
       thumbnailUrl: product.thumbnailUrl,
       quantity,
-      pricingType: selectedPricingTier,
+      pricingType: "CASH",
     });
     setAddedToast(true);
     setTimeout(() => setAddedToast(false), 2500);
@@ -312,76 +307,41 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
             </h1>
           </div>
 
-          {/* Dual Pricing Option Box */}
-          <div className="bg-gradient-to-br from-card to-muted/30 p-5 rounded-2xl border-2 border-primary/20 shadow-lg space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Cash Discount Option */}
-              <div
-                onClick={() => setSelectedPricingTier("CASH")}
-                className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                  selectedPricingTier === "CASH"
-                    ? "border-primary bg-primary/5 shadow-md"
-                    : "border-border hover:border-border/80 bg-background"
-                }`}
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-bold uppercase text-primary tracking-wider">
-                    Special Cash Price
+          {/* Pricing Box (Star Tech Style - Zero EMI) */}
+          <div className="bg-slate-50 dark:bg-[#0d1620] p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-2 pb-3 border-b border-slate-200/80 dark:border-slate-800">
+              <div className="space-y-1">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground block">
+                  Special Cash Price
+                </span>
+                <div className="flex items-baseline gap-3">
+                  <span className="text-3xl font-black text-blue-600 dark:text-blue-400">
+                    {formatBdt(product.cashPriceBdt)}
                   </span>
-                  <span className="text-[10px] bg-primary text-white font-bold px-1.5 py-0.5 rounded">
-                    Save {formatBdt(product.regularPriceBdt - product.cashPriceBdt)}
-                  </span>
-                </div>
-                <div className="text-2xl font-black text-primary">
-                  {formatBdt(product.cashPriceBdt)}
-                </div>
-                <div className="text-[11px] text-muted-foreground mt-1">
-                  Applicable for Cash, bKash, or Bank Transfer
+                  {product.regularPriceBdt > product.cashPriceBdt && (
+                    <span className="text-base text-slate-400 dark:text-slate-500 line-through font-normal">
+                      Regular: {formatBdt(product.regularPriceBdt)}
+                    </span>
+                  )}
                 </div>
               </div>
 
-              {/* Regular / EMI Option */}
-              <div
-                onClick={() => setSelectedPricingTier("REGULAR")}
-                className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                  selectedPricingTier === "REGULAR"
-                    ? "border-amber-500 bg-amber-500/5 shadow-md"
-                    : "border-border hover:border-border/80 bg-background"
-                }`}
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-bold uppercase text-muted-foreground tracking-wider">
-                    Regular / EMI Price
-                  </span>
-                  <span className="text-[10px] bg-amber-500/10 text-amber-500 font-bold px-1.5 py-0.5 rounded border border-amber-500/20">
-                    Up to 12 Mos
-                  </span>
+              {product.regularPriceBdt > product.cashPriceBdt && (
+                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#673ab7]/10 text-[#673ab7] dark:text-purple-400 font-bold text-xs border border-[#673ab7]/20 self-start sm:self-auto">
+                  <span>Save: {formatBdt(product.regularPriceBdt - product.cashPriceBdt)}</span>
+                  <span>({Math.round(((product.regularPriceBdt - product.cashPriceBdt) / product.regularPriceBdt) * 100)}% OFF)</span>
                 </div>
-                <div className="text-2xl font-black text-foreground">
-                  {formatBdt(product.regularPriceBdt)}
-                </div>
-                <div className="text-[11px] text-amber-500 font-semibold mt-1">
-                  Starts at {formatBdt(emi12)}/mo on selected credit cards
-                </div>
-              </div>
+              )}
             </div>
 
-            {/* EMI Breakdown details */}
-            {product.isEmiAvailable && (
-              <div className="flex items-center justify-between text-xs text-muted-foreground bg-muted/40 p-2.5 rounded-lg border border-border/50">
-                <span className="flex items-center gap-1.5">
-                  <CreditCard className="w-4 h-4 text-primary" />
-                  <span>Available EMI Plans:</span>
-                </span>
-                <span className="space-x-2 text-[11px] font-bold text-foreground">
-                  <span>3m: {formatBdt(emi3)}</span>
-                  <span>•</span>
-                  <span>6m: {formatBdt(emi6)}</span>
-                  <span>•</span>
-                  <span>12m: {formatBdt(emi12)}</span>
-                </span>
-              </div>
-            )}
+            <div className="flex items-center gap-4 text-xs text-muted-foreground pt-1 flex-wrap">
+              <span className="flex items-center gap-1.5 font-medium text-emerald-600 dark:text-emerald-400">
+                <CheckCircle2 className="w-4 h-4 shrink-0" />
+                <span>Cash on Delivery & bKash Available</span>
+              </span>
+              <span className="hidden sm:inline">•</span>
+              <span>100% Genuine Box Pack with Warranty</span>
+            </div>
           </div>
 
           {/* Key Features Bullet List */}

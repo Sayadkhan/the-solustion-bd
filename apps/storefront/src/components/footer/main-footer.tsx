@@ -48,8 +48,8 @@ export function MainFooter() {
           <div className="flex items-center space-x-3 p-3 rounded-lg bg-slate-900/60 border border-slate-800">
             <CreditCard className="w-8 h-8 text-amber-400 shrink-0" />
             <div>
-              <h4 className="font-bold text-white text-xs sm:text-sm">Flexible Payment & EMI</h4>
-              <p className="text-slate-400 text-[11px]">Cash discount & 0% EMI facilities</p>
+              <h4 className="font-bold text-white text-xs sm:text-sm">Secure Payment</h4>
+              <p className="text-slate-400 text-[11px]">Cash on delivery & instant bKash</p>
             </div>
           </div>
           <div className="flex items-center space-x-3 p-3 rounded-lg bg-slate-900/60 border border-slate-800">
@@ -144,8 +144,8 @@ export function MainFooter() {
           <h4 className="font-bold text-white uppercase tracking-wider text-xs">CUSTOMER CARE</h4>
           <ul className="space-y-2 text-xs">
             <li>
-              <Link href="/pc-builder" className="hover:text-white transition-colors">
-                0% EMI Terms & Calculator
+              <Link href="/track-order" className="hover:text-white transition-colors">
+                Delivery & Refund Policy
               </Link>
             </li>
             <li>

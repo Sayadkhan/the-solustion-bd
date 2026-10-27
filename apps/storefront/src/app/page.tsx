@@ -340,7 +340,7 @@ export default function StorefrontHomePage() {
                   {promoSideBanners[1]?.title || "Shape Your Dream Battlestation With Us!"}
                 </h3>
                 <p className="text-slate-300 text-xs">
-                  {promoSideBanners[1]?.subtitle || "Official distributor warranty & 0% bank EMI facilities across Bangladesh."}
+                  {promoSideBanners[1]?.subtitle || "Official distributor warranty & nationwide fast delivery across Bangladesh."}
                 </p>
               </div>
               <div className="relative z-10 pt-4">

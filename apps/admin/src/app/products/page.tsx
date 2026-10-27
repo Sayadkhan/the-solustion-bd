@@ -187,7 +187,7 @@ export default function ProductsPage() {
   return (
     <AdminShell
       title="Products Inventory"
-      subtitle="Dual Pricing (Cash Discount vs Regular EMI) & Stock Management"
+      subtitle="Dual Pricing (Cash Discount vs Regular MRP) & Stock Management"
       onRefresh={loadData}
       isRefreshing={loading}
       actions={
@@ -219,7 +219,7 @@ export default function ProductsPage() {
               Bangladesh Tech Catalog & Inventory Management
             </h2>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Cash Discount pricing and Credit Card EMI Regular Pricing calculated dynamically.
+              Cash Discount pricing and Regular MRP pricing calculated dynamically.
             </p>
           </div>
         </div>

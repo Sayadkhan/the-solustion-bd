@@ -114,7 +114,7 @@ export default function ComparePage() {
             {/* Regular Price */}
             <tr>
               <td className="p-4 font-semibold text-muted-foreground bg-muted/20">
-                Regular / EMI Price
+                Regular Price
               </td>
               {items.map((item: CompareProduct) => (
                 <td key={item.id} className="p-4 text-center font-bold text-foreground">

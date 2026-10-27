@@ -48,7 +48,7 @@ export function AddProductModal({
   const [costPrice, setCostPrice] = useState<number>(0);
   const [stock, setStock] = useState<number>(20);
   const [warrantyMonths, setWarrantyMonths] = useState<number>(36);
-  const [isEmiAvailable, setIsEmiAvailable] = useState<boolean>(true);
+  const [isEmiAvailable, setIsEmiAvailable] = useState<boolean>(false);
 
   // Images
   const [imageUrl, setImageUrl] = useState<string>("");
@@ -318,7 +318,7 @@ export function AddProductModal({
                   className="w-full px-3.5 py-2 text-sm font-mono bg-muted/40 border border-border rounded-lg text-foreground focus:ring-1 focus:ring-primary focus:border-primary outline-none"
                 />
                 <span className="text-[11px] text-muted-foreground mt-0.5 block">
-                  Used for credit card / EMI calculations
+                  Used for list / MRP regular price
                 </span>
               </div>
 
@@ -339,7 +339,7 @@ export function AddProductModal({
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
               <div>
                 <label className="block text-xs font-semibold text-foreground mb-1">
                   Initial Central Stock
@@ -362,19 +362,6 @@ export function AddProductModal({
                   onChange={(e) => setWarrantyMonths(Number(e.target.value))}
                   className="w-full px-3.5 py-2 text-sm font-mono bg-muted/40 border border-border rounded-lg text-foreground focus:ring-1 focus:ring-primary focus:border-primary outline-none"
                 />
-              </div>
-
-              <div className="flex items-center gap-2 pt-6">
-                <input
-                  type="checkbox"
-                  id="emi-check"
-                  checked={isEmiAvailable}
-                  onChange={(e) => setIsEmiAvailable(e.target.checked)}
-                  className="rounded border-border text-primary focus:ring-primary"
-                />
-                <label htmlFor="emi-check" className="text-xs font-medium text-foreground cursor-pointer">
-                  Available for 0% Interest EMI
-                </label>
               </div>
             </div>
           </div>

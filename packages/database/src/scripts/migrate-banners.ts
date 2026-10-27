@@ -110,7 +110,7 @@ async function run() {
         'PROMO_SIDE',
         'Custom Rig & B2B Solutions',
         'Shape Your Dream Battlestation With Us!',
-        'Official distributor warranty & 0% bank EMI facilities across Bangladesh.',
+        'Official distributor warranty & nationwide fast delivery across Bangladesh.',
         '',
         'Build Your PC',
         '/pc-builder',
