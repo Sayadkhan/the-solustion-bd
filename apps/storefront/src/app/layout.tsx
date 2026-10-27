@@ -4,10 +4,10 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { MainNavbar } from "@/components/navbar/main-navbar";
 import { MainFooter } from "@/components/footer/main-footer";
 import { FloatingWidgets } from "@/components/floating-widgets";
+import { TopProgressBar } from "@/components/top-progress-bar";
 
 import { Roboto } from "next/font/google";
 import { Suspense } from "react";
-import Loading from "./loading";
 
 const roboto = Roboto({
   weight: ["300", "400", "500", "700", "900"],
@@ -52,11 +52,12 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
+          <Suspense fallback={null}>
+            <TopProgressBar />
+          </Suspense>
           <MainNavbar />
           <main className="flex-1">
-            <Suspense fallback={<Loading />}>
-              {children}
-            </Suspense>
+            {children}
           </main>
           <FloatingWidgets />
           <MainFooter />

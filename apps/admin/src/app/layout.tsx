@@ -3,7 +3,7 @@ import { Roboto } from "next/font/google";
 import { Suspense } from "react";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
-import { PageLoader } from "@/components/page-loader";
+import { TopProgressBar } from "@/components/top-progress-bar";
 
 const roboto = Roboto({
   weight: ["300", "400", "500", "700", "900"],
@@ -40,9 +40,10 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <Suspense fallback={<div className="p-6 w-full"><PageLoader title="Loading page content..." /></div>}>
-            {children}
+          <Suspense fallback={null}>
+            <TopProgressBar />
           </Suspense>
+          {children}
         </ThemeProvider>
       </body>
     </html>
