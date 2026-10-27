@@ -19,6 +19,7 @@ export interface ApiProduct {
   keyFeatures: string[];
   warrantyDurationMonths: number;
   warrantyNotice: string;
+  videoUrl?: string | null;
   specifications: Array<{ group: string; label: string; value: string }>;
   compatibility: any;
 }

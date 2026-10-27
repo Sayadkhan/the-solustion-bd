@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { formatBdt } from "@solusation/shared-types";
 import { adminApi } from "@/lib/api-client";
+import { extractYouTubeId, getYouTubeThumbnailUrl } from "@/lib/youtube";
 import {
   X,
   Upload,
@@ -50,9 +51,10 @@ export function AddProductModal({
   const [warrantyMonths, setWarrantyMonths] = useState<number>(36);
   const [isEmiAvailable, setIsEmiAvailable] = useState<boolean>(false);
 
-  // Images
+  // Images & Video
   const [imageUrl, setImageUrl] = useState<string>("");
   const [images, setImages] = useState<string[]>([]);
+  const [videoUrl, setVideoUrl] = useState<string>("");
 
   // Hardware Specs
   const [componentType, setComponentType] = useState<string>("CPU");
@@ -130,6 +132,7 @@ export function AddProductModal({
         totalStock: Number(stock),
         stockStatus: "IN_STOCK",
         warrantyDurationMonths: Number(warrantyMonths),
+        videoUrl: videoUrl.trim() || null,
         images: images.length > 0 ? images : [imageUrl || "https://images.unsplash.com/photo-1591799264318-7e6ef8ddb7ea?w=800"],
         keyFeatures,
         compatibility: {
@@ -431,11 +434,65 @@ export function AddProductModal({
             </div>
           </div>
 
+          {/* Product Video (YouTube Link) Section */}
+          <div className="space-y-3 pt-2 border-t border-border">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-red-600 inline-block" />
+              4. Product Video Review (YouTube Link)
+            </h3>
+
+            <div>
+              <label className="block text-xs font-semibold text-foreground mb-1">
+                YouTube Video URL
+              </label>
+              <div className="relative">
+                <input
+                  type="url"
+                  placeholder="https://www.youtube.com/watch?v=... or https://youtu.be/..."
+                  value={videoUrl}
+                  onChange={(e) => setVideoUrl(e.target.value)}
+                  className="w-full px-3.5 py-2 pl-9 text-xs bg-muted/40 border border-border rounded-lg text-foreground focus:ring-1 focus:ring-primary focus:border-primary outline-none font-mono"
+                />
+                <svg
+                  className="w-4 h-4 text-red-600 absolute left-3 top-1/2 -translate-y-1/2"
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+                </svg>
+              </div>
+              <span className="text-[11px] text-muted-foreground mt-1 block">
+                Paste any YouTube video or short URL. It will be embedded directly on the product's detail page.
+              </span>
+
+              {/* YouTube Live Validation & Thumbnail Preview */}
+              {extractYouTubeId(videoUrl) && (
+                <div className="mt-2.5 p-3 rounded-xl bg-red-500/5 border border-red-500/20 flex items-center gap-3">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={getYouTubeThumbnailUrl(videoUrl) || ""}
+                    alt="YouTube Video Preview"
+                    className="w-24 h-14 object-cover rounded-lg border border-red-500/30 shrink-0 bg-black"
+                  />
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-red-600 dark:text-red-400">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>Valid YouTube Video Detected</span>
+                    </div>
+                    <div className="text-[11px] text-muted-foreground font-mono">
+                      Video ID: {extractYouTubeId(videoUrl)}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Technical Specs */}
           <div className="space-y-4 pt-2 border-t border-border">
             <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
               <Cpu className="w-4 h-4 text-primary" />
-              4. Hardware Compatibility Specs (Rule 4.3 Engine)
+              5. Hardware Compatibility Specs (Rule 4.3 Engine)
             </h3>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

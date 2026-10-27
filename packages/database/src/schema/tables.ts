@@ -108,6 +108,7 @@ export const products = pgTable(
       benchmarkScore?: number;
     }>(),
 
+    videoUrl: text("video_url"),
     warrantyDurationMonths: integer("warranty_duration_months").notNull().default(12),
     warrantyTerms: text("warranty_terms"),
     createdAt: timestamp("created_at").notNull().defaultNow(),

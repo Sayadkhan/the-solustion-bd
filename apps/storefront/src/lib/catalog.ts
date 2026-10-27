@@ -17,6 +17,7 @@ export interface Product {
   keyFeatures: string[];
   warrantyDurationMonths: number;
   warrantyNotice: string;
+  videoUrl?: string | null;
   branchStocks: Record<string, number>;
   specifications: Array<{ group: string; label: string; value: string }>;
   compatibility: {
@@ -58,6 +59,7 @@ export const CATALOG_PRODUCTS: Product[] = [
     ],
     warrantyDurationMonths: 36,
     warrantyNotice: "3 Years Official Warranty",
+    videoUrl: "https://www.youtube.com/watch?v=7LhWpydI_uM",
     branchStocks: {
       IDB: 10,
       MULTIPLAN: 8,
@@ -108,6 +110,7 @@ export const CATALOG_PRODUCTS: Product[] = [
     ],
     warrantyDurationMonths: 36,
     warrantyNotice: "3 Years Official Warranty",
+    videoUrl: "https://www.youtube.com/watch?v=1b_j-L8u_iA",
     branchStocks: {
       IDB: 15,
       MULTIPLAN: 12,

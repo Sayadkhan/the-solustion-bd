@@ -43,6 +43,7 @@ function formatRawProduct(p: any): Product {
     ],
     warrantyDurationMonths: p.warrantyDurationMonths || 36,
     warrantyNotice: p.warrantyNotice || "3 Years Official Warranty",
+    videoUrl: p.videoUrl || p.video_url || null,
     branchStocks: p.branchStocks || {},
     specifications: p.specifications || [],
     compatibility: p.compatibility || { componentType: "OTHER" },
