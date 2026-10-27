@@ -10,7 +10,6 @@ import {
   Building2,
   CheckCircle2,
   ShoppingCart,
-  Zap,
   GitCompare,
   ChevronRight,
   HelpCircle,
@@ -387,9 +386,8 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
 
             <button
               onClick={handleBuyNow}
-              className="flex-1 w-full sm:w-auto bg-primary hover:bg-primary/90 text-white font-black py-3 px-6 rounded-xl text-sm flex items-center justify-center gap-2 shadow-lg shadow-primary/25 transition-all hover:scale-[1.02]"
+              className="flex-1 w-full sm:w-auto bg-primary hover:bg-primary/90 text-white font-black py-3 px-6 rounded-xl text-sm flex items-center justify-center shadow-lg shadow-primary/25 transition-all hover:scale-[1.02]"
             >
-              <Zap className="w-4 h-4" />
               <span>Buy Now</span>
             </button>
 

@@ -960,15 +960,9 @@ export default function CartPage() {
                   <span>Processing Order...</span>
                 </>
               ) : paymentMethod === "BKASH" && !bkashTrxId ? (
-                <>
-                  <span>Pay with bKash ({formatBdt(grandTotal)})</span>
-                  <ArrowRight className="w-4 h-4" />
-                </>
+                <span>Pay with bKash ({formatBdt(grandTotal)})</span>
               ) : (
-                <>
-                  <Banknote className="w-4 h-4" />
-                  <span>Confirm Order</span>
-                </>
+                <span>Confirm Order</span>
               )}
             </button>
 
