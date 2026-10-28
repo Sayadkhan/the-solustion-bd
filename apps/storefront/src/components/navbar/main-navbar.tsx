@@ -7,7 +7,6 @@ import {
   Search,
   ShoppingCart,
   Gift,
-  Zap,
   User,
   Cpu,
   ChevronDown,
@@ -536,7 +535,7 @@ export function MainNavbar() {
           <div className="flex items-center gap-6 shrink-0">
             {/* Offers */}
             <Link
-              href="/products?discount=true"
+              href="/products?deals=true"
               className="flex items-center gap-2 hover:text-blue-600 transition-colors group text-left"
             >
               <div className="p-2 rounded-full bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
@@ -545,20 +544,6 @@ export function MainNavbar() {
               <div className="flex flex-col leading-tight">
                 <span className="font-bold text-slate-900 text-sm">Offers</span>
                 <span className="text-[11px] text-slate-500">Latest Deals</span>
-              </div>
-            </Link>
-
-            {/* Super Hour / Deals */}
-            <Link
-              href="/products?deals=true"
-              className="flex items-center gap-2 hover:text-amber-600 transition-colors group text-left"
-            >
-              <div className="p-2 rounded-full bg-amber-50 text-amber-600 group-hover:bg-amber-500 group-hover:text-white transition-colors">
-                <Zap className="w-4 h-4" />
-              </div>
-              <div className="flex flex-col leading-tight">
-                <span className="font-bold text-slate-900 text-sm">Super Hour</span>
-                <span className="text-[11px] text-slate-500">Special Flash</span>
               </div>
             </Link>
 
@@ -672,23 +657,15 @@ export function MainNavbar() {
             </Link>
           </div>
 
-          {/* Quick links: Offers, Super Hour */}
-          <div className="grid grid-cols-2 gap-2 pb-3 border-b border-slate-100 text-xs">
+          {/* Quick links: Offers */}
+          <div className="pb-3 border-b border-slate-100 text-xs">
             <Link
               href="/products?deals=true"
               onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-2 p-2 rounded bg-slate-50 hover:bg-slate-100 text-slate-800 border border-slate-200/80 font-medium"
+              className="flex items-center justify-center gap-2 p-2.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-800 border border-slate-200/80 font-medium"
             >
               <Gift className="w-4 h-4 text-blue-600" />
-              <span>Offers</span>
-            </Link>
-            <Link
-              href="/products?discount=true"
-              onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-2 p-2 rounded bg-slate-50 hover:bg-slate-100 text-slate-800 border border-slate-200/80 font-medium"
-            >
-              <Zap className="w-4 h-4 text-amber-500" />
-              <span>Super Hour</span>
+              <span>Exclusive Offers & Deals</span>
             </Link>
           </div>
 

@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Gift, Zap, Cpu, GitCompare, User } from "lucide-react";
+import { Gift, Cpu, GitCompare, User } from "lucide-react";
 import { useCompareStore } from "@/stores/compare-store";
 
 export function MobileBottomNav() {
@@ -26,12 +26,6 @@ export function MobileBottomNav() {
       href: "/products?deals=true",
       icon: Gift,
       isActive: pathname.includes("deals=true"),
-    },
-    {
-      label: "Super Hour",
-      href: "/products?discount=true",
-      icon: Zap,
-      isActive: pathname.includes("discount=true"),
     },
     {
       label: "PC Builder",
