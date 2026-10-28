@@ -11,7 +11,7 @@ export function FloatingWidgets() {
   const compareCount = useCompareStore((s) => s.items.length);
 
   return (
-    <div className="fixed right-3 bottom-6 z-50 flex flex-col items-end gap-2.5">
+    <div className="hidden md:flex fixed right-3 bottom-6 z-40 flex-col items-end gap-2.5">
       {/* 1. Special Campaign / Deals Floating Badge */}
       <Link
         href="/products?deals=true"

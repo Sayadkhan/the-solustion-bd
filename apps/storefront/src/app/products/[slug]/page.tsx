@@ -441,10 +441,10 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
 
       {/* Detail Tabs (Specifications, Physical Branch Inventory, Warranty, YouTube Video) */}
       <div id="product-tabs" className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden mt-10">
-        <div className="flex items-center border-b border-border bg-muted/20 px-4 overflow-x-auto">
+        <div className="flex items-center border-b border-border bg-muted/20 px-2 sm:px-4 overflow-x-auto whitespace-nowrap scrollbar-none">
           <button
             onClick={() => setActiveTab("specs")}
-            className={`py-3.5 px-5 font-bold text-sm border-b-2 transition-colors shrink-0 ${
+            className={`py-3 px-3.5 sm:px-5 font-bold text-xs sm:text-sm border-b-2 transition-colors shrink-0 ${
               activeTab === "specs"
                 ? "border-primary text-primary"
                 : "border-transparent text-muted-foreground hover:text-foreground"
@@ -454,18 +454,18 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
           </button>
           <button
             onClick={() => setActiveTab("branches")}
-            className={`py-3.5 px-5 font-bold text-sm border-b-2 transition-colors flex items-center gap-1.5 shrink-0 ${
+            className={`py-3 px-3.5 sm:px-5 font-bold text-xs sm:text-sm border-b-2 transition-colors flex items-center gap-1.5 shrink-0 ${
               activeTab === "branches"
                 ? "border-primary text-primary"
                 : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
-            <Building2 className="w-4 h-4" />
+            <Building2 className="w-3.5 h-3.5" />
             <span>Branch Availability</span>
           </button>
           <button
             onClick={() => setActiveTab("warranty")}
-            className={`py-3.5 px-5 font-bold text-sm border-b-2 transition-colors shrink-0 ${
+            className={`py-3 px-3.5 sm:px-5 font-bold text-xs sm:text-sm border-b-2 transition-colors shrink-0 ${
               activeTab === "warranty"
                 ? "border-primary text-primary"
                 : "border-transparent text-muted-foreground hover:text-foreground"
@@ -475,13 +475,13 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
           </button>
           <button
             onClick={() => setActiveTab("video")}
-            className={`py-3.5 px-5 font-bold text-sm border-b-2 transition-colors flex items-center gap-1.5 shrink-0 ${
+            className={`py-3 px-3.5 sm:px-5 font-bold text-xs sm:text-sm border-b-2 transition-colors flex items-center gap-1.5 shrink-0 ${
               activeTab === "video"
                 ? "border-red-600 text-red-600 dark:text-red-400"
                 : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
-            <svg className="w-4 h-4 text-red-600" fill="currentColor" viewBox="0 0 24 24">
+            <svg className="w-3.5 h-3.5 text-red-600" fill="currentColor" viewBox="0 0 24 24">
               <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
             </svg>
             <span>Video Review</span>
@@ -653,6 +653,37 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
           </div>
         </div>
       )}
+
+      {/* Mobile Sticky Purchase Bar (Always within thumb reach) */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-card/95 backdrop-blur-md border-t border-border p-3 flex items-center justify-between gap-3 shadow-[0_-4px_20px_rgba(0,0,0,0.15)]">
+        <div className="flex flex-col min-w-0">
+          <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
+            Special Cash Price
+          </span>
+          <span className="text-base font-black text-blue-600 dark:text-blue-400 truncate">
+            {formatBdt(product.cashPriceBdt)}
+          </span>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={handleAddToCart}
+            className="p-2.5 rounded-xl border border-border bg-muted/40 hover:bg-muted text-foreground transition-all active:scale-95"
+            title="Add to Cart"
+          >
+            {addedToast ? (
+              <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+            ) : (
+              <ShoppingCart className="w-5 h-5 text-primary" />
+            )}
+          </button>
+          <button
+            onClick={handleBuyNow}
+            className="bg-primary hover:bg-primary/90 text-white font-bold py-2.5 px-5 rounded-xl text-xs flex items-center justify-center shadow-md active:scale-95 transition-all"
+          >
+            <span>Buy Now</span>
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

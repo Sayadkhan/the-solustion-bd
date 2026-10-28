@@ -12,6 +12,7 @@ import {
   RotateCcw,
   Check,
   Search,
+  X,
 } from "lucide-react";
 import { CATALOG_PRODUCTS, CATEGORIES, Product } from "@/lib/catalog";
 import { ProductCard } from "@/components/product-card";
@@ -251,8 +252,8 @@ function ProductsContent() {
         </div>
 
         <button
-          onClick={() => setMobileFilterOpen(!mobileFilterOpen)}
-          className="lg:hidden flex items-center space-x-2 bg-primary/10 text-primary border border-primary/20 px-4 py-2 rounded-lg font-bold text-xs"
+          onClick={() => setMobileFilterOpen(true)}
+          className="lg:hidden flex items-center space-x-2 bg-primary/10 text-primary border border-primary/20 px-4 py-2.5 rounded-xl font-bold text-xs shadow-sm active:scale-95 transition-transform"
         >
           <SlidersHorizontal className="w-4 h-4" />
           <span>Filters ({filteredProducts.length})</span>
@@ -260,12 +261,8 @@ function ProductsContent() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 items-start">
-        {/* Left Filter Sidebar */}
-        <aside
-          className={`lg:block ${
-            mobileFilterOpen ? "block" : "hidden"
-          } space-y-6 bg-card p-5 rounded-xl border border-border/70 sticky top-20`}
-        >
+        {/* Left Filter Sidebar (Desktop) */}
+        <aside className="hidden lg:block space-y-6 bg-card p-5 rounded-xl border border-border/70 sticky top-20">
           <div className="flex items-center justify-between pb-3 border-b border-border">
             <span className="font-bold text-sm text-foreground flex items-center gap-2">
               <Filter className="w-4 h-4 text-primary" />
@@ -382,7 +379,7 @@ function ProductsContent() {
             </div>
           </div>
 
-          {/* Processor Sockets (AM5, LGA1700) */}
+          {/* Processor Sockets */}
           <div className="space-y-2 pt-3 border-t border-border/70">
             <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
               Socket / Platform
@@ -404,6 +401,149 @@ function ProductsContent() {
             </div>
           </div>
         </aside>
+
+        {/* Mobile Filter Slide-over Drawer / Bottom Sheet */}
+        {mobileFilterOpen && (
+          <div className="lg:hidden fixed inset-0 z-50 flex flex-col justify-end bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
+            <div
+              className="fixed inset-0"
+              onClick={() => setMobileFilterOpen(false)}
+            />
+            <div className="relative z-10 bg-card rounded-t-3xl max-h-[85vh] flex flex-col border-t border-border shadow-2xl animate-in slide-in-from-bottom duration-300">
+              {/* Drawer Header */}
+              <div className="flex items-center justify-between p-4 px-5 border-b border-border">
+                <div className="flex items-center gap-2 font-bold text-sm text-foreground">
+                  <SlidersHorizontal className="w-4 h-4 text-primary" />
+                  <span>Filters ({filteredProducts.length} items)</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={resetFilters}
+                    className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 font-medium transition-colors"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>Reset</span>
+                  </button>
+                  <button
+                    onClick={() => setMobileFilterOpen(false)}
+                    className="p-1 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Drawer Content */}
+              <div className="p-5 overflow-y-auto space-y-6 flex-1">
+                {/* Categories */}
+                <div className="space-y-2">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    Categories
+                  </h4>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <Link
+                      href="/products"
+                      onClick={() => setMobileFilterOpen(false)}
+                      className={`flex items-center justify-between text-xs px-2.5 py-2 rounded-lg transition-colors ${
+                        selectedCategory === "all"
+                          ? "bg-primary text-white font-bold"
+                          : "bg-muted/30 text-foreground"
+                      }`}
+                    >
+                      <span>All Categories</span>
+                    </Link>
+                    {CATEGORIES.map((cat) => (
+                      <Link
+                        key={cat.slug}
+                        href={`/products?category=${cat.slug}`}
+                        onClick={() => setMobileFilterOpen(false)}
+                        className={`flex items-center justify-between text-xs px-2.5 py-2 rounded-lg transition-colors ${
+                          selectedCategory === cat.slug
+                            ? "bg-primary text-white font-bold"
+                            : "bg-muted/30 text-foreground"
+                        }`}
+                      >
+                        <span className="truncate">{cat.name}</span>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Price Range Slider */}
+                <div className="space-y-3 pt-3 border-t border-border">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                      Max Price
+                    </h4>
+                    <span className="text-xs font-bold text-primary">
+                      {formatBdt(maxPrice)}
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min={10000}
+                    max={200000}
+                    step={5000}
+                    value={maxPrice}
+                    onChange={(e) => setMaxPrice(Number(e.target.value))}
+                    className="w-full accent-primary h-2 bg-muted rounded-lg cursor-pointer"
+                  />
+                </div>
+
+                {/* In Stock Toggle */}
+                <div className="pt-3 border-t border-border">
+                  <label className="flex items-center space-x-2.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={inStockOnly}
+                      onChange={(e) => setInStockOnly(e.target.checked)}
+                      className="w-4 h-4 rounded border-border text-primary focus:ring-primary accent-primary"
+                    />
+                    <span className="text-xs font-semibold text-foreground">
+                      In Stock Only
+                    </span>
+                  </label>
+                </div>
+
+                {/* Brands */}
+                <div className="space-y-2 pt-3 border-t border-border">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    Brands
+                  </h4>
+                  <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
+                    {allBrands.map((brand) => {
+                      const checked = selectedBrands.includes(brand);
+                      return (
+                        <label
+                          key={brand}
+                          className="flex items-center space-x-2 text-xs text-foreground cursor-pointer p-1.5 rounded-lg bg-muted/20"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => toggleBrand(brand)}
+                            className="w-3.5 h-3.5 rounded border-border text-primary focus:ring-primary accent-primary"
+                          />
+                          <span className="truncate">{brand}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Drawer Apply Button */}
+              <div className="p-4 border-t border-border bg-card">
+                <button
+                  onClick={() => setMobileFilterOpen(false)}
+                  className="w-full bg-primary hover:bg-primary/90 text-white font-bold py-3 rounded-xl text-xs shadow-lg shadow-primary/25 transition-all active:scale-95"
+                >
+                  Apply Filters ({filteredProducts.length} Results)
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Product Grid Area */}
         <main className="lg:col-span-3 space-y-6">
@@ -457,7 +597,7 @@ function ProductsContent() {
             <div
               className={
                 viewMode === "grid"
-                  ? "grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5"
+                  ? "grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-3 gap-3.5 sm:gap-5"
                   : "space-y-4"
               }
             >
@@ -480,7 +620,7 @@ function ProductsContent() {
               </button>
             </div>
           ) : viewMode === "grid" ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+            <div className="grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-3 gap-3.5 sm:gap-5">
               {filteredProducts.map((p) => (
                 <ProductCard key={p.id} product={p} viewMode="grid" />
               ))}

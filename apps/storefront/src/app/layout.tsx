@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { MainNavbar } from "@/components/navbar/main-navbar";
+import { MobileBottomNav } from "@/components/navbar/mobile-bottom-nav";
 import { MainFooter } from "@/components/footer/main-footer";
 import { FloatingWidgets } from "@/components/floating-widgets";
 import { TopProgressBar } from "@/components/top-progress-bar";
@@ -56,9 +57,10 @@ export default function RootLayout({
             <TopProgressBar />
           </Suspense>
           <MainNavbar />
-          <main className="flex-1">
+          <main className="flex-1 pb-20 md:pb-0">
             {children}
           </main>
+          <MobileBottomNav />
           <FloatingWidgets />
           <MainFooter />
         </ThemeProvider>
