@@ -597,7 +597,7 @@ function ProductsContent() {
             <div
               className={
                 viewMode === "grid"
-                  ? "grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-3 gap-3.5 sm:gap-5"
+                  ? "grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5"
                   : "space-y-4"
               }
             >
@@ -620,7 +620,7 @@ function ProductsContent() {
               </button>
             </div>
           ) : viewMode === "grid" ? (
-            <div className="grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-3 gap-3.5 sm:gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
               {filteredProducts.map((p) => (
                 <ProductCard key={p.id} product={p} viewMode="grid" />
               ))}
