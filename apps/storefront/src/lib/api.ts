@@ -1,4 +1,13 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api/v1";
+export const API_HOST = API_BASE.replace(/\/api\/v1\/?$/, "");
+
+export function normalizeImageUrl(url?: string | null): string {
+  if (!url) return "https://images.unsplash.com/photo-1591799264318-7e6ef8ddb7ea?w=800";
+  if (url.startsWith("/uploads/")) {
+    return `${API_HOST}${url}`;
+  }
+  return url;
+}
 
 export interface ApiProduct {
   id: string;

@@ -37,7 +37,7 @@ import {
 import { formatBdt } from "@solusation/shared-types";
 import { CATALOG_PRODUCTS, Product } from "@/lib/catalog";
 import { ProductCard } from "@/components/product-card";
-import { storefrontApi, ApiSiteSettings } from "@/lib/api";
+import { storefrontApi, ApiSiteSettings, normalizeImageUrl } from "@/lib/api";
 
 // Hero Slider Banners
 const HERO_SLIDES = [
@@ -142,8 +142,10 @@ export default function StorefrontHomePage() {
             isEmiAvailable: Boolean(p.isEmiAvailable),
             totalStock: Number(p.totalStock) || 10,
             stockStatus: p.stockStatus || "IN_STOCK",
-            thumbnailUrl: p.thumbnailUrl || p.images?.[0] || "https://images.unsplash.com/photo-1591799264318-7e6ef8ddb7ea?w=800",
-            images: p.images || [p.thumbnailUrl || ""],
+            thumbnailUrl: normalizeImageUrl(p.thumbnailUrl || (Array.isArray(p.images) && p.images[0])),
+            images: Array.isArray(p.images) && p.images.length > 0
+              ? p.images.map((img: string) => normalizeImageUrl(img))
+              : [normalizeImageUrl(p.thumbnailUrl)],
             keyFeatures: p.keyFeatures || [
               "Official Distributor Warranty",
               "Box Serial Number Tracking",

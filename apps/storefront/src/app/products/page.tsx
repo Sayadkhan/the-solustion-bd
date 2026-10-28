@@ -17,9 +17,15 @@ import { CATALOG_PRODUCTS, CATEGORIES, Product } from "@/lib/catalog";
 import { ProductCard } from "@/components/product-card";
 import { ProductCardSkeleton } from "@/components/product-card-skeleton";
 import { formatBdt } from "@solusation/shared-types";
-import { storefrontApi } from "@/lib/api";
+import { storefrontApi, normalizeImageUrl } from "@/lib/api";
 
 function formatRawProduct(p: any): Product {
+  const rawThumb = p.thumbnailUrl || (Array.isArray(p.images) && p.images[0]) || null;
+  const normalizedThumb = normalizeImageUrl(rawThumb);
+  const normalizedImages = Array.isArray(p.images) && p.images.length > 0
+    ? p.images.map((img: string) => normalizeImageUrl(img))
+    : [normalizedThumb];
+
   return {
     id: p.id,
     name: p.name,
@@ -34,8 +40,8 @@ function formatRawProduct(p: any): Product {
     isEmiAvailable: Boolean(p.isEmiAvailable),
     totalStock: Number(p.totalStock) || 10,
     stockStatus: p.stockStatus || "IN_STOCK",
-    thumbnailUrl: p.thumbnailUrl || p.images?.[0] || "https://images.unsplash.com/photo-1591799264318-7e6ef8ddb7ea?w=800",
-    images: p.images || [p.thumbnailUrl || ""],
+    thumbnailUrl: normalizedThumb,
+    images: normalizedImages,
     keyFeatures: p.keyFeatures || [
       "Official Distributor Warranty",
       "Box Serial Number Tracking",

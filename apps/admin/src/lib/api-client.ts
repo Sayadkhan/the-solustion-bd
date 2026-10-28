@@ -1,4 +1,5 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api/v1";
+const API_HOST = API_BASE.replace(/\/api\/v1\/?$/, "");
 
 export interface ApiResponse<T = any> {
   success: boolean;
@@ -276,7 +277,7 @@ export const adminApi = {
     const json = await res.json();
     return {
       success: res.ok,
-      url: json.url ? `http://localhost:4000${json.url}` : "",
+      url: json.url ? `${API_HOST}${json.url}` : "",
     };
   },
 

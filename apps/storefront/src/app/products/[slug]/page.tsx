@@ -21,7 +21,7 @@ import { formatBdt } from "@solusation/shared-types";
 import { useCartStore } from "@/stores/cart-store";
 import { useCompareStore } from "@/stores/compare-store";
 import { ProductCard } from "@/components/product-card";
-import { storefrontApi } from "@/lib/api";
+import { storefrontApi, normalizeImageUrl } from "@/lib/api";
 import { getYouTubeEmbedUrl } from "@/lib/youtube";
 
 interface ProductPageProps {
@@ -78,13 +78,11 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
             isEmiAvailable: apiData.isEmiAvailable ?? true,
             totalStock: apiData.totalStock ?? 10,
             stockStatus: apiData.stockStatus || "IN_STOCK",
-            thumbnailUrl:
-              apiData.images?.[0] ||
-              "https://images.unsplash.com/photo-1591799264318-7e6ef8ddb7ea?w=800",
+            thumbnailUrl: normalizeImageUrl(apiData.images?.[0] || apiData.thumbnailUrl),
             images:
               apiData.images && apiData.images.length > 0
-                ? apiData.images
-                : ["https://images.unsplash.com/photo-1591799264318-7e6ef8ddb7ea?w=800"],
+                ? apiData.images.map((img: string) => normalizeImageUrl(img))
+                : [normalizeImageUrl(apiData.thumbnailUrl)],
             keyFeatures: apiData.keyFeatures || [],
             warrantyDurationMonths: apiData.warrantyDurationMonths || 36,
             warrantyNotice:

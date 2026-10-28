@@ -387,6 +387,7 @@ export function AddProductModal({
                     Supports JPG, PNG, WEBP, AVIF up to 10MB
                   </span>
                   <input
+                    id="product-image-file-input"
                     type="file"
                     accept="image/*"
                     onChange={handleImageUpload}

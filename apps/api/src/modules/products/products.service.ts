@@ -61,13 +61,14 @@ export class ProductsService {
   }
 
   async createProduct(data: any) {
-    const [newProduct] = await db.insert(products).values(data).returning();
+    const { initialStock, ...productData } = data;
+    const [newProduct] = await db.insert(products).values(productData).returning();
     
     // Add default central inventory
     await db.insert(branchInventory).values({
       productId: newProduct.id,
       branchCode: "ONLINE_WAREHOUSE",
-      stock: data.initialStock || data.totalStock || 10,
+      stock: initialStock || productData.totalStock || 10,
     });
 
     try {
