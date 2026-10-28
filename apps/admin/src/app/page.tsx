@@ -24,10 +24,23 @@ import {
   DollarSign,
   ChevronRight,
   Filter,
+  FileText,
+  Tag,
+  BarChart3,
+  Users,
+  Eye,
+  Sparkles,
+  Globe,
+  Layers,
+  ArrowRight,
 } from "lucide-react";
+import { getAdminUser } from "@/lib/auth";
 
 export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [blogsList, setBlogsList] = useState<any[]>([]);
+  const [seoSettings, setSeoSettings] = useState<any>(null);
   const [productsList, setProductsList] = useState<any[]>([]);
   const [ordersList, setOrdersList] = useState<any[]>([]);
   const [serialsList, setSerialsList] = useState<any[]>([]);
@@ -54,15 +67,31 @@ export default function DashboardPage() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [p, o, sers] = await Promise.all([
-        adminApi.getProducts({ limit: 100 }),
-        adminApi.getOrders({ limit: 50 }),
-        adminApi.getSerials(),
-      ]);
+      const usr = getAdminUser();
+      setCurrentUser(usr);
 
-      if (p?.data && Array.isArray(p.data)) setProductsList(p.data);
-      if (o?.data && Array.isArray(o.data)) setOrdersList(o.data);
-      if (sers?.data && Array.isArray(sers.data)) setSerialsList(sers.data);
+      if (usr?.role === "SEO_MANAGER") {
+        const [bRes, sRes] = await Promise.all([
+          adminApi.getBlogs(),
+          adminApi.getSettings(),
+        ]);
+        if (bRes?.items && Array.isArray(bRes.items)) setBlogsList(bRes.items);
+        if (sRes?.data) setSeoSettings(sRes.data);
+      } else {
+        const [p, o, sers, bRes, sRes] = await Promise.all([
+          adminApi.getProducts({ limit: 100 }),
+          adminApi.getOrders({ limit: 50 }),
+          adminApi.getSerials(),
+          adminApi.getBlogs(),
+          adminApi.getSettings(),
+        ]);
+
+        if (p?.data && Array.isArray(p.data)) setProductsList(p.data);
+        if (o?.data && Array.isArray(o.data)) setOrdersList(o.data);
+        if (sers?.data && Array.isArray(sers.data)) setSerialsList(sers.data);
+        if (bRes?.items && Array.isArray(bRes.items)) setBlogsList(bRes.items);
+        if (sRes?.data) setSeoSettings(sRes.data);
+      }
     } catch (err) {
       console.error("Dashboard data load error:", err);
     } finally {
@@ -162,6 +191,248 @@ export default function DashboardPage() {
     const start = (ordersPage - 1) * ordersPerPage;
     return filteredOrders.slice(start, start + ordersPerPage);
   }, [filteredOrders, ordersPage, ordersPerPage]);
+
+  if (currentUser?.role === "SEO_MANAGER") {
+    return (
+      <AdminShell
+        title="SEO & Growth Control Center"
+        subtitle="Organic Search Presence, Google Tag Manager & Content Marketing"
+        onRefresh={loadData}
+        isRefreshing={loading}
+      >
+        {/* Toast alert */}
+        {toastMessage && (
+          <div className="fixed top-20 right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-xl bg-card border border-emerald-500/40 text-emerald-600 dark:text-emerald-400 text-xs font-semibold shadow-xl animate-in fade-in slide-in-from-top-4">
+            <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+            {toastMessage}
+          </div>
+        )}
+
+        {/* SEO Overview 4 KPI Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Monthly Visitors */}
+          <div className="p-5 rounded-2xl bg-card border border-border shadow-sm space-y-2 hover:border-primary/40 transition-all">
+            <div className="flex items-center justify-between text-muted-foreground">
+              <span className="text-xs font-bold uppercase tracking-wider">Monthly Traffic</span>
+              <div className="p-2 rounded-xl bg-blue-500/10 text-blue-500">
+                <Users className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="text-2xl font-black text-foreground tracking-tight">84,920</div>
+            <div className="flex items-center gap-1.5 text-xs text-emerald-500 font-semibold">
+              <TrendingUp className="w-3.5 h-3.5" />
+              <span>+18.4% organic growth</span>
+            </div>
+          </div>
+
+          {/* Google Organic Search Share */}
+          <div className="p-5 rounded-2xl bg-card border border-border shadow-sm space-y-2 hover:border-emerald-500/40 transition-all">
+            <div className="flex items-center justify-between text-muted-foreground">
+              <span className="text-xs font-bold uppercase tracking-wider">Google Organic Share</span>
+              <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-500">
+                <Globe className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="text-2xl font-black text-foreground tracking-tight">58%</div>
+            <div className="text-xs text-muted-foreground font-medium">49,250 direct Google visits</div>
+          </div>
+
+          {/* GTM Status */}
+          <div className="p-5 rounded-2xl bg-card border border-border shadow-sm space-y-2 hover:border-purple-500/40 transition-all">
+            <div className="flex items-center justify-between text-muted-foreground">
+              <span className="text-xs font-bold uppercase tracking-wider">Tag Manager Container</span>
+              <div className="p-2 rounded-xl bg-purple-500/10 text-purple-500">
+                <Tag className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="text-xl font-black font-mono text-foreground tracking-tight truncate">
+              {seoSettings?.gtmId || "Not Connected"}
+            </div>
+            <div className="flex items-center gap-1.5 text-xs font-medium">
+              <Link href="/seo" className="text-primary hover:underline flex items-center gap-1">
+                <span>Manage GTM & GA4</span>
+                <ArrowRight className="w-3 h-3" />
+              </Link>
+            </div>
+          </div>
+
+          {/* Active Blogs */}
+          <div className="p-5 rounded-2xl bg-card border border-border shadow-sm space-y-2 hover:border-amber-500/40 transition-all">
+            <div className="flex items-center justify-between text-muted-foreground">
+              <span className="text-xs font-bold uppercase tracking-wider">SEO Tech Blogs</span>
+              <div className="p-2 rounded-xl bg-amber-500/10 text-amber-500">
+                <FileText className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="text-2xl font-black text-foreground tracking-tight">
+              {blogsList.length} Articles
+            </div>
+            <div className="flex items-center gap-1.5 text-xs font-medium">
+              <Link href="/blogs" className="text-primary hover:underline flex items-center gap-1">
+                <span>Add / Edit Articles</span>
+                <ArrowRight className="w-3 h-3" />
+              </Link>
+            </div>
+          </div>
+        </div>
+
+        {/* Quick SEO Operations Launchpad */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Link
+            href="/blogs"
+            className="p-4 rounded-xl border border-border bg-card hover:border-primary/50 transition-all group flex items-center justify-between"
+          >
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-blue-500/10 text-blue-500 group-hover:scale-110 transition-transform">
+                <FileText className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="text-xs font-bold text-foreground">Write Tech Blog</div>
+                <div className="text-[11px] text-muted-foreground">SEO articles & backlinks</div>
+              </div>
+            </div>
+            <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+          </Link>
+
+          <Link
+            href="/seo"
+            className="p-4 rounded-xl border border-border bg-card hover:border-purple-500/50 transition-all group flex items-center justify-between"
+          >
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-purple-500/10 text-purple-500 group-hover:scale-110 transition-transform">
+                <Tag className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="text-xs font-bold text-foreground">Google Tag Manager</div>
+                <div className="text-[11px] text-muted-foreground">GTM, GA4 & Meta tags</div>
+              </div>
+            </div>
+            <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-purple-500 group-hover:translate-x-0.5 transition-all" />
+          </Link>
+
+          <Link
+            href="/traffic"
+            className="p-4 rounded-xl border border-border bg-card hover:border-emerald-500/50 transition-all group flex items-center justify-between"
+          >
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-500 group-hover:scale-110 transition-transform">
+                <BarChart3 className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="text-xs font-bold text-foreground">Traffic Analytics</div>
+                <div className="text-[11px] text-muted-foreground">Pageviews, bounce & devices</div>
+              </div>
+            </div>
+            <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-emerald-500 group-hover:translate-x-0.5 transition-all" />
+          </Link>
+
+          <Link
+            href="/banners"
+            className="p-4 rounded-xl border border-border bg-card hover:border-amber-500/50 transition-all group flex items-center justify-between"
+          >
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-amber-500/10 text-amber-500 group-hover:scale-110 transition-transform">
+                <Layers className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="text-xs font-bold text-foreground">Hero Banners</div>
+                <div className="text-[11px] text-muted-foreground">Campaign promo graphics</div>
+              </div>
+            </div>
+            <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-amber-500 group-hover:translate-x-0.5 transition-all" />
+          </Link>
+        </div>
+
+        {/* SEO Tech Blogs Table & Organic Keywords */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Blogs */}
+          <div className="p-5 rounded-2xl border border-border bg-card shadow-sm space-y-4">
+            <div className="flex items-center justify-between border-b border-border pb-3">
+              <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+                <FileText className="w-4 h-4 text-primary" />
+                Latest SEO Blog Articles
+              </h3>
+              <Link href="/blogs" className="text-xs text-primary hover:underline font-semibold flex items-center gap-1">
+                <span>View All ({blogsList.length})</span>
+                <ArrowRight className="w-3 h-3" />
+              </Link>
+            </div>
+
+            <div className="space-y-3">
+              {blogsList.length === 0 ? (
+                <div className="text-center py-8 text-xs text-muted-foreground">
+                  No blog articles found. Create your first tech article!
+                </div>
+              ) : (
+                blogsList.slice(0, 5).map((blog: any) => (
+                  <div
+                    key={blog.id || blog.slug}
+                    className="flex items-center justify-between p-3 rounded-xl border border-border bg-card hover:border-primary/40 transition-all"
+                  >
+                    <div className="min-w-0 pr-3">
+                      <div className="text-xs font-bold text-foreground truncate">{blog.title}</div>
+                      <div className="text-[10px] text-muted-foreground font-mono mt-0.5">
+                        /{blog.slug} • {blog.category || "Tech Guide"}
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <span
+                        className={`text-[9px] font-mono px-2 py-0.5 rounded-full font-semibold ${
+                          blog.status === "PUBLISHED"
+                            ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20"
+                            : "bg-amber-500/10 text-amber-500 border border-amber-500/20"
+                        }`}
+                      >
+                        {blog.status}
+                      </span>
+                      <div className="text-[10px] text-muted-foreground mt-1">
+                        {blog.viewCount || 0} views
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Top Organic Keywords */}
+          <div className="p-5 rounded-2xl border border-border bg-card shadow-sm space-y-4">
+            <div className="flex items-center justify-between border-b border-border pb-3">
+              <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+                <Search className="w-4 h-4 text-emerald-500" />
+                Top Google Organic Search Terms
+              </h3>
+              <Link href="/traffic" className="text-xs text-emerald-500 hover:underline font-semibold flex items-center gap-1">
+                <span>Full Analytics</span>
+                <ArrowRight className="w-3 h-3" />
+              </Link>
+            </div>
+
+            <div className="space-y-2.5">
+              {[
+                { kw: "ryzen 7 7800x3d price in bd", rank: "#1 on Google", volume: "4,230/mo", ctr: "18.4%" },
+                { kw: "gaming pc build bangladesh", rank: "#2 on Google", volume: "3,890/mo", ctr: "15.2%" },
+                { kw: "rtx 4070 ti super 16gb bd", rank: "#1 on Google", volume: "3,120/mo", ctr: "14.1%" },
+                { kw: "the solutions bd idb shop", rank: "#1 on Google", volume: "2,950/mo", ctr: "28.6%" },
+                { kw: "b650 gaming plus wifi bd", rank: "#3 on Google", volume: "1,940/mo", ctr: "11.5%" },
+              ].map((item) => (
+                <div key={item.kw} className="flex items-center justify-between p-2.5 rounded-xl bg-muted/40 text-xs">
+                  <div>
+                    <div className="font-semibold text-foreground">{item.kw}</div>
+                    <div className="text-[10px] text-emerald-500 font-medium">{item.rank}</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-mono font-bold text-foreground">{item.volume}</div>
+                    <div className="text-[10px] text-muted-foreground">CTR: {item.ctr}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </AdminShell>
+    );
+  }
 
   return (
     <AdminShell

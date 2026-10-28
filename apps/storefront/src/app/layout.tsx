@@ -6,6 +6,7 @@ import { MobileBottomNav } from "@/components/navbar/mobile-bottom-nav";
 import { MainFooter } from "@/components/footer/main-footer";
 import { FloatingWidgets } from "@/components/floating-widgets";
 import { TopProgressBar } from "@/components/top-progress-bar";
+import { GtmAnalytics } from "@/components/analytics/gtm-analytics";
 
 import { Roboto } from "next/font/google";
 import { Suspense } from "react";
@@ -56,6 +57,7 @@ export default function RootLayout({
           <Suspense fallback={null}>
             <TopProgressBar />
           </Suspense>
+          <GtmAnalytics />
           <MainNavbar />
           <main className="flex-1 pb-20 md:pb-0">
             {children}

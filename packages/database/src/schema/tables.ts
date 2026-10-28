@@ -263,6 +263,27 @@ export const siteSettings = pgTable("site_settings", {
   usdToBdtRate: numeric("usd_to_bdt_rate", { precision: 10, scale: 2 })
     .notNull()
     .default("122.50"),
+
+  // Advanced SEO & Tracking Configuration
+  gtmId: varchar("gtm_id", { length: 50 }).default(""),
+  gaMeasurementId: varchar("ga_measurement_id", { length: 50 }).default(""),
+  googleSearchConsoleCode: text("google_search_console_code").default(""),
+  facebookPixelId: varchar("facebook_pixel_id", { length: 50 }).default(""),
+  defaultMetaTitle: text("default_meta_title").default(
+    "The Solutions BD | High-Performance PC & Tech Store in Bangladesh"
+  ),
+  defaultMetaDescription: text("default_meta_description").default(
+    "Buy authentic Processors, Graphics Cards, Motherboards, Gaming PCs & Tech Hardware in Bangladesh at lowest prices with official warranty from The Solutions BD."
+  ),
+  defaultMetaKeywords: text("default_meta_keywords").default(
+    "computer shop bd, pc price bangladesh, gaming pc bd, ryzen processor price bd, graphics card bd"
+  ),
+  robotsTxt: text("robots_txt").default(
+    "User-agent: *\nAllow: /\nSitemap: https://thesolutionsbd.com/sitemap.xml"
+  ),
+  customHeadScript: text("custom_head_script").default(""),
+  customBodyScript: text("custom_body_script").default(""),
+
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 

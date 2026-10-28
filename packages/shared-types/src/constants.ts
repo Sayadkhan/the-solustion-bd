@@ -86,6 +86,7 @@ export type OrderStatus = (typeof ORDER_STATUSES)[number];
 export const USER_ROLES = [
   "SUPER_ADMIN",
   "ADMIN",
+  "SEO_MANAGER",
   "BRANCH_MANAGER",
   "BRANCH_STAFF",
   "CUSTOMER",
