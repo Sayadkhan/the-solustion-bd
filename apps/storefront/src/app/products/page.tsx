@@ -65,19 +65,29 @@ function ProductsContent() {
   const selectedBrand = searchParams.get("brand") || "all";
   const searchQuery = searchParams.get("q") || "";
 
-  // Progressive products state: fast initial batch + background hydration
-  const [productsList, setProductsList] = useState<Product[]>([]);
-  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  // Progressive products state: instant catalog fallback + live backend hydration
+  const [productsList, setProductsList] = useState<Product[]>(() => {
+    if (selectedCategory !== "all") {
+      const matched = CATALOG_PRODUCTS.filter(
+        (p) =>
+          p.categorySlug === selectedCategory ||
+          p.categorySlug.toLowerCase().includes(selectedCategory.toLowerCase()) ||
+          selectedCategory.toLowerCase().includes(p.categorySlug.toLowerCase())
+      );
+      return matched.length > 0 ? matched : CATALOG_PRODUCTS;
+    }
+    return CATALOG_PRODUCTS;
+  });
+  const [isInitialLoading, setIsInitialLoading] = useState(false);
   const [isStreamingMore, setIsStreamingMore] = useState(false);
 
-  // Progressive live products fetch
+  // Progressive live products fetch from backend
   useEffect(() => {
     let isCancelled = false;
 
     async function loadProgressiveProducts() {
-      setIsInitialLoading(true);
       try {
-        // Step 1: Instant Fast Batch (First 12 products for instant 0-wait screen render)
+        // Step 1: Fast initial batch from backend
         const initialBatch = await storefrontApi.getProducts({
           category: selectedCategory !== "all" ? selectedCategory : undefined,
           search: searchQuery || undefined,
@@ -89,11 +99,10 @@ function ProductsContent() {
 
         if (initialBatch && initialBatch.length > 0) {
           setProductsList(initialBatch.map(formatRawProduct));
-          setIsInitialLoading(false);
           setIsStreamingMore(true);
         }
 
-        // Step 2: Background Full Batch (Stream up to 100 products to smoothly replace skeletons)
+        // Step 2: Background Full Batch (Stream up to 100 products to smoothly hydrate remaining catalog)
         const fullBatch = await storefrontApi.getProducts({
           category: selectedCategory !== "all" ? selectedCategory : undefined,
           search: searchQuery || undefined,
@@ -105,14 +114,9 @@ function ProductsContent() {
 
         if (fullBatch && fullBatch.length > 0) {
           setProductsList(fullBatch.map(formatRawProduct));
-        } else if (!initialBatch || initialBatch.length === 0) {
-          setProductsList(CATALOG_PRODUCTS);
         }
       } catch (err) {
         console.warn("Progressive products catalog fetch fallback:", err);
-        if (!isCancelled && productsList.length === 0) {
-          setProductsList(CATALOG_PRODUCTS);
-        }
       } finally {
         if (!isCancelled) {
           setIsInitialLoading(false);
@@ -149,7 +153,13 @@ function ProductsContent() {
   const filteredProducts = useMemo(() => {
     return productsList.filter((prod) => {
       // Category filter
-      if (selectedCategory !== "all" && prod.categorySlug !== selectedCategory) {
+      if (
+        selectedCategory !== "all" &&
+        prod.categorySlug &&
+        prod.categorySlug !== selectedCategory &&
+        !selectedCategory.toLowerCase().includes(prod.categorySlug.toLowerCase()) &&
+        !prod.categorySlug.toLowerCase().includes(selectedCategory.toLowerCase())
+      ) {
         return false;
       }
 
@@ -163,8 +173,8 @@ function ProductsContent() {
         return false;
       }
 
-      // Price filter
-      if (prod.cashPriceBdt < minPrice || prod.cashPriceBdt > maxPrice) {
+      // Price filter (200,000+ means unlimited max)
+      if (prod.cashPriceBdt < minPrice || (maxPrice < 200000 && prod.cashPriceBdt > maxPrice)) {
         return false;
       }
 
@@ -597,7 +607,7 @@ function ProductsContent() {
             <div
               className={
                 viewMode === "grid"
-                  ? "grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5"
+                  ? "grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-3 gap-2.5 sm:gap-5"
                   : "space-y-4"
               }
             >
@@ -620,7 +630,7 @@ function ProductsContent() {
               </button>
             </div>
           ) : viewMode === "grid" ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+            <div className="grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-3 gap-2.5 sm:gap-5">
               {filteredProducts.map((p) => (
                 <ProductCard key={p.id} product={p} viewMode="grid" />
               ))}

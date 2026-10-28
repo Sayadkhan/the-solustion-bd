@@ -210,6 +210,8 @@ export function MainNavbar() {
   const router = useRouter();
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [expandedCat, setExpandedCat] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [liveSearchResults, setLiveSearchResults] = useState<any[]>([]);
@@ -330,8 +332,126 @@ export function MainNavbar() {
 
   return (
     <header className="w-full z-40 sticky top-0 shadow-md">
-      {/* 1. Main Header Bar - Clean White matching the corporate logo */}
-      <div className="bg-white text-slate-900 py-3 px-4 border-b border-slate-200/80 shadow-sm transition-colors">
+      {/* 1. Mobile Top Header Bar (#081621 Star Tech Style) */}
+      <div className="lg:hidden bg-[#081621] text-white px-3 py-2.5 flex items-center justify-between border-b border-slate-800 shadow-md">
+        {/* Left: Hamburger menu toggle */}
+        <button
+          onClick={() => {
+            setMobileMenuOpen(!mobileMenuOpen);
+            if (mobileSearchOpen) setMobileSearchOpen(false);
+          }}
+          className="p-1.5 text-white hover:text-blue-400 transition-colors focus:outline-none"
+          aria-label="Toggle Menu"
+        >
+          {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+        </button>
+
+        {/* Center: Logo in white pill badge for crisp visibility */}
+        <Link href="/" className="flex items-center">
+          <div className="bg-white px-2.5 py-0.5 rounded-md shadow-sm">
+            <img
+              src="/logo.png"
+              alt="The Solutions BD"
+              className="h-7 w-auto object-contain"
+            />
+          </div>
+        </Link>
+
+        {/* Right: Search icon and Cart icon with red badge */}
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => {
+              setMobileSearchOpen(!mobileSearchOpen);
+              if (mobileMenuOpen) setMobileMenuOpen(false);
+            }}
+            className={`p-1.5 rounded transition-colors ${
+              mobileSearchOpen ? "text-blue-400 bg-slate-800" : "text-white hover:text-blue-400"
+            }`}
+            aria-label="Toggle Search"
+          >
+            <Search className="w-5 h-5" />
+          </button>
+
+          <Link
+            href="/cart"
+            className="p-1.5 text-white hover:text-blue-400 relative transition-colors"
+            title="Cart"
+          >
+            <ShoppingCart className="w-5 h-5" />
+            <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center shadow">
+              {cartCount}
+            </span>
+          </Link>
+        </div>
+      </div>
+
+      {/* Mobile Expandable Search Bar */}
+      {mobileSearchOpen && (
+        <div className="lg:hidden bg-[#0a1824] p-2.5 border-b border-slate-800 animate-in slide-in-from-top-1 duration-150">
+          <form onSubmit={handleSearchSubmit} className="relative flex items-center">
+            <input
+              type="text"
+              autoFocus
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setSearchOpen(true);
+              }}
+              placeholder="Search components, laptops, gaming rigs..."
+              className="w-full bg-[#081621] text-white placeholder-slate-400 pl-3.5 pr-10 py-2 text-xs rounded-md border border-slate-700 focus:border-blue-500 outline-none"
+            />
+            <button
+              type="submit"
+              className="absolute right-0 top-0 bottom-0 px-3 flex items-center justify-center text-slate-400 hover:text-white"
+              title="Search"
+            >
+              <Search className="w-4 h-4" />
+            </button>
+          </form>
+
+          {/* Mobile Live Search Dropdown */}
+          {searchOpen && liveSearchResults.length > 0 && (
+            <div className="mt-2 bg-white text-slate-900 rounded-lg shadow-2xl overflow-hidden divide-y divide-slate-100 max-h-60 overflow-y-auto">
+              {liveSearchResults.map((item) => (
+                <Link
+                  key={item.id}
+                  href={`/products/${item.slug}`}
+                  onClick={() => {
+                    setSearchOpen(false);
+                    setMobileSearchOpen(false);
+                  }}
+                  className="flex items-center justify-between p-2.5 hover:bg-slate-50 transition-colors"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <img
+                      src={item.thumbnailUrl}
+                      alt={item.name}
+                      className="w-8 h-8 object-contain rounded bg-slate-100 p-0.5"
+                    />
+                    <div className="text-left">
+                      <span className="text-xs font-bold text-slate-900 line-clamp-1">{item.name}</span>
+                      <span className="text-[10px] text-slate-500">{item.brand} • SKU: {item.sku}</span>
+                    </div>
+                  </div>
+                  <span className="text-xs font-black text-rose-600 shrink-0 ml-2">{formatBdt(item.cashPriceBdt)}</span>
+                </Link>
+              ))}
+              <div className="p-2 text-center bg-slate-50">
+                <button
+                  onClick={handleSearchSubmit}
+                  className="text-xs font-bold text-blue-600 hover:underline flex items-center justify-center gap-1 mx-auto"
+                >
+                  <span>View all matching results</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 2. Desktop Main Header Bar (Hidden on Mobile) */}
+      <div className="hidden lg:block bg-white text-slate-900 py-3 px-4 border-b border-slate-200/80 shadow-sm transition-colors">
         <div className="max-w-[1600px] mx-auto flex items-center justify-between gap-4">
           {/* Logo - Sitting naturally on clean white background */}
           <Link href="/" className="flex items-center shrink-0 group py-0.5">
@@ -343,7 +463,7 @@ export function MainNavbar() {
           </Link>
 
           {/* Search Bar (Star Tech Style) */}
-          <div ref={searchRef} className="flex-1 max-w-2xl mx-2 sm:mx-6 relative">
+          <div ref={searchRef} className="flex-1 max-w-2xl mx-6 relative">
             <form onSubmit={handleSearchSubmit} className="relative flex items-center">
               <input
                 type="text"
@@ -415,7 +535,7 @@ export function MainNavbar() {
           </div>
 
           {/* Right Header Navigation Icons */}
-          <div className="hidden lg:flex items-center gap-6 shrink-0">
+          <div className="flex items-center gap-6 shrink-0">
             {/* Offers */}
             <Link
               href="/products?discount=true"
@@ -483,33 +603,10 @@ export function MainNavbar() {
 
             <ThemeToggle />
           </div>
-
-          {/* Mobile Menu Button */}
-          <div className="lg:hidden flex items-center gap-2">
-            <ThemeToggle />
-            <Link
-              href="/cart"
-              className="relative p-2 rounded-lg bg-slate-100 text-slate-800 border border-slate-200"
-            >
-              <ShoppingCart className="w-5 h-5" />
-              {cartCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-blue-600 text-white text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center">
-                  {cartCount}
-                </span>
-              )}
-            </Link>
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 rounded-lg bg-slate-100 text-slate-800 hover:bg-slate-200 border border-slate-200"
-              aria-label="Toggle Menu"
-            >
-              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </button>
-          </div>
         </div>
       </div>
 
-      {/* 2. Horizontal Category Mega Menu Bar - Styled with Navbar Deep Navy (#081621) */}
+      {/* 3. Horizontal Category Mega Menu Bar (Desktop Only) */}
       <nav className="bg-[#081621] text-white border-b border-slate-900 hidden lg:block font-semibold text-sm relative shadow-md">
         <div className="max-w-[1440px] mx-auto px-4 flex items-center justify-center">
           <ul className="flex items-center justify-center gap-1 lg:gap-2 xl:gap-3">
@@ -561,47 +658,97 @@ export function MainNavbar() {
         </div>
       </nav>
 
-      {/* 3. Mobile Navigation Drawer */}
+      {/* 4. Mobile Navigation Drawer (Star Tech Style) */}
       {mobileMenuOpen && (
-        <div className="lg:hidden bg-white dark:bg-slate-900 border-b border-border p-4 max-h-[80vh] overflow-y-auto space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-border">
-            <span className="font-bold text-sm text-foreground">Menu & Categories</span>
+        <div className="lg:hidden bg-[#081621] text-white border-b border-slate-800 p-4 max-h-[85vh] overflow-y-auto space-y-4 animate-in slide-in-from-top-2 duration-200 shadow-2xl">
+          {/* Top Quick Actions */}
+          <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+            <span className="font-bold text-xs uppercase tracking-wider text-slate-400">Navigation Menu</span>
             <Link
               href="/pc-builder"
               onClick={() => setMobileMenuOpen(false)}
-              className="bg-[#1340b8] text-white text-xs font-bold px-3 py-1.5 rounded flex items-center gap-1.5"
+              className="bg-[#1340b8] hover:bg-blue-800 text-white text-xs font-bold px-3 py-1.5 rounded flex items-center gap-1.5 shadow"
             >
               <Cpu className="w-3.5 h-3.5" />
               <span>PC Builder</span>
             </Link>
           </div>
 
+          {/* Quick links: Offers, Super Hour */}
+          <div className="grid grid-cols-2 gap-2 pb-3 border-b border-slate-800 text-xs">
+            <Link
+              href="/products?deals=true"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-2 p-2 rounded bg-slate-900/80 hover:bg-slate-800 text-slate-200"
+            >
+              <Gift className="w-4 h-4 text-blue-400" />
+              <span>Offers</span>
+            </Link>
+            <Link
+              href="/products?discount=true"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-2 p-2 rounded bg-slate-900/80 hover:bg-slate-800 text-slate-200"
+            >
+              <Zap className="w-4 h-4 text-amber-400" />
+              <span>Super Hour</span>
+            </Link>
+          </div>
+
+          {/* Category Tree with Expandable Subcategories */}
           <div className="space-y-1">
-            {navCategories.map((cat) => (
-              <div key={cat.name} className="border-b border-border/50 pb-1">
-                <Link
-                  href={cat.href}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="block py-2 text-sm font-semibold text-foreground hover:text-primary"
-                >
-                  {cat.name}
-                </Link>
-                {cat.subcategories && (
-                  <div className="pl-3 pb-2 space-y-1 text-xs text-muted-foreground">
-                    {cat.subcategories.slice(0, 4).map((sub) => (
-                      <Link
-                        key={sub.name}
-                        href={sub.href}
-                        onClick={() => setMobileMenuOpen(false)}
-                        className="block py-1 hover:text-primary"
+            <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400 px-1 pb-1">
+              All Categories
+            </div>
+            {navCategories.map((cat) => {
+              const isExpanded = expandedCat === cat.name;
+              return (
+                <div key={cat.name} className="border-b border-slate-800/60 pb-1">
+                  <div className="flex items-center justify-between py-2 px-1">
+                    <Link
+                      href={cat.href}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="text-sm font-semibold text-slate-200 hover:text-blue-400 flex items-center gap-2"
+                    >
+                      <span>{cat.name}</span>
+                      {cat.badge && (
+                        <span className="bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase">
+                          {cat.badge}
+                        </span>
+                      )}
+                    </Link>
+                    {cat.subcategories && cat.subcategories.length > 0 && (
+                      <button
+                        onClick={() => setExpandedCat(isExpanded ? null : cat.name)}
+                        className="p-1 text-slate-400 hover:text-white"
+                        aria-label="Toggle subcategories"
                       >
-                        • {sub.name}
-                      </Link>
-                    ))}
+                        <ChevronDown className={`w-4 h-4 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
+                      </button>
+                    )}
                   </div>
-                )}
-              </div>
-            ))}
+                  {isExpanded && cat.subcategories && (
+                    <div className="pl-4 pb-2 space-y-1 text-xs text-slate-400 bg-slate-950/40 rounded-lg p-2 mt-1">
+                      {cat.subcategories.map((sub) => (
+                        <Link
+                          key={sub.name}
+                          href={sub.href}
+                          onClick={() => setMobileMenuOpen(false)}
+                          className="block py-1 hover:text-blue-400 text-slate-300"
+                        >
+                          • {sub.name}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Theme Switcher in Drawer */}
+          <div className="pt-2 flex items-center justify-between border-t border-slate-800 text-xs text-slate-400">
+            <span>Color Theme</span>
+            <ThemeToggle />
           </div>
         </div>
       )}

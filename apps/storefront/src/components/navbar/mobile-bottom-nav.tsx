@@ -3,12 +3,12 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Layers, Cpu, ShoppingCart, Truck } from "lucide-react";
-import { useCartStore } from "@/stores/cart-store";
+import { Gift, Zap, Cpu, GitCompare, User } from "lucide-react";
+import { useCompareStore } from "@/stores/compare-store";
 
 export function MobileBottomNav() {
   const pathname = usePathname();
-  const cartCount = useCartStore((s) => s.getItemCount());
+  const compareCount = useCompareStore((s) => s.items.length);
 
   // Hide the global bottom nav on product detail pages so the dedicated sticky buy bar has full focus
   const isProductDetailPage =
@@ -22,16 +22,16 @@ export function MobileBottomNav() {
 
   const navItems = [
     {
-      label: "Home",
-      href: "/",
-      icon: Home,
-      isActive: pathname === "/",
+      label: "Offers",
+      href: "/products?deals=true",
+      icon: Gift,
+      isActive: pathname.includes("deals=true"),
     },
     {
-      label: "Products",
-      href: "/products",
-      icon: Layers,
-      isActive: pathname.startsWith("/products"),
+      label: "Super Hour",
+      href: "/products?discount=true",
+      icon: Zap,
+      isActive: pathname.includes("discount=true"),
     },
     {
       label: "PC Builder",
@@ -41,75 +41,42 @@ export function MobileBottomNav() {
       isActive: pathname === "/pc-builder",
     },
     {
-      label: "Cart",
-      href: "/cart",
-      icon: ShoppingCart,
-      badge: cartCount > 0 ? cartCount : undefined,
-      isActive: pathname === "/cart",
+      label: `Compare (${compareCount})`,
+      href: "/compare",
+      icon: GitCompare,
+      isActive: pathname === "/compare",
     },
     {
-      label: "Track Order",
-      href: "/track-order",
-      icon: Truck,
-      isActive: pathname === "/track-order",
+      label: "Account",
+      href: "/cart",
+      icon: User,
+      isActive: pathname === "/cart",
     },
   ];
 
   return (
     <nav
-      aria-label="Mobile Navigation"
-      className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-card/95 backdrop-blur-md border-t border-border shadow-[0_-4px_20px_rgba(0,0,0,0.12)] px-2 py-1.5"
+      aria-label="Star Tech Style Mobile Bottom Navigation"
+      className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#081621] text-white border-t border-slate-800 shadow-[0_-4px_25px_rgba(0,0,0,0.35)] px-1 py-1"
     >
       <div className="flex items-center justify-around max-w-md mx-auto">
         {navItems.map((item) => {
           const Icon = item.icon;
 
-          if (item.isSpecial) {
-            return (
-              <Link
-                key={item.label}
-                href={item.href}
-                className="flex flex-col items-center -mt-5 group"
-              >
-                <div
-                  className={`w-12 h-12 rounded-full flex items-center justify-center shadow-lg transition-transform group-active:scale-90 ${
-                    item.isActive
-                      ? "bg-blue-600 text-white ring-4 ring-background shadow-blue-500/30"
-                      : "bg-[#1340b8] text-white ring-4 ring-background shadow-blue-600/30"
-                  }`}
-                >
-                  <Icon className="w-5 h-5" />
-                </div>
-                <span
-                  className={`text-[10px] font-bold mt-1 transition-colors ${
-                    item.isActive ? "text-blue-600 dark:text-blue-400" : "text-muted-foreground"
-                  }`}
-                >
-                  {item.label}
-                </span>
-              </Link>
-            );
-          }
-
           return (
             <Link
               key={item.label}
               href={item.href}
-              className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-lg transition-colors relative min-w-[56px] ${
+              className={`flex flex-col items-center justify-center py-1.5 px-2 rounded transition-colors relative min-w-[62px] ${
                 item.isActive
-                  ? "text-blue-600 dark:text-blue-400 font-bold"
-                  : "text-muted-foreground hover:text-foreground"
+                  ? "text-blue-400 font-bold"
+                  : "text-slate-300 hover:text-white"
               }`}
             >
-              <div className="relative">
-                <Icon className={`w-5 h-5 transition-transform ${item.isActive ? "scale-110" : ""}`} />
-                {typeof item.badge === "number" && (
-                  <span className="absolute -top-1.5 -right-2 bg-blue-600 text-white text-[9px] font-black rounded-full h-4 min-w-[16px] px-1 flex items-center justify-center shadow">
-                    {item.badge}
-                  </span>
-                )}
-              </div>
-              <span className="text-[10px] mt-1 tracking-tight leading-none">{item.label}</span>
+              <Icon className="w-5 h-5 mb-1" />
+              <span className="text-[10px] tracking-tight whitespace-nowrap font-medium">
+                {item.label}
+              </span>
             </Link>
           );
         })}

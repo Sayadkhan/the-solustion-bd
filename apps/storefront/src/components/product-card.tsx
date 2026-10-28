@@ -172,24 +172,27 @@ export function ProductCard({ product, viewMode = "grid" }: ProductCardProps) {
     );
   }
 
-  // Star Tech Grid View Card (matches screenshot startech_products_grid_1792953209530.png)
+  // Star Tech Grid View Card (matches screenshot startech_products_grid_1792953209530.png and mobile)
   return (
-    <div className="group bg-white dark:bg-[#0d1620] rounded-xl border border-slate-200 dark:border-slate-800 hover:border-blue-500/50 hover:shadow-xl transition-all duration-300 p-3.5 flex flex-col justify-between relative overflow-hidden">
-      {/* Top Left Discount Tag (Star Tech Signature Purple/Blue Badge) */}
+    <div
+      onClick={() => router.push(`/products/${product.slug}`)}
+      className="group bg-white dark:bg-[#0d1620] rounded-xl border border-slate-200 dark:border-slate-800 hover:border-blue-500/50 hover:shadow-xl transition-all duration-300 p-2.5 sm:p-3.5 flex flex-col justify-between relative overflow-hidden cursor-pointer"
+    >
+      {/* Top Left Discount Tag (Star Tech Signature Purple Badge) */}
       <div className="flex items-center justify-between mb-1">
         {discountAmount > 0 ? (
-          <span className="bg-[#673ab7] text-white text-[10px] font-bold px-2 py-0.5 rounded shadow-sm">
+          <span className="bg-[#673ab7] text-white text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded shadow-sm">
             Save: {formatBdt(discountAmount)} (-{discountPercent}%)
           </span>
         ) : (
-          <span className="bg-emerald-600 text-white text-[10px] font-bold px-2 py-0.5 rounded">
+          <span className="bg-emerald-600 text-white text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded">
             In Stock
           </span>
         )}
 
         <button
           onClick={handleCompare}
-          className={`p-1.5 rounded text-xs transition-colors ${
+          className={`hidden sm:block p-1.5 rounded text-xs transition-colors ${
             compared
               ? "bg-blue-600 text-white"
               : "text-slate-400 hover:text-slate-700 dark:hover:text-white"
@@ -201,13 +204,10 @@ export function ProductCard({ product, viewMode = "grid" }: ProductCardProps) {
       </div>
 
       {/* Product Image Area with Official Warranty Tag */}
-      <Link
-        href={`/products/${product.slug}`}
-        className="relative w-full h-44 sm:h-48 bg-slate-50 dark:bg-slate-900/40 rounded-lg overflow-hidden flex items-center justify-center p-3 my-2"
-      >
+      <div className="relative w-full h-32 sm:h-44 bg-slate-50 dark:bg-slate-900/40 rounded-lg overflow-hidden flex items-center justify-center p-2 my-1">
         {!imageLoaded && (
           <div className="absolute inset-0 bg-slate-100 dark:bg-slate-800/60 animate-pulse flex items-center justify-center">
-            <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700/50" />
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-slate-200 dark:bg-slate-700/50" />
           </div>
         )}
         <img
@@ -221,23 +221,21 @@ export function ProductCard({ product, viewMode = "grid" }: ProductCardProps) {
         />
 
         {/* Star Tech Official Warranty Badge */}
-        <div className="absolute bottom-1 right-1 flex items-center gap-1 bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-800 text-[9px] font-bold text-blue-600 dark:text-blue-400 shadow-sm z-10">
-          <ShieldCheck className="w-3 h-3 text-blue-600" />
+        <div className="absolute bottom-1 right-1 flex items-center gap-1 bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm px-1 sm:px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-800 text-[8px] sm:text-[9px] font-bold text-blue-600 dark:text-blue-400 shadow-sm z-10">
+          <ShieldCheck className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-blue-600" />
           <span>OFFICIAL</span>
         </div>
-      </Link>
-
-      {/* Title */}
-      <div className="text-left mb-2">
-        <Link href={`/products/${product.slug}`}>
-          <h3 className="font-bold text-sm sm:text-[15px] text-slate-900 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2 h-11 leading-snug">
-            {product.name}
-          </h3>
-        </Link>
       </div>
 
-      {/* Key Features Bullet List (Star Tech Style) */}
-      <ul className="text-xs font-normal text-slate-500 dark:text-slate-400 space-y-1 mb-3 pt-2 border-t border-slate-100 dark:border-slate-800">
+      {/* Title */}
+      <div className="text-left mb-1.5 sm:mb-2">
+        <h3 className="font-semibold sm:font-bold text-xs sm:text-[15px] text-slate-900 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2 h-8 sm:h-11 leading-tight sm:leading-snug">
+          {product.name}
+        </h3>
+      </div>
+
+      {/* Key Features Bullet List (Star Tech Style - Hidden on Mobile to match Star Tech clean deal cards) */}
+      <ul className="hidden sm:block text-xs font-normal text-slate-500 dark:text-slate-400 space-y-1 mb-3 pt-2 border-t border-slate-100 dark:border-slate-800">
         {product.keyFeatures.slice(0, 2).map((feat, idx) => (
           <li key={idx} className="flex items-start gap-1.5 text-left leading-snug">
             <span className="w-1.5 h-1.5 rounded-full bg-slate-400 dark:bg-slate-600 shrink-0 mt-1.5" />
@@ -246,23 +244,23 @@ export function ProductCard({ product, viewMode = "grid" }: ProductCardProps) {
         ))}
       </ul>
 
-      {/* Pricing block (Large Blue Cash Price, Strikethrough Regular Price) */}
-      <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
-        <div className="flex items-baseline gap-2 text-left mb-2.5">
-          <span className="text-lg font-black text-blue-600 dark:text-blue-400">
+      {/* Pricing block (Large Red/Blue Cash Price, Strikethrough Regular Price) */}
+      <div className="pt-1.5 sm:pt-2 border-t border-slate-100 dark:border-slate-800">
+        <div className="flex items-baseline gap-1.5 sm:gap-2 text-left mb-1 sm:mb-2.5">
+          <span className="text-sm sm:text-base lg:text-lg font-black text-rose-600 dark:text-rose-500">
             {formatBdt(product.cashPriceBdt)}
           </span>
           {discountAmount > 0 && (
-            <span className="text-xs sm:text-[13px] font-normal text-slate-400 line-through">
+            <span className="text-[10px] sm:text-[13px] font-normal text-slate-400 line-through">
               {formatBdt(product.regularPriceBdt)}
             </span>
           )}
         </div>
 
-        {/* Action button (Star Tech Style Buy Now) */}
+        {/* Action button (Star Tech Style Buy Now - Shown on Desktop) */}
         <button
           onClick={handleBuyNow}
-          className="w-full bg-[#1340b8] hover:bg-blue-800 text-white font-bold py-2.5 px-3 rounded text-sm flex items-center justify-center gap-1.5 shadow transition-all active:scale-95"
+          className="hidden sm:flex w-full bg-[#1340b8] hover:bg-blue-800 text-white font-bold py-2.5 px-3 rounded text-sm items-center justify-center gap-1.5 shadow transition-all active:scale-95"
         >
           <ShoppingCart className="w-4 h-4" />
           <span>Buy Now</span>

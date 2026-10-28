@@ -72,7 +72,11 @@ export const storefrontApi = {
       if (params?.limit) q.append("limit", params.limit.toString());
       if (params?.page) q.append("page", params.page.toString());
       const res = await fetch(`${API_BASE}/products?${q.toString()}`, { cache: "no-store" });
-      if (!res.ok) throw new Error("Failed to fetch products");
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        console.warn(`[STOREFRONT_API] getProducts failed HTTP ${res.status}:`, text);
+        throw new Error(`Failed to fetch products: ${res.status} ${text}`);
+      }
       const json = await res.json();
       return json?.data || [];
     } catch (e) {

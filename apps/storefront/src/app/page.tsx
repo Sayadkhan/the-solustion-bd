@@ -378,22 +378,22 @@ export default function StorefrontHomePage() {
         </div>
       </section>
 
-      {/* 3. Four Quick Service / Calculator Cards (Star Tech Style) */}
+      {/* 3. Four Quick Service / Calculator Cards (Star Tech Style: 2 cols on mobile) */}
       <section className="max-w-[1600px] mx-auto px-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
           {/* Card 1 */}
           <Link
             href="/products?category=laptop"
-            className="bg-white dark:bg-[#0d1620] p-4 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center gap-3.5 shadow-sm hover:shadow-md hover:border-blue-500/50 transition-all group"
+            className="bg-white dark:bg-[#0d1620] p-2.5 sm:p-4 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center gap-2.5 sm:gap-3.5 shadow-sm hover:shadow-md hover:border-blue-500/50 transition-all group"
           >
-            <div className="w-12 h-12 rounded-full bg-blue-500/10 text-blue-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-              <Laptop className="w-6 h-6" />
+            <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-full bg-blue-500/10 text-blue-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+              <Laptop className="w-4 h-4 sm:w-6 sm:h-6" />
             </div>
             <div>
-              <h4 className="font-bold text-sm sm:text-[15px] text-slate-900 dark:text-white group-hover:text-blue-600 transition-colors">
+              <h4 className="font-bold text-xs sm:text-[15px] text-slate-900 dark:text-white group-hover:text-blue-600 transition-colors line-clamp-1">
                 Laptop Finder
               </h4>
-              <p className="text-xs font-normal text-slate-500 dark:text-slate-400">
+              <p className="text-[10px] sm:text-xs font-normal text-slate-500 dark:text-slate-400 line-clamp-1 hidden sm:block">
                 Find Your Desired Laptop Easily
               </p>
             </div>
@@ -402,16 +402,16 @@ export default function StorefrontHomePage() {
           {/* Card 2 */}
           <Link
             href="/track-order"
-            className="bg-white dark:bg-[#0d1620] p-4 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center gap-3.5 shadow-sm hover:shadow-md hover:border-blue-500/50 transition-all group"
+            className="bg-white dark:bg-[#0d1620] p-2.5 sm:p-4 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center gap-2.5 sm:gap-3.5 shadow-sm hover:shadow-md hover:border-blue-500/50 transition-all group"
           >
-            <div className="w-12 h-12 rounded-full bg-blue-500/10 text-blue-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-              <MessageSquare className="w-6 h-6" />
+            <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-full bg-blue-500/10 text-blue-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+              <MessageSquare className="w-4 h-4 sm:w-6 sm:h-6" />
             </div>
             <div>
-              <h4 className="font-bold text-sm sm:text-[15px] text-slate-900 dark:text-white group-hover:text-blue-600 transition-colors">
+              <h4 className="font-bold text-xs sm:text-[15px] text-slate-900 dark:text-white group-hover:text-blue-600 transition-colors line-clamp-1">
                 Raise a Complain
               </h4>
-              <p className="text-xs font-normal text-slate-500 dark:text-slate-400">
+              <p className="text-[10px] sm:text-xs font-normal text-slate-500 dark:text-slate-400 line-clamp-1 hidden sm:block">
                 Share your experience & RMA
               </p>
             </div>
@@ -420,16 +420,16 @@ export default function StorefrontHomePage() {
           {/* Card 3 */}
           <Link
             href="/pc-builder"
-            className="bg-white dark:bg-[#0d1620] p-4 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center gap-3.5 shadow-sm hover:shadow-md hover:border-blue-500/50 transition-all group"
+            className="bg-white dark:bg-[#0d1620] p-2.5 sm:p-4 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center gap-2.5 sm:gap-3.5 shadow-sm hover:shadow-md hover:border-blue-500/50 transition-all group"
           >
-            <div className="w-12 h-12 rounded-full bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-              <Calculator className="w-6 h-6" />
+            <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-full bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+              <Calculator className="w-4 h-4 sm:w-6 sm:h-6" />
             </div>
             <div>
-              <h4 className="font-bold text-sm sm:text-[15px] text-slate-900 dark:text-white group-hover:text-blue-600 transition-colors">
+              <h4 className="font-bold text-xs sm:text-[15px] text-slate-900 dark:text-white group-hover:text-blue-600 transition-colors line-clamp-1">
                 PC Wattage Calculator
               </h4>
-              <p className="text-xs font-normal text-slate-500 dark:text-slate-400">
+              <p className="text-[10px] sm:text-xs font-normal text-slate-500 dark:text-slate-400 line-clamp-1 hidden sm:block">
                 Find Perfect Power Supply
               </p>
             </div>
@@ -438,16 +438,16 @@ export default function StorefrontHomePage() {
           {/* Card 4 */}
           <Link
             href="/track-order"
-            className="bg-white dark:bg-[#0d1620] p-4 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center gap-3.5 shadow-sm hover:shadow-md hover:border-blue-500/50 transition-all group"
+            className="bg-white dark:bg-[#0d1620] p-2.5 sm:p-4 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center gap-2.5 sm:gap-3.5 shadow-sm hover:shadow-md hover:border-blue-500/50 transition-all group"
           >
-            <div className="w-12 h-12 rounded-full bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-              <Wrench className="w-6 h-6" />
+            <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-full bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+              <Wrench className="w-4 h-4 sm:w-6 sm:h-6" />
             </div>
             <div>
-              <h4 className="font-bold text-sm sm:text-[15px] text-slate-900 dark:text-white group-hover:text-blue-600 transition-colors">
+              <h4 className="font-bold text-xs sm:text-[15px] text-slate-900 dark:text-white group-hover:text-blue-600 transition-colors line-clamp-1">
                 Servicing Center
               </h4>
-              <p className="text-xs font-normal text-slate-500 dark:text-slate-400">
+              <p className="text-[10px] sm:text-xs font-normal text-slate-500 dark:text-slate-400 line-clamp-1 hidden sm:block">
                 Repair Your Device & Box S/N
               </p>
             </div>
@@ -455,30 +455,30 @@ export default function StorefrontHomePage() {
         </div>
       </section>
 
-      {/* 4. Featured Category 16-Grid (Exact Star Tech Feature) */}
+      {/* 4. Featured Category 16-Grid (Exact Star Tech 4-Col Mobile Feature) */}
       <section className="max-w-[1600px] mx-auto px-4 pt-4">
-        <div className="text-center space-y-1 mb-6">
-          <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+        <div className="text-center space-y-1 mb-4 sm:mb-6">
+          <h2 className="text-lg sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
             Featured Category
           </h2>
-          <p className="text-xs font-normal text-slate-500 dark:text-slate-400">
+          <p className="text-[11px] sm:text-xs font-normal text-slate-500 dark:text-slate-400">
             Get Your Desired Product from Featured Category!
           </p>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3 sm:gap-4">
+        <div className="grid grid-cols-4 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 sm:gap-4">
           {FEATURED_CATEGORIES.map((cat) => {
             const Icon = cat.icon;
             return (
               <Link
                 key={cat.name}
                 href={cat.href}
-                className="bg-white dark:bg-[#0d1620] rounded-xl border border-slate-200 dark:border-slate-800 p-4 flex flex-col items-center justify-center text-center shadow-sm hover:shadow-md hover:border-blue-500/50 transition-all group"
+                className="bg-white dark:bg-[#0d1620] rounded-xl border border-slate-200 dark:border-slate-800 p-2 sm:p-4 flex flex-col items-center justify-center text-center shadow-sm hover:shadow-md hover:border-blue-500/50 transition-all group"
               >
-                <div className="w-12 h-12 rounded-full bg-slate-50 dark:bg-slate-900 flex items-center justify-center text-slate-700 dark:text-slate-200 group-hover:text-blue-600 group-hover:scale-110 transition-transform mb-2">
-                  <Icon className="w-6 h-6" />
+                <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-full bg-slate-50 dark:bg-slate-900 flex items-center justify-center text-slate-700 dark:text-slate-200 group-hover:text-blue-600 group-hover:scale-110 transition-transform mb-1 sm:mb-2">
+                  <Icon className="w-4 h-4 sm:w-6 sm:h-6" />
                 </div>
-                <span className="font-bold text-[13px] sm:text-sm text-slate-900 dark:text-slate-100 group-hover:text-blue-600 transition-colors line-clamp-1">
+                <span className="font-bold text-[10px] sm:text-sm text-slate-900 dark:text-slate-100 group-hover:text-blue-600 transition-colors line-clamp-2 leading-tight">
                   {cat.name}
                 </span>
               </Link>
@@ -513,49 +513,49 @@ export default function StorefrontHomePage() {
 
       {/* 6. 10.10 Mega Deal / Flash Sale Countdown Grid (Star Tech Style) */}
       <section className="max-w-[1600px] mx-auto px-4 pt-4">
-        <div className="bg-white dark:bg-[#0c1319] border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm space-y-5">
+        <div className="bg-white dark:bg-[#0c1319] border border-slate-200 dark:border-slate-800 rounded-2xl p-3 sm:p-5 shadow-sm space-y-4 sm:space-y-5">
           {/* Section Header with Countdown Timer */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 pb-3 sm:pb-4 border-b border-slate-100 dark:border-slate-800">
             <div>
               <div className="flex items-center gap-2">
                 <Flame className="w-5 h-5 text-red-600 fill-red-600 animate-pulse" />
-                <h3 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white">
+                <h3 className="text-base sm:text-xl font-black text-slate-900 dark:text-white">
                   10.10 Mega Deal
                 </h3>
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                 Enjoy Exciting Discounts on your desired Products!
               </p>
             </div>
 
             {/* Countdown Boxes (Star Tech Style Badges) */}
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
+              <span className="text-[11px] sm:text-xs font-bold text-slate-500 dark:text-slate-400">
                 Ending In:
               </span>
               <div className="flex items-center gap-1.5 font-bold text-xs">
-                <div className="flex items-center gap-1 bg-blue-600 text-white px-2 py-1 rounded shadow-sm">
+                <div className="flex items-center gap-1 bg-red-600 text-white px-2 py-1 rounded shadow-sm">
                   <span>{String(countdown.days).padStart(2, "0")}</span>
-                  <span className="text-[10px] uppercase font-normal">Days</span>
+                  <span className="text-[9px] uppercase font-normal">Days</span>
                 </div>
-                <div className="flex items-center gap-1 bg-blue-600 text-white px-2 py-1 rounded shadow-sm">
+                <div className="flex items-center gap-1 bg-red-600 text-white px-2 py-1 rounded shadow-sm">
                   <span>{String(countdown.hours).padStart(2, "0")}</span>
-                  <span className="text-[10px] uppercase font-normal">Hours</span>
+                  <span className="text-[9px] uppercase font-normal">Hours</span>
                 </div>
-                <div className="flex items-center gap-1 bg-blue-600 text-white px-2 py-1 rounded shadow-sm">
+                <div className="flex items-center gap-1 bg-red-600 text-white px-2 py-1 rounded shadow-sm">
                   <span>{String(countdown.minutes).padStart(2, "0")}</span>
-                  <span className="text-[10px] uppercase font-normal">Min</span>
+                  <span className="text-[9px] uppercase font-normal">Min</span>
                 </div>
-                <div className="flex items-center gap-1 bg-blue-600 text-white px-2 py-1 rounded shadow-sm">
+                <div className="flex items-center gap-1 bg-red-600 text-white px-2 py-1 rounded shadow-sm">
                   <span>{String(countdown.seconds).padStart(2, "0")}</span>
-                  <span className="text-[10px] uppercase font-normal">Sec</span>
+                  <span className="text-[9px] uppercase font-normal">Sec</span>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Deal Products Grid: 1 col on mobile, multi-col on larger screens */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          {/* Deal Products Grid: 2 cols on mobile, multi-col on larger screens */}
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2.5 sm:gap-4">
             {megaDealsList.map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}
@@ -565,17 +565,17 @@ export default function StorefrontHomePage() {
 
       {/* 7. Featured Products Section with Tab Filter (Star Tech Style) */}
       <section className="max-w-[1600px] mx-auto px-4 pt-4">
-        <div className="text-center space-y-1 mb-5">
-          <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+        <div className="text-center space-y-1 mb-4 sm:mb-5">
+          <h2 className="text-lg sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
             Featured Products
           </h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
+          <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400">
             Check & Get Your Desired Product!
           </p>
         </div>
 
         {/* Filter Tab Chips */}
-        <div className="flex items-center justify-center gap-2 overflow-x-auto pb-4">
+        <div className="flex items-center justify-start sm:justify-center gap-2 overflow-x-auto pb-3 no-scrollbar">
           {[
             { id: "all", label: "All Hardware" },
             { id: "processor", label: "Processors" },
@@ -588,7 +588,7 @@ export default function StorefrontHomePage() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all shrink-0 ${
+              className={`px-3 sm:px-4 py-1.5 rounded-full text-xs font-bold transition-all shrink-0 ${
                 activeTab === tab.id
                   ? "bg-blue-600 text-white shadow-md shadow-blue-600/20"
                   : "bg-white dark:bg-[#0d1620] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:border-blue-500/50"
@@ -599,8 +599,8 @@ export default function StorefrontHomePage() {
           ))}
         </div>
 
-        {/* Featured Products Grid: 1 col on mobile, multi-col on larger screens */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+        {/* Featured Products Grid: 2 cols on mobile, multi-col on larger screens */}
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2.5 sm:gap-4">
           {filteredProducts.slice(0, 10).map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}
