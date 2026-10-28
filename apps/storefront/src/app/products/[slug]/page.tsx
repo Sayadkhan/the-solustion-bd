@@ -15,6 +15,8 @@ import {
   HelpCircle,
   Loader2,
   ExternalLink,
+  Image as ImageIcon,
+  Play,
 } from "lucide-react";
 import { CATALOG_PRODUCTS, getProductBySlug, Product } from "@/lib/catalog";
 import { formatBdt } from "@solusation/shared-types";
@@ -22,7 +24,7 @@ import { useCartStore } from "@/stores/cart-store";
 import { useCompareStore } from "@/stores/compare-store";
 import { ProductCard } from "@/components/product-card";
 import { storefrontApi, normalizeImageUrl } from "@/lib/api";
-import { getYouTubeEmbedUrl } from "@/lib/youtube";
+import { getYouTubeEmbedUrl, getYouTubeThumbnailUrl } from "@/lib/youtube";
 
 interface ProductPageProps {
   params: Promise<{ slug: string }>;
@@ -36,6 +38,10 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
   const [product, setProduct] = useState<Product | null>(() => getProductBySlug(slug) || null);
   const [loading, setLoading] = useState<boolean>(!product);
   const [selectedImage, setSelectedImage] = useState<string>("");
+  const [activeMedia, setActiveMedia] = useState<"video" | "image">(() => {
+    const initProd = getProductBySlug(slug);
+    return initProd?.videoUrl && getYouTubeEmbedUrl(initProd.videoUrl) ? "video" : "image";
+  });
   const [quantity, setQuantity] = useState<number>(1);
   const [selectedPricingTier, setSelectedPricingTier] = useState<"CASH" | "REGULAR">("CASH");
   const [activeTab, setActiveTab] = useState<"specs" | "branches" | "warranty" | "video">("specs");
@@ -54,6 +60,11 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
         if (isMounted) {
           setProduct(catalogMatch);
           setSelectedImage(catalogMatch.images[0] || catalogMatch.thumbnailUrl);
+          if (catalogMatch.videoUrl && getYouTubeEmbedUrl(catalogMatch.videoUrl)) {
+            setActiveMedia("video");
+          } else {
+            setActiveMedia("image");
+          }
           setLoading(false);
         }
         return;
@@ -107,6 +118,11 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
 
           setProduct(normalized);
           setSelectedImage(normalized.images[0] || normalized.thumbnailUrl);
+          if (normalized.videoUrl && getYouTubeEmbedUrl(normalized.videoUrl)) {
+            setActiveMedia("video");
+          } else {
+            setActiveMedia("image");
+          }
         }
       } catch (err) {
         console.error("Failed to load product by slug:", err);
@@ -238,52 +254,125 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Left Gallery (5 cols) */}
         <div className="lg:col-span-5 space-y-4">
-          <div className="bg-card rounded-2xl border border-border p-6 flex items-center justify-center h-80 sm:h-96 relative overflow-hidden shadow-sm">
-            <img
-              src={selectedImage || product.thumbnailUrl}
-              alt={product.name}
-              className="max-h-full max-w-full object-contain transition-transform duration-300 hover:scale-105"
-            />
-            <div className="absolute top-4 left-4">
-              <span className="px-2.5 py-1 rounded-md text-xs font-extrabold uppercase tracking-wider bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+          <div className="bg-card rounded-2xl border border-border flex items-center justify-center h-80 sm:h-96 relative overflow-hidden shadow-sm">
+            {activeMedia === "video" && product.videoUrl && getYouTubeEmbedUrl(product.videoUrl) ? (
+              <div className="w-full h-full bg-black relative flex items-center justify-center">
+                <iframe
+                  src={`${getYouTubeEmbedUrl(product.videoUrl)}?autoplay=0&rel=0`}
+                  title={product.name}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                  className="w-full h-full border-0"
+                />
+              </div>
+            ) : (
+              <div className="w-full h-full p-6 flex items-center justify-center">
+                <img
+                  src={selectedImage || product.thumbnailUrl}
+                  alt={product.name}
+                  className="max-h-full max-w-full object-contain transition-transform duration-300 hover:scale-105"
+                />
+              </div>
+            )}
+
+            {/* Stock status badge */}
+            <div className="absolute top-4 left-4 z-10 pointer-events-none">
+              <span className="px-2.5 py-1 rounded-md text-xs font-extrabold uppercase tracking-wider bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 backdrop-blur-sm shadow-sm">
                 {product.stockStatus.replace("_", " ")}
               </span>
             </div>
-            {product.videoUrl && (
-              <button
-                onClick={() => {
-                  setActiveTab("video");
-                  const tabEl = document.getElementById("product-tabs");
-                  if (tabEl) tabEl.scrollIntoView({ behavior: "smooth" });
-                }}
-                className="absolute top-4 right-4 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-600 hover:bg-red-700 text-white text-xs font-bold shadow-lg transition-transform hover:scale-105 active:scale-95"
-              >
-                <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
-                </svg>
-                <span>Watch Video</span>
-              </button>
+
+            {/* Quick Switch Button (Video <-> Image) on top right */}
+            {product.videoUrl && getYouTubeEmbedUrl(product.videoUrl) && (
+              <div className="absolute top-4 right-4 z-20">
+                {activeMedia === "video" ? (
+                  <button
+                    id="btn-switch-to-image"
+                    type="button"
+                    onClick={() => setActiveMedia("image")}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-900/90 hover:bg-slate-900 text-white text-xs font-bold shadow-lg backdrop-blur-sm border border-slate-700/80 transition-all hover:scale-105 active:scale-95 cursor-pointer"
+                    title="Switch to Image view"
+                  >
+                    <ImageIcon className="w-3.5 h-3.5 text-blue-400" />
+                    <span>View Image</span>
+                  </button>
+                ) : (
+                  <button
+                    id="btn-switch-to-video"
+                    type="button"
+                    onClick={() => setActiveMedia("video")}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-600 hover:bg-red-700 text-white text-xs font-bold shadow-lg transition-all hover:scale-105 active:scale-95 cursor-pointer"
+                    title="Switch to Video view"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+                    </svg>
+                    <span>Watch Video</span>
+                  </button>
+                )}
+              </div>
             )}
           </div>
 
-          {/* Thumbnails */}
-          {product.images.length > 1 && (
-            <div className="flex items-center gap-3">
-              {product.images.map((img, i) => (
-                <button
-                  key={i}
-                  onClick={() => setSelectedImage(img)}
-                  className={`w-16 h-16 rounded-xl border p-1 bg-card transition-all ${
-                    selectedImage === img
-                      ? "border-primary ring-2 ring-primary/20"
-                      : "border-border hover:border-border/80"
-                  }`}
-                >
-                  <img src={img} alt="" className="w-full h-full object-contain" />
-                </button>
-              ))}
-            </div>
-          )}
+          {/* Thumbnails Row (Video + Images) */}
+          <div className="flex items-center gap-3 overflow-x-auto pb-1">
+            {/* 1. Video Thumbnail (if product has video) */}
+            {product.videoUrl && getYouTubeEmbedUrl(product.videoUrl) && (
+              <button
+                id="thumb-video"
+                type="button"
+                onClick={() => setActiveMedia("video")}
+                className={`relative w-16 h-16 rounded-xl border p-0.5 bg-black flex items-center justify-center shrink-0 overflow-hidden transition-all group cursor-pointer ${
+                  activeMedia === "video"
+                    ? "border-red-600 ring-2 ring-red-600/40 shadow-md scale-105"
+                    : "border-border hover:border-red-500 opacity-80 hover:opacity-100"
+                }`}
+                title="Play Video"
+              >
+                {getYouTubeThumbnailUrl(product.videoUrl) ? (
+                  <img
+                    src={getYouTubeThumbnailUrl(product.videoUrl)!}
+                    alt="Video thumbnail"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-slate-900" />
+                )}
+                {/* Play Badge Overlay */}
+                <div className="absolute inset-0 bg-black/40 flex items-center justify-center group-hover:bg-black/20 transition-colors">
+                  <div className="w-6 h-6 rounded-full bg-red-600 text-white flex items-center justify-center shadow-md">
+                    <svg className="w-3.5 h-3.5 fill-current ml-0.5" viewBox="0 0 24 24">
+                      <path d="M8 5v14l11-7z" />
+                    </svg>
+                  </div>
+                </div>
+                <span className="absolute bottom-0 left-0 right-0 bg-red-600 text-white text-[8px] font-black uppercase text-center leading-tight py-0.5 tracking-wider">
+                  Video
+                </span>
+              </button>
+            )}
+
+            {/* 2. Image Thumbnails */}
+            {product.images.map((img, i) => (
+              <button
+                key={i}
+                id={`thumb-image-${i}`}
+                type="button"
+                onClick={() => {
+                  setSelectedImage(img);
+                  setActiveMedia("image");
+                }}
+                className={`w-16 h-16 rounded-xl border p-1 bg-card shrink-0 transition-all cursor-pointer ${
+                  activeMedia === "image" && selectedImage === img
+                    ? "border-primary ring-2 ring-primary/20 shadow-md scale-105"
+                    : "border-border hover:border-border/80 opacity-80 hover:opacity-100"
+                }`}
+                title={`View Image ${i + 1}`}
+              >
+                <img src={img} alt="" className="w-full h-full object-contain" />
+              </button>
+            ))}
+          </div>
 
           {/* Value Badges */}
           <div className="grid grid-cols-2 gap-3 pt-2 text-xs">
