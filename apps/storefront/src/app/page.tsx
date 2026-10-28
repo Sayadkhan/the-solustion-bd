@@ -215,13 +215,13 @@ export default function StorefrontHomePage() {
       <section className="max-w-[1600px] mx-auto px-4 pt-4">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
           {/* Left: 8 Cols Carousel Slider */}
-          <div className="lg:col-span-8 relative rounded-xl overflow-hidden shadow-lg min-h-[320px] sm:min-h-[400px] md:min-h-[440px] flex items-center group">
+          <div className="lg:col-span-8 relative rounded-xl overflow-hidden shadow-lg min-h-[220px] sm:min-h-[340px] md:min-h-[440px] flex items-center group">
             {heroSlides.map((slide, idx) => (
               <div
                 key={slide.id || idx}
                 className={`absolute inset-0 transition-opacity duration-700 bg-gradient-to-r ${
                   slide.bgGradient || "from-blue-700 via-indigo-900 to-slate-950"
-                } flex items-center p-6 sm:p-10 text-white ${
+                } flex items-center p-5 sm:p-10 text-white ${
                   idx === currentSlide ? "opacity-100 z-10" : "opacity-0 z-0 pointer-events-none"
                 }`}
               >
@@ -300,8 +300,8 @@ export default function StorefrontHomePage() {
             )}
           </div>
 
-          {/* Right: 4 Cols Stacked Promo Banners (Star Tech Style) */}
-          <div className="lg:col-span-4 flex flex-col gap-4">
+          {/* Right: 4 Cols Stacked Promo Banners (Hidden on Mobile, Visible on Desktop like Star Tech) */}
+          <div className="hidden lg:flex lg:col-span-4 flex-col gap-4">
             {/* Promo Card 1: Blue Customer Care & After Sales */}
             <div className={`flex-1 rounded-xl p-6 bg-gradient-to-br ${
               promoSideBanners[0]?.bgGradient || "from-[#0e3c88] to-[#122444]"
