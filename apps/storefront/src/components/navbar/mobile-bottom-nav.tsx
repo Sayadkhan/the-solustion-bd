@@ -56,8 +56,8 @@ export function MobileBottomNav() {
 
   return (
     <nav
-      aria-label="Star Tech Style Mobile Bottom Navigation"
-      className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#081621] text-white border-t border-slate-800 shadow-[0_-4px_25px_rgba(0,0,0,0.35)] px-1 py-1"
+      aria-label="Mobile Bottom Navigation"
+      className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white text-slate-700 border-t border-slate-200 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] px-1 py-1"
     >
       <div className="flex items-center justify-around max-w-md mx-auto">
         {navItems.map((item) => {
@@ -69,8 +69,8 @@ export function MobileBottomNav() {
               href={item.href}
               className={`flex flex-col items-center justify-center py-1.5 px-2 rounded transition-colors relative min-w-[62px] ${
                 item.isActive
-                  ? "text-blue-400 font-bold"
-                  : "text-slate-300 hover:text-white"
+                  ? "text-blue-600 font-bold"
+                  : "text-slate-600 hover:text-slate-900"
               }`}
             >
               <Icon className="w-5 h-5 mb-1" />

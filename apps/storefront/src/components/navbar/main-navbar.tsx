@@ -332,29 +332,27 @@ export function MainNavbar() {
 
   return (
     <header className="w-full z-40 sticky top-0 shadow-md">
-      {/* 1. Mobile Top Header Bar (#081621 Star Tech Style) */}
-      <div className="lg:hidden bg-[#081621] text-white px-3 py-2.5 flex items-center justify-between border-b border-slate-800 shadow-md">
+      {/* 1. Mobile Top Header Bar (Clean White) */}
+      <div className="lg:hidden bg-white text-slate-900 px-3 py-2.5 flex items-center justify-between border-b border-slate-200 shadow-sm">
         {/* Left: Hamburger menu toggle */}
         <button
           onClick={() => {
             setMobileMenuOpen(!mobileMenuOpen);
             if (mobileSearchOpen) setMobileSearchOpen(false);
           }}
-          className="p-1.5 text-white hover:text-blue-400 transition-colors focus:outline-none"
+          className="p-1.5 text-slate-800 hover:text-blue-600 transition-colors focus:outline-none"
           aria-label="Toggle Menu"
         >
           {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
         </button>
 
-        {/* Center: Logo in white pill badge for crisp visibility */}
+        {/* Center: Logo */}
         <Link href="/" className="flex items-center">
-          <div className="bg-white px-2.5 py-0.5 rounded-md shadow-sm">
-            <img
-              src="/logo.png"
-              alt="The Solutions BD"
-              className="h-7 w-auto object-contain"
-            />
-          </div>
+          <img
+            src="/logo.png"
+            alt="The Solutions BD"
+            className="h-7 w-auto object-contain"
+          />
         </Link>
 
         {/* Right: Search icon and Cart icon with red badge */}
@@ -365,7 +363,7 @@ export function MainNavbar() {
               if (mobileMenuOpen) setMobileMenuOpen(false);
             }}
             className={`p-1.5 rounded transition-colors ${
-              mobileSearchOpen ? "text-blue-400 bg-slate-800" : "text-white hover:text-blue-400"
+              mobileSearchOpen ? "text-blue-600 bg-slate-100" : "text-slate-800 hover:text-blue-600"
             }`}
             aria-label="Toggle Search"
           >
@@ -374,7 +372,7 @@ export function MainNavbar() {
 
           <Link
             href="/cart"
-            className="p-1.5 text-white hover:text-blue-400 relative transition-colors"
+            className="p-1.5 text-slate-800 hover:text-blue-600 relative transition-colors"
             title="Cart"
           >
             <ShoppingCart className="w-5 h-5" />
@@ -387,7 +385,7 @@ export function MainNavbar() {
 
       {/* Mobile Expandable Search Bar */}
       {mobileSearchOpen && (
-        <div className="lg:hidden bg-[#0a1824] p-2.5 border-b border-slate-800 animate-in slide-in-from-top-1 duration-150">
+        <div className="lg:hidden bg-slate-50 p-2.5 border-b border-slate-200 shadow-sm animate-in slide-in-from-top-1 duration-150">
           <form onSubmit={handleSearchSubmit} className="relative flex items-center">
             <input
               type="text"
@@ -398,11 +396,11 @@ export function MainNavbar() {
                 setSearchOpen(true);
               }}
               placeholder="Search components, laptops, gaming rigs..."
-              className="w-full bg-[#081621] text-white placeholder-slate-400 pl-3.5 pr-10 py-2 text-xs rounded-md border border-slate-700 focus:border-blue-500 outline-none"
+              className="w-full bg-white text-slate-900 placeholder-slate-400 pl-3.5 pr-10 py-2 text-xs rounded-md border border-slate-300 focus:border-blue-600 focus:ring-1 focus:ring-blue-600 outline-none"
             />
             <button
               type="submit"
-              className="absolute right-0 top-0 bottom-0 px-3 flex items-center justify-center text-slate-400 hover:text-white"
+              className="absolute right-0 top-0 bottom-0 px-3 flex items-center justify-center text-slate-500 hover:text-blue-600"
               title="Search"
             >
               <Search className="w-4 h-4" />
@@ -658,12 +656,12 @@ export function MainNavbar() {
         </div>
       </nav>
 
-      {/* 4. Mobile Navigation Drawer (Star Tech Style) */}
+      {/* 4. Mobile Navigation Drawer (Clean White) */}
       {mobileMenuOpen && (
-        <div className="lg:hidden bg-[#081621] text-white border-b border-slate-800 p-4 max-h-[85vh] overflow-y-auto space-y-4 animate-in slide-in-from-top-2 duration-200 shadow-2xl">
+        <div className="lg:hidden bg-white text-slate-900 border-b border-slate-200 p-4 max-h-[85vh] overflow-y-auto space-y-4 animate-in slide-in-from-top-2 duration-200 shadow-xl">
           {/* Top Quick Actions */}
-          <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-            <span className="font-bold text-xs uppercase tracking-wider text-slate-400">Navigation Menu</span>
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+            <span className="font-bold text-xs uppercase tracking-wider text-slate-500">Navigation Menu</span>
             <Link
               href="/pc-builder"
               onClick={() => setMobileMenuOpen(false)}
@@ -675,39 +673,39 @@ export function MainNavbar() {
           </div>
 
           {/* Quick links: Offers, Super Hour */}
-          <div className="grid grid-cols-2 gap-2 pb-3 border-b border-slate-800 text-xs">
+          <div className="grid grid-cols-2 gap-2 pb-3 border-b border-slate-100 text-xs">
             <Link
               href="/products?deals=true"
               onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-2 p-2 rounded bg-slate-900/80 hover:bg-slate-800 text-slate-200"
+              className="flex items-center gap-2 p-2 rounded bg-slate-50 hover:bg-slate-100 text-slate-800 border border-slate-200/80 font-medium"
             >
-              <Gift className="w-4 h-4 text-blue-400" />
+              <Gift className="w-4 h-4 text-blue-600" />
               <span>Offers</span>
             </Link>
             <Link
               href="/products?discount=true"
               onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-2 p-2 rounded bg-slate-900/80 hover:bg-slate-800 text-slate-200"
+              className="flex items-center gap-2 p-2 rounded bg-slate-50 hover:bg-slate-100 text-slate-800 border border-slate-200/80 font-medium"
             >
-              <Zap className="w-4 h-4 text-amber-400" />
+              <Zap className="w-4 h-4 text-amber-500" />
               <span>Super Hour</span>
             </Link>
           </div>
 
           {/* Category Tree with Expandable Subcategories */}
           <div className="space-y-1">
-            <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400 px-1 pb-1">
+            <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 px-1 pb-1">
               All Categories
             </div>
             {navCategories.map((cat) => {
               const isExpanded = expandedCat === cat.name;
               return (
-                <div key={cat.name} className="border-b border-slate-800/60 pb-1">
+                <div key={cat.name} className="border-b border-slate-100 pb-1">
                   <div className="flex items-center justify-between py-2 px-1">
                     <Link
                       href={cat.href}
                       onClick={() => setMobileMenuOpen(false)}
-                      className="text-sm font-semibold text-slate-200 hover:text-blue-400 flex items-center gap-2"
+                      className="text-sm font-semibold text-slate-800 hover:text-blue-600 flex items-center gap-2"
                     >
                       <span>{cat.name}</span>
                       {cat.badge && (
@@ -719,21 +717,21 @@ export function MainNavbar() {
                     {cat.subcategories && cat.subcategories.length > 0 && (
                       <button
                         onClick={() => setExpandedCat(isExpanded ? null : cat.name)}
-                        className="p-1 text-slate-400 hover:text-white"
+                        className="p-1 text-slate-400 hover:text-slate-700"
                         aria-label="Toggle subcategories"
                       >
-                        <ChevronDown className={`w-4 h-4 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
+                        <ChevronDown className={`w-4 h-4 transition-transform ${isExpanded ? "rotate-180 text-blue-600" : ""}`} />
                       </button>
                     )}
                   </div>
                   {isExpanded && cat.subcategories && (
-                    <div className="pl-4 pb-2 space-y-1 text-xs text-slate-400 bg-slate-950/40 rounded-lg p-2 mt-1">
+                    <div className="pl-4 pb-2 space-y-1 text-xs text-slate-600 bg-slate-50 rounded-lg p-2.5 mt-1 border border-slate-100">
                       {cat.subcategories.map((sub) => (
                         <Link
                           key={sub.name}
                           href={sub.href}
                           onClick={() => setMobileMenuOpen(false)}
-                          className="block py-1 hover:text-blue-400 text-slate-300"
+                          className="block py-1 hover:text-blue-600 text-slate-700"
                         >
                           • {sub.name}
                         </Link>
@@ -746,7 +744,7 @@ export function MainNavbar() {
           </div>
 
           {/* Theme Switcher in Drawer */}
-          <div className="pt-2 flex items-center justify-between border-t border-slate-800 text-xs text-slate-400">
+          <div className="pt-2 flex items-center justify-between border-t border-slate-100 text-xs text-slate-500">
             <span>Color Theme</span>
             <ThemeToggle />
           </div>
