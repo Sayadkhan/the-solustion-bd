@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { adminApi } from "@/lib/api-client";
+import { WordPressEditor } from "@/components/wordpress-editor";
 import {
   X,
   Plus,
@@ -12,59 +13,103 @@ import {
   Search,
   CheckCircle2,
   FileText,
+  Sparkles,
 } from "lucide-react";
 
 interface AddBlogModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: (newBlog: any) => void;
+  onSuccess: (blog: any) => void;
+  initialBlog?: any | null;
 }
 
-export function AddBlogModal({ isOpen, onClose, onSuccess }: AddBlogModalProps) {
+export function AddBlogModal({
+  isOpen,
+  onClose,
+  onSuccess,
+  initialBlog = null,
+}: AddBlogModalProps) {
   if (!isOpen) return null;
 
+  const isEditing = !!initialBlog?.id;
   const [loading, setLoading] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
 
   // Form State
-  const [title, setTitle] = useState("");
-  const [slug, setSlug] = useState("");
-  const [category, setCategory] = useState("Buying Guide");
-  const [excerpt, setExcerpt] = useState("");
-  const [content, setContent] = useState("");
-  const [featuredImage, setFeaturedImage] = useState("");
-  const [status, setStatus] = useState<"PUBLISHED" | "DRAFT">("PUBLISHED");
+  const [title, setTitle] = useState(initialBlog?.title || "");
+  const [slug, setSlug] = useState(initialBlog?.slug || "");
+  const [category, setCategory] = useState(initialBlog?.category || "Buying Guide");
+  const [excerpt, setExcerpt] = useState(initialBlog?.excerpt || "");
+  const [content, setContent] = useState(initialBlog?.content || "");
+  const [featuredImage, setFeaturedImage] = useState(initialBlog?.featuredImage || "");
+  const [status, setStatus] = useState<"PUBLISHED" | "DRAFT">(
+    initialBlog?.status === "DRAFT" ? "DRAFT" : "PUBLISHED"
+  );
 
   // SEO Fields
-  const [metaTitle, setMetaTitle] = useState("");
-  const [metaDescription, setMetaDescription] = useState("");
-  const [metaKeywords, setMetaKeywords] = useState("graphics card bd, gaming pc dhaka, pc build guide");
-  const [canonicalUrl, setCanonicalUrl] = useState("");
+  const [metaTitle, setMetaTitle] = useState(initialBlog?.metaTitle || "");
+  const [metaDescription, setMetaDescription] = useState(initialBlog?.metaDescription || "");
+  const [metaKeywords, setMetaKeywords] = useState(
+    Array.isArray(initialBlog?.metaKeywords)
+      ? initialBlog.metaKeywords.join(", ")
+      : initialBlog?.metaKeywords || "graphics card bd, gaming pc dhaka, pc build guide"
+  );
+  const [canonicalUrl, setCanonicalUrl] = useState(initialBlog?.canonicalUrl || "");
 
   // Backlinks
   const [backlinks, setBacklinks] = useState<
     Array<{ anchorText: string; url: string; rel: "dofollow" | "nofollow" | "sponsored"; targetBlank: boolean }>
-  >([
-    {
-      anchorText: "Official GPU Collection",
-      url: "https://thesolutionsbd.com/products?category=graphics-card",
-      rel: "dofollow",
-      targetBlank: true,
-    },
-  ]);
+  >(
+    Array.isArray(initialBlog?.backlinks) && initialBlog.backlinks.length > 0
+      ? initialBlog.backlinks
+      : [
+          {
+            anchorText: "Official GPU Collection",
+            url: "https://thesolutionsbd.com/products?category=graphics-card",
+            rel: "dofollow",
+            targetBlank: true,
+          },
+        ]
+  );
   const [newAnchor, setNewAnchor] = useState("");
   const [newUrl, setNewUrl] = useState("");
   const [newRel, setNewRel] = useState<"dofollow" | "nofollow" | "sponsored">("dofollow");
 
+  // Re-sync if initialBlog changes
+  useEffect(() => {
+    if (initialBlog) {
+      setTitle(initialBlog.title || "");
+      setSlug(initialBlog.slug || "");
+      setCategory(initialBlog.category || "Buying Guide");
+      setExcerpt(initialBlog.excerpt || "");
+      setContent(initialBlog.content || "");
+      setFeaturedImage(initialBlog.featuredImage || "");
+      setStatus(initialBlog.status === "DRAFT" ? "DRAFT" : "PUBLISHED");
+      setMetaTitle(initialBlog.metaTitle || "");
+      setMetaDescription(initialBlog.metaDescription || "");
+      setMetaKeywords(
+        Array.isArray(initialBlog.metaKeywords)
+          ? initialBlog.metaKeywords.join(", ")
+          : initialBlog.metaKeywords || ""
+      );
+      setCanonicalUrl(initialBlog.canonicalUrl || "");
+      if (Array.isArray(initialBlog.backlinks) && initialBlog.backlinks.length > 0) {
+        setBacklinks(initialBlog.backlinks);
+      }
+    }
+  }, [initialBlog]);
+
   const handleTitleChange = (val: string) => {
     setTitle(val);
-    const autoSlug = val
-      .toLowerCase()
-      .replace(/[^\w\s-]/g, "")
-      .replace(/[\s_-]+/g, "-");
-    setSlug(autoSlug);
-    if (!metaTitle) setMetaTitle(val.slice(0, 65));
-    if (!canonicalUrl) setCanonicalUrl(`https://thesolutionsbd.com/blog/${autoSlug}`);
+    if (!isEditing) {
+      const autoSlug = val
+        .toLowerCase()
+        .replace(/[^\w\s-]/g, "")
+        .replace(/[\s_-]+/g, "-");
+      setSlug(autoSlug);
+      if (!metaTitle) setMetaTitle(val.slice(0, 65));
+      if (!canonicalUrl) setCanonicalUrl(`https://thesolutionsbd.com/blog/${autoSlug}`);
+    }
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -107,7 +152,7 @@ export function AddBlogModal({ isOpen, onClose, onSuccess }: AddBlogModalProps) 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title || !content) {
+    if (!title.trim() || !content.trim()) {
       alert("Please provide both Title and Article Content.");
       return;
     }
@@ -126,18 +171,24 @@ export function AddBlogModal({ isOpen, onClose, onSuccess }: AddBlogModalProps) 
         metaDescription: metaDescription.trim() || excerpt || title,
         metaKeywords: metaKeywords
           .split(",")
-          .map((k) => k.trim())
+          .map((k: string) => k.trim())
           .filter(Boolean),
         canonicalUrl: canonicalUrl.trim() || `https://thesolutionsbd.com/blog/${slug}`,
         backlinks,
       };
 
-      const res = await adminApi.createBlog(payload);
+      let res;
+      if (isEditing && initialBlog?.id) {
+        res = await adminApi.updateBlog(initialBlog.id, payload);
+      } else {
+        res = await adminApi.createBlog(payload);
+      }
+
       if (res.success) {
         onSuccess(res.data);
         onClose();
       } else {
-        alert(res.message || "Failed to publish blog post.");
+        alert(res.message || "Failed to save blog post.");
       }
     } catch (err: any) {
       alert(`Error: ${err.message}`);
@@ -147,14 +198,17 @@ export function AddBlogModal({ isOpen, onClose, onSuccess }: AddBlogModalProps) 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="relative w-full max-w-4xl bg-card border border-border rounded-2xl shadow-2xl overflow-hidden my-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto">
+      <div className="relative w-full max-w-5xl bg-card border border-border rounded-2xl shadow-2xl overflow-hidden my-6">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-muted/30">
           <div>
             <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
               <FileText className="w-5 h-5 text-primary" />
-              Write & Publish SEO Blog Post
+              <span>{isEditing ? "Edit SEO Blog Post" : "Write & Publish SEO Blog Post"}</span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-500 border border-blue-500/20 font-semibold font-mono">
+                WordPress WYSIWYG
+              </span>
             </h2>
             <p className="text-xs text-muted-foreground mt-0.5">
               Rank on Google with clean canonical URLs, structured Article schema, and managed backlinks.
@@ -169,14 +223,14 @@ export function AddBlogModal({ isOpen, onClose, onSuccess }: AddBlogModalProps) 
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-6 max-h-[80vh] overflow-y-auto">
+        <form onSubmit={handleSubmit} className="p-6 space-y-6 max-h-[82vh] overflow-y-auto">
           {/* Main Article Details */}
           <div className="space-y-4">
             <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              1. Article Content
+              1. Article Content & WordPress Rich Body
             </h3>
 
-            <div className="space-y-3">
+            <div className="space-y-3.5">
               <div>
                 <label className="block text-xs font-semibold text-foreground mb-1">
                   Article Headline / Title *
@@ -187,14 +241,14 @@ export function AddBlogModal({ isOpen, onClose, onSuccess }: AddBlogModalProps) 
                   placeholder="e.g. Best Gaming Graphics Cards Under 50,000 BDT in Bangladesh (2026 Guide)"
                   value={title}
                   onChange={(e) => handleTitleChange(e.target.value)}
-                  className="w-full px-3.5 py-2 text-sm bg-muted/40 border border-border rounded-lg text-foreground focus:ring-1 focus:ring-primary focus:border-primary outline-none"
+                  className="w-full px-3.5 py-2 text-sm bg-muted/40 border border-border rounded-xl text-foreground focus:ring-1 focus:ring-primary focus:border-primary outline-none"
                 />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-foreground mb-1">
-                    URL Slug (Indexable Permlink) *
+                    URL Slug (Indexable Permalink) *
                   </label>
                   <input
                     type="text"
@@ -202,10 +256,10 @@ export function AddBlogModal({ isOpen, onClose, onSuccess }: AddBlogModalProps) 
                     placeholder="best-gaming-graphics-cards-under-50000-bdt"
                     value={slug}
                     onChange={(e) => setSlug(e.target.value)}
-                    className="w-full px-3.5 py-2 text-xs font-mono bg-muted/40 border border-border rounded-lg text-foreground outline-none"
+                    className="w-full px-3.5 py-2 text-xs font-mono bg-muted/40 border border-border rounded-xl text-foreground outline-none"
                   />
                   <span className="text-[11px] text-muted-foreground mt-0.5 block">
-                    URL: /blog/{slug || "..."}
+                    Live URL: /blogs/{slug || "..."}
                   </span>
                 </div>
 
@@ -214,12 +268,14 @@ export function AddBlogModal({ isOpen, onClose, onSuccess }: AddBlogModalProps) 
                   <select
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
-                    className="w-full px-3.5 py-2 text-sm bg-muted/40 border border-border rounded-lg text-foreground outline-none"
+                    className="w-full px-3.5 py-2 text-sm bg-muted/40 border border-border rounded-xl text-foreground outline-none"
                   >
                     <option value="Buying Guide">Buying Guide</option>
                     <option value="Hardware Comparison">Hardware Comparison</option>
                     <option value="Tech News">Tech News & Releases</option>
                     <option value="PC Build Tips">PC Build & Maintenance</option>
+                    <option value="Processor Benchmarks">Processor Benchmarks</option>
+                    <option value="GPU Reviews">GPU Reviews</option>
                   </select>
                 </div>
               </div>
@@ -233,213 +289,232 @@ export function AddBlogModal({ isOpen, onClose, onSuccess }: AddBlogModalProps) 
                   placeholder="A concise 2-sentence breakdown of what this article covers for tech buyers."
                   value={excerpt}
                   onChange={(e) => setExcerpt(e.target.value)}
-                  className="w-full px-3.5 py-2 text-xs bg-muted/40 border border-border rounded-lg text-foreground outline-none resize-none"
+                  className="w-full px-3.5 py-2 text-xs bg-muted/40 border border-border rounded-xl text-foreground outline-none resize-none"
                 />
               </div>
 
+              {/* WordPress-Style Full Article Body Editor */}
               <div>
-                <label className="block text-xs font-semibold text-foreground mb-1">
-                  Full Article Body (Supports HTML & Markdown) *
+                <label className="block text-xs font-semibold text-foreground mb-1.5 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <FileText className="w-3.5 h-3.5 text-primary" />
+                    <span>Full Article Body (WordPress Style Rich Editor) *</span>
+                  </span>
+                  <span className="text-[10px] text-muted-foreground font-mono">
+                    Visual WYSIWYG & Raw HTML Dual Mode
+                  </span>
                 </label>
-                <textarea
-                  rows={8}
-                  required
-                  placeholder="<p>Write your detailed technical analysis here with benchmarks, pricing tables, and recommendations...</p>"
+
+                <WordPressEditor
                   value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                  className="w-full px-3.5 py-2.5 text-xs font-mono bg-muted/40 border border-border rounded-lg text-foreground outline-none"
+                  onChange={setContent}
+                  placeholder="Write your comprehensive technical guide here with rich headings, comparisons, benchmark charts, images, and links..."
+                  minHeight="380px"
                 />
               </div>
             </div>
           </div>
 
           {/* Featured Image */}
-          <div className="space-y-4 pt-2 border-t border-border">
+          <div className="space-y-4 pt-4 border-t border-border">
             <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
               <Upload className="w-4 h-4 text-primary" />
-              2. Featured Banner Image
+              2. Featured Banner Image (OpenGraph / Social Sharing)
             </h3>
 
-            <div className="flex flex-col md:flex-row gap-4 items-start">
-              <div className="w-full md:w-1/2">
-                <label className="block border-2 border-dashed border-border hover:border-primary/50 transition rounded-xl p-6 text-center cursor-pointer bg-muted/20">
-                  <Upload className="w-8 h-8 text-primary mx-auto mb-2" />
-                  <span className="text-xs font-semibold text-foreground block">
-                    {uploadingImage ? "Uploading Banner..." : "Click or Drag Banner Image"}
-                  </span>
-                  <span className="text-[11px] text-muted-foreground mt-1 block">
-                    Recommended ratio 16:9 (1200x630px)
-                  </span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    disabled={uploadingImage}
-                    className="hidden"
-                  />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1">
+                  Image URL / CDN Path
                 </label>
-              </div>
-
-              <div className="w-full md:w-1/2 space-y-2">
-                <label className="block text-xs font-semibold text-foreground">Or Enter Image URL</label>
                 <input
                   type="text"
-                  placeholder="https://..."
+                  placeholder="https://images.unsplash.com/... or /uploads/..."
                   value={featuredImage}
                   onChange={(e) => setFeaturedImage(e.target.value)}
-                  className="w-full px-3.5 py-2 text-xs bg-muted/40 border border-border rounded-lg text-foreground outline-none"
+                  className="w-full px-3.5 py-2 text-xs font-mono bg-muted/40 border border-border rounded-xl text-foreground outline-none"
                 />
-                {featuredImage && (
-                  // eslint-disable-next-line @next/next/no-img-element
+
+                <div className="mt-2 flex items-center gap-2">
+                  <label className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-muted/40 hover:bg-muted text-xs font-semibold text-foreground cursor-pointer transition">
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>{uploadingImage ? "Uploading..." : "Upload from Computer"}</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      disabled={uploadingImage}
+                      onChange={handleImageUpload}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+              </div>
+
+              {featuredImage && (
+                <div className="p-2 border border-border rounded-xl bg-muted/20 text-center">
+                  <span className="text-[10px] text-muted-foreground font-mono mb-1 block">
+                    Featured Thumbnail Preview:
+                  </span>
                   <img
                     src={featuredImage}
-                    alt="Banner Preview"
-                    className="w-full h-28 object-cover rounded-lg border border-border mt-2"
+                    alt="Featured Preview"
+                    className="h-28 w-full object-cover rounded-lg border border-border"
                   />
-                )}
-              </div>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* SEO Metadata Suite */}
-          <div className="space-y-4 pt-2 border-t border-border">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-              <Search className="w-4 h-4 text-primary" />
-              3. Search Engine Optimization (SEO) Suite
-            </h3>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-foreground mb-1">
-                  Meta Title (Google SERP Title)
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Best GPU Under 50,000 BDT in Bangladesh"
-                  value={metaTitle}
-                  onChange={(e) => setMetaTitle(e.target.value)}
-                  className="w-full px-3.5 py-2 text-xs bg-muted/40 border border-border rounded-lg text-foreground outline-none"
-                />
-                <span className="text-[11px] text-muted-foreground mt-0.5 block">
-                  Length: {metaTitle.length}/70 chars
-                </span>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-foreground mb-1">
-                  Canonical URL (Authority Reference)
-                </label>
-                <input
-                  type="text"
-                  value={canonicalUrl}
-                  onChange={(e) => setCanonicalUrl(e.target.value)}
-                  className="w-full px-3.5 py-2 text-xs font-mono bg-muted/40 border border-border rounded-lg text-foreground outline-none"
-                />
-              </div>
-
-              <div className="md:col-span-2">
-                <label className="block text-xs font-semibold text-foreground mb-1">
-                  Meta Description (Google Snippet)
-                </label>
-                <input
-                  type="text"
-                  placeholder="Detailed benchmark analysis comparing RTX 4060 and RX 7600 with official warranty in BD."
-                  value={metaDescription}
-                  onChange={(e) => setMetaDescription(e.target.value)}
-                  className="w-full px-3.5 py-2 text-xs bg-muted/40 border border-border rounded-lg text-foreground outline-none"
-                />
-                <span className="text-[11px] text-muted-foreground mt-0.5 block">
-                  Length: {metaDescription.length}/160 chars
-                </span>
-              </div>
-
-              <div className="md:col-span-2">
-                <label className="block text-xs font-semibold text-foreground mb-1">
-                  Target SEO Keywords (Comma Separated)
-                </label>
-                <input
-                  type="text"
-                  value={metaKeywords}
-                  onChange={(e) => setMetaKeywords(e.target.value)}
-                  className="w-full px-3.5 py-2 text-xs bg-muted/40 border border-border rounded-lg text-foreground outline-none"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Backlink Manager */}
-          <div className="space-y-4 pt-2 border-t border-border">
+          {/* 3. Managed Backlinks Engine */}
+          <div className="space-y-4 pt-4 border-t border-border">
             <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
               <LinkIcon className="w-4 h-4 text-primary" />
-              4. Backlink & Internal Link Engine
+              3. SEO Internal Backlinks Registry (Rule 4.8)
             </h3>
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              Register targeted high-intent anchor texts to pass PageRank to core product categories and build topical authority in Bangladesh search results.
+            </p>
 
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
-              <input
-                type="text"
-                placeholder="Anchor Text (e.g. RTX 4060 GPU)"
-                value={newAnchor}
-                onChange={(e) => setNewAnchor(e.target.value)}
-                className="px-3 py-1.5 text-xs bg-muted/40 border border-border rounded-lg text-foreground outline-none"
-              />
-              <input
-                type="text"
-                placeholder="URL (e.g. https://thesolutionsbd.com/products/...)"
-                value={newUrl}
-                onChange={(e) => setNewUrl(e.target.value)}
-                className="px-3 py-1.5 text-xs font-mono bg-muted/40 border border-border rounded-lg text-foreground outline-none md:col-span-2"
-              />
-              <div className="flex gap-1.5">
-                <select
-                  value={newRel}
-                  onChange={(e) => setNewRel(e.target.value as any)}
-                  className="px-2 py-1.5 text-xs bg-muted/40 border border-border rounded-lg text-foreground outline-none"
-                >
-                  <option value="dofollow">dofollow (Pass SEO)</option>
-                  <option value="nofollow">nofollow (No rank pass)</option>
-                  <option value="sponsored">sponsored</option>
-                </select>
-                <button
-                  type="button"
-                  onClick={handleAddBacklink}
-                  className="px-3 py-1.5 text-xs font-medium rounded-lg bg-secondary text-secondary-foreground hover:bg-secondary/80"
-                >
-                  Add
-                </button>
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              {backlinks.map((link, idx) => (
-                <div
-                  key={idx}
-                  className="flex items-center justify-between text-xs px-3 py-2 rounded-lg bg-muted/20 border border-border/50 text-foreground"
-                >
-                  <div className="flex items-center gap-2 overflow-hidden">
-                    <span className="font-semibold text-primary">{link.anchorText}</span>
-                    <span className="font-mono text-[11px] text-muted-foreground truncate">
-                      ({link.url})
-                    </span>
-                    <span className="px-1.5 py-0.5 text-[10px] uppercase font-mono rounded bg-primary/10 text-primary">
-                      rel=&quot;{link.rel}&quot;
-                    </span>
-                  </div>
+            <div className="p-4 border border-border rounded-xl bg-muted/20 space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
+                <input
+                  type="text"
+                  placeholder="Anchor Text (e.g. Official GPU Price)"
+                  value={newAnchor}
+                  onChange={(e) => setNewAnchor(e.target.value)}
+                  className="px-3 py-1.5 text-xs bg-background border border-border rounded-lg text-foreground outline-none"
+                />
+                <input
+                  type="url"
+                  placeholder="Target URL (e.g. /products?category=gpu)"
+                  value={newUrl}
+                  onChange={(e) => setNewUrl(e.target.value)}
+                  className="px-3 py-1.5 text-xs bg-background border border-border rounded-lg text-foreground outline-none font-mono sm:col-span-2"
+                />
+                <div className="flex gap-1.5">
+                  <select
+                    value={newRel}
+                    onChange={(e) => setNewRel(e.target.value as any)}
+                    className="px-2 py-1.5 text-xs bg-background border border-border rounded-lg text-foreground outline-none"
+                  >
+                    <option value="dofollow">dofollow</option>
+                    <option value="nofollow">nofollow</option>
+                    <option value="sponsored">sponsored</option>
+                  </select>
                   <button
                     type="button"
-                    onClick={() => handleRemoveBacklink(idx)}
-                    className="text-muted-foreground hover:text-destructive transition p-1"
+                    onClick={handleAddBacklink}
+                    className="px-3 py-1.5 bg-primary text-white rounded-lg text-xs font-bold hover:bg-primary/90 flex items-center gap-1"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add</span>
                   </button>
                 </div>
-              ))}
+              </div>
+
+              {/* Active registered backlinks */}
+              {backlinks.length > 0 && (
+                <div className="space-y-1.5 mt-2">
+                  <div className="text-[10px] font-bold text-muted-foreground uppercase">
+                    Configured Backlinks ({backlinks.length}):
+                  </div>
+                  <div className="divide-y divide-border border border-border rounded-lg bg-card overflow-hidden">
+                    {backlinks.map((b, idx) => (
+                      <div
+                        key={idx}
+                        className="px-3 py-2 flex items-center justify-between text-xs"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-primary">{b.anchorText}</span>
+                          <span className="text-muted-foreground font-mono text-[10px]">
+                            -&gt; {b.url}
+                          </span>
+                          <span className="px-1.5 py-0.2 rounded bg-muted text-[9px] font-mono border border-border">
+                            rel=&quot;{b.rel}&quot;
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveBacklink(idx)}
+                          className="text-rose-500 hover:text-rose-700 p-1"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Publication Status */}
-          <div className="flex items-center justify-between pt-4 border-t border-border">
+          {/* 4. Advanced Technical SEO */}
+          <div className="space-y-4 pt-4 border-t border-border">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+              <Search className="w-4 h-4 text-primary" />
+              4. Advanced Google Search Meta & SERP Snippet
+            </h3>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1">
+                  Meta Title (50-65 chars recommended for Google SERP)
+                </label>
+                <input
+                  type="text"
+                  placeholder="Leave blank to use main headline"
+                  value={metaTitle}
+                  onChange={(e) => setMetaTitle(e.target.value)}
+                  className="w-full px-3.5 py-2 text-xs bg-muted/40 border border-border rounded-xl text-foreground outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1">
+                  Meta Description (120-155 chars recommended)
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder="Target search terms and compelling call-to-action for organic click-through rate."
+                  value={metaDescription}
+                  onChange={(e) => setMetaDescription(e.target.value)}
+                  className="w-full px-3.5 py-2 text-xs bg-muted/40 border border-border rounded-xl text-foreground outline-none resize-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-foreground mb-1">
+                    Canonical URL (Prevent Duplicate Content)
+                  </label>
+                  <input
+                    type="url"
+                    placeholder="https://thesolutionsbd.com/blog/..."
+                    value={canonicalUrl}
+                    onChange={(e) => setCanonicalUrl(e.target.value)}
+                    className="w-full px-3.5 py-2 text-xs font-mono bg-muted/40 border border-border rounded-xl text-foreground outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-foreground mb-1">
+                    Meta Keywords (Comma separated)
+                  </label>
+                  <input
+                    type="text"
+                    value={metaKeywords}
+                    onChange={(e) => setMetaKeywords(e.target.value)}
+                    className="w-full px-3.5 py-2 text-xs font-mono bg-muted/40 border border-border rounded-xl text-foreground outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Footer Controls: Status & Submit */}
+          <div className="pt-4 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-4">
-              <label className="text-xs font-semibold text-foreground">Publication Status:</label>
+              <span className="text-xs font-semibold text-foreground">Publication Status:</span>
               <div className="flex items-center gap-3">
                 <label className="flex items-center gap-1.5 text-xs cursor-pointer">
                   <input
@@ -449,7 +524,9 @@ export function AddBlogModal({ isOpen, onClose, onSuccess }: AddBlogModalProps) 
                     onChange={() => setStatus("PUBLISHED")}
                     className="text-primary"
                   />
-                  <span>Published (Live on Website)</span>
+                  <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                    Published (Live on Website)
+                  </span>
                 </label>
                 <label className="flex items-center gap-1.5 text-xs cursor-pointer">
                   <input
@@ -468,16 +545,26 @@ export function AddBlogModal({ isOpen, onClose, onSuccess }: AddBlogModalProps) 
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 text-sm font-medium rounded-lg border border-border text-foreground hover:bg-muted transition"
+                className="px-4 py-2 text-xs font-medium rounded-xl border border-border text-foreground hover:bg-muted transition"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={loading}
-                className="px-6 py-2 text-sm font-semibold rounded-lg bg-primary text-white hover:bg-primary/90 transition shadow-sm disabled:opacity-50"
+                className="px-6 py-2 text-xs font-bold rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition shadow-sm disabled:opacity-50 flex items-center gap-1.5"
               >
-                {loading ? "Publishing..." : "Save & Publish Article"}
+                {loading ? (
+                  <>
+                    <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span>Saving Article...</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>{isEditing ? "Update & Save Changes" : "Save & Publish Article"}</span>
+                  </>
+                )}
               </button>
             </div>
           </div>

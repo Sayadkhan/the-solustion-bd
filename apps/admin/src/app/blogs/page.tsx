@@ -14,6 +14,7 @@ import {
   ExternalLink,
   CheckCircle2,
   Globe,
+  Pencil,
 } from "lucide-react";
 
 export default function BlogsPage() {
@@ -26,6 +27,7 @@ export default function BlogsPage() {
 
   // Modal State
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editingBlog, setEditingBlog] = useState<any | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -127,7 +129,10 @@ export default function BlogsPage() {
       isRefreshing={loading}
       actions={
         <button
-          onClick={() => setIsAddModalOpen(true)}
+          onClick={() => {
+            setEditingBlog(null);
+            setIsAddModalOpen(true);
+          }}
           className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold shadow transition-all"
         >
           <Plus className="w-4 h-4" />
@@ -315,6 +320,18 @@ export default function BlogsPage() {
                       {/* Actions */}
                       <td className="px-5 py-3.5 text-right">
                         <div className="flex items-center justify-end gap-1.5">
+                          {/* Edit with WordPress Editor */}
+                          <button
+                            onClick={() => {
+                              setEditingBlog(b);
+                              setIsAddModalOpen(true);
+                            }}
+                            title="Edit Blog in WordPress Editor"
+                            className="p-1.5 rounded-md border border-border hover:bg-muted text-muted-foreground hover:text-primary transition-colors"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+
                           {/* Live Blog link */}
                           <a
                             href={`http://localhost:3000/blogs/${b.slug}`}
@@ -355,13 +372,18 @@ export default function BlogsPage() {
         />
       </div>
 
-      {/* Add Blog Modal */}
+      {/* Add / Edit Blog Modal with WordPress Editor */}
       <AddBlogModal
         isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        onSuccess={async (newBlog) => {
+        initialBlog={editingBlog}
+        onClose={() => {
           setIsAddModalOpen(false);
-          showToast(`Blog "${newBlog.title}" published successfully!`);
+          setEditingBlog(null);
+        }}
+        onSuccess={async (savedBlog) => {
+          setIsAddModalOpen(false);
+          setEditingBlog(null);
+          showToast(`Blog "${savedBlog.title}" saved successfully!`);
           await loadData();
         }}
       />

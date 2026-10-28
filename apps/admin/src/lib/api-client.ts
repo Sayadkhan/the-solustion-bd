@@ -184,6 +184,15 @@ export const adminApi = {
     return await res.json();
   },
 
+  async updateBlog(id: string, payload: any) {
+    const res = await fetch(`${API_BASE}/blogs/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    return await res.json();
+  },
+
   // Inquiries
   // Product Actions
   async updateProductStock(id: string, stock: number, status?: string) {
