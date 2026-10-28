@@ -127,19 +127,6 @@ export const storefrontApi = {
     }
   },
 
-  // Fetch blogs from backend
-  async getBlogs() {
-    try {
-      const res = await fetch(`${API_BASE}/blogs`, { cache: "no-store" });
-      if (!res.ok) throw new Error("Failed to fetch blogs");
-      const json = await res.json();
-      return json?.data || [];
-    } catch (e) {
-      console.warn("[STOREFRONT_API] getBlogs error:", e);
-      return [];
-    }
-  },
-
   // Fetch banners from backend (Hero Slider, Side Promos)
   async getBanners(type?: string): Promise<ApiBanner[]> {
     try {
@@ -254,6 +241,32 @@ export const storefrontApi = {
       return json;
     } catch (e: any) {
       return { success: false, message: e.message || "Invalid bKash TrxID" };
+    }
+  },
+
+  // Tech Blogs & SEO Guides
+  async getBlogs(params?: { category?: string; search?: string; page?: number; limit?: number }) {
+    try {
+      const q = new URLSearchParams();
+      if (params?.category) q.append("category", params.category);
+      if (params?.search) q.append("search", params.search);
+      if (params?.page) q.append("page", params.page.toString());
+      if (params?.limit) q.append("limit", params.limit.toString());
+      const res = await fetch(`${API_BASE}/blogs?${q.toString()}`, { cache: "no-store" });
+      if (!res.ok) return null;
+      return await res.json();
+    } catch {
+      return null;
+    }
+  },
+
+  async getBlogBySlug(slug: string) {
+    try {
+      const res = await fetch(`${API_BASE}/blogs/${encodeURIComponent(slug)}`, { cache: "no-store" });
+      if (!res.ok) return null;
+      return await res.json();
+    } catch {
+      return null;
     }
   },
 };
