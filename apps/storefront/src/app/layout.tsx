@@ -58,7 +58,9 @@ export default function RootLayout({
             <TopProgressBar />
           </Suspense>
           <GtmAnalytics />
-          <MainNavbar />
+          <Suspense fallback={<div className="w-full h-16 bg-white dark:bg-slate-900 border-b border-slate-200" />}>
+            <MainNavbar />
+          </Suspense>
           <main className="flex-1 pb-20 md:pb-0">
             {children}
           </main>

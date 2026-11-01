@@ -67,16 +67,28 @@ function ProductsContent() {
 
   // Progressive products state: instant catalog fallback + live backend hydration
   const [productsList, setProductsList] = useState<Product[]>(() => {
+    let list = CATALOG_PRODUCTS;
     if (selectedCategory !== "all") {
-      const matched = CATALOG_PRODUCTS.filter(
+      const matched = list.filter(
         (p) =>
           p.categorySlug === selectedCategory ||
           p.categorySlug.toLowerCase().includes(selectedCategory.toLowerCase()) ||
           selectedCategory.toLowerCase().includes(p.categorySlug.toLowerCase())
       );
-      return matched.length > 0 ? matched : CATALOG_PRODUCTS;
+      if (matched.length > 0) list = matched;
     }
-    return CATALOG_PRODUCTS;
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      const matched = list.filter(
+        (p) =>
+          p.name.toLowerCase().includes(q) ||
+          p.sku.toLowerCase().includes(q) ||
+          p.brand.toLowerCase().includes(q) ||
+          p.categoryName.toLowerCase().includes(q)
+      );
+      if (matched.length > 0) list = matched;
+    }
+    return list;
   });
   const [isInitialLoading, setIsInitialLoading] = useState(false);
   const [isStreamingMore, setIsStreamingMore] = useState(false);
@@ -87,11 +99,12 @@ function ProductsContent() {
 
     async function loadProgressiveProducts() {
       try {
+        const qTrimmed = searchQuery.trim();
         // Step 1: Fast initial batch from backend
         const initialBatch = await storefrontApi.getProducts({
           category: selectedCategory !== "all" ? selectedCategory : undefined,
-          search: searchQuery || undefined,
-          limit: 12,
+          search: qTrimmed || undefined,
+          limit: 24,
           page: 1,
         });
 
@@ -100,12 +113,25 @@ function ProductsContent() {
         if (initialBatch && initialBatch.length > 0) {
           setProductsList(initialBatch.map(formatRawProduct));
           setIsStreamingMore(true);
+        } else if (qTrimmed) {
+          // Fallback to local catalog when search returns 0 results
+          const q = qTrimmed.toLowerCase();
+          const fallback = CATALOG_PRODUCTS.filter(
+            (p) =>
+              p.name.toLowerCase().includes(q) ||
+              p.sku.toLowerCase().includes(q) ||
+              p.brand.toLowerCase().includes(q) ||
+              p.categoryName.toLowerCase().includes(q)
+          );
+          if (fallback.length > 0) {
+            setProductsList(fallback);
+          }
         }
 
         // Step 2: Background Full Batch (Stream up to 100 products to smoothly hydrate remaining catalog)
         const fullBatch = await storefrontApi.getProducts({
           category: selectedCategory !== "all" ? selectedCategory : undefined,
-          search: searchQuery || undefined,
+          search: qTrimmed || undefined,
           limit: 100,
           page: 1,
         });
@@ -556,11 +582,51 @@ function ProductsContent() {
         )}
 
         {/* Product Grid Area */}
-        <main className="lg:col-span-3 space-y-6">
-          {/* Top Sort & View Bar */}
+        <main className="lg:col-span-3 space-y-4 sm:space-y-6">
+          {/* Active Search Filter Banner */}
+          {searchQuery && (
+            <div className="flex items-center justify-between bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900 rounded-xl px-4 py-2.5 text-xs text-blue-900 dark:text-blue-200">
+              <div className="flex items-center gap-2 min-w-0">
+                <Search className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
+                <span className="truncate">
+                  Search results for: <strong className="font-bold underline">{searchQuery}</strong> ({filteredProducts.length} items found)
+                </span>
+              </div>
+              <button
+                onClick={() => {
+                  router.push(selectedCategory !== "all" ? `/products?category=${selectedCategory}` : "/products");
+                }}
+                className="flex items-center gap-1 font-bold text-blue-600 hover:text-blue-800 dark:text-blue-400 hover:underline shrink-0 ml-2"
+              >
+                <X className="w-3.5 h-3.5" />
+                <span>Clear</span>
+              </button>
+            </div>
+          )}
+
+          {/* Top Sort, Search & View Bar */}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-card p-3 rounded-xl border border-border/70 text-xs">
-            <div className="text-muted-foreground font-medium">
-              Showing <strong className="text-foreground">{filteredProducts.length}</strong> items
+            <div className="flex items-center gap-3 w-full sm:w-auto">
+              <div className="text-muted-foreground font-medium shrink-0">
+                Showing <strong className="text-foreground">{filteredProducts.length}</strong> items
+              </div>
+
+              {/* In-page quick search */}
+              <div className="relative flex-1 sm:w-48 lg:w-56">
+                <input
+                  type="text"
+                  placeholder="Filter by keyword..."
+                  defaultValue={searchQuery}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      const val = (e.target as HTMLInputElement).value.trim();
+                      router.push(val ? `/products?q=${encodeURIComponent(val)}` : "/products");
+                    }
+                  }}
+                  className="w-full bg-muted/40 border border-border rounded-lg pl-7 pr-2.5 py-1 text-xs text-foreground placeholder:text-muted-foreground outline-none focus:border-primary"
+                />
+                <Search className="w-3 h-3 text-muted-foreground absolute left-2 top-1/2 -translate-y-1/2" />
+              </div>
             </div>
 
             <div className="flex items-center space-x-3 w-full sm:w-auto justify-between sm:justify-end">
@@ -618,9 +684,13 @@ function ProductsContent() {
           ) : filteredProducts.length === 0 ? (
             <div className="p-12 text-center bg-card rounded-xl border border-dashed border-border space-y-3">
               <Search className="w-10 h-10 text-muted-foreground mx-auto stroke-1" />
-              <h3 className="text-base font-bold text-foreground">No components found</h3>
+              <h3 className="text-base font-bold text-foreground">
+                {searchQuery ? `No components found for "${searchQuery}"` : "No components found"}
+              </h3>
               <p className="text-xs text-muted-foreground max-w-sm mx-auto">
-                No products match your selected filters. Try clearing or relaxing price and brand filters.
+                {searchQuery
+                  ? "Try searching for a different term (e.g. Intel, AMD, RTX, ASUS) or reset filters."
+                  : "No products match your selected filters. Try clearing or relaxing price and brand filters."}
               </p>
               <button
                 onClick={resetFilters}
@@ -629,6 +699,7 @@ function ProductsContent() {
                 Clear All Filters
               </button>
             </div>
+
           ) : viewMode === "grid" ? (
             <div className="grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-3 gap-2.5 sm:gap-5">
               {filteredProducts.map((p) => (

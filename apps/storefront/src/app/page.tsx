@@ -215,14 +215,16 @@ export default function StorefrontHomePage() {
       <section className="max-w-[1600px] mx-auto px-4 pt-4">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
           {/* Left: 8 Cols Carousel Slider */}
-          <div className="lg:col-span-8 relative rounded-xl overflow-hidden shadow-lg min-h-[220px] sm:min-h-[340px] md:min-h-[440px] flex items-center group">
+          <div className="lg:col-span-8 relative rounded-xl overflow-hidden shadow-lg min-h-[220px] sm:min-h-[340px] md:min-h-[440px] flex items-center group bg-slate-950">
             {heroSlides.map((slide, idx) => (
               <div
                 key={slide.id || idx}
-                className={`absolute inset-0 transition-opacity duration-700 bg-gradient-to-r ${
+                className={`absolute inset-0 transition-opacity duration-700 bg-slate-950 bg-gradient-to-r ${
                   slide.bgGradient || "from-blue-700 via-indigo-900 to-slate-950"
                 } flex items-center p-5 sm:p-10 text-white ${
-                  idx === currentSlide ? "opacity-100 z-10" : "opacity-0 z-0 pointer-events-none"
+                  idx === currentSlide
+                    ? "opacity-100 z-10 visible"
+                    : "opacity-0 z-0 pointer-events-none invisible"
                 }`}
               >
                 <div className="relative z-10 max-w-lg space-y-4 text-left">
@@ -301,24 +303,24 @@ export default function StorefrontHomePage() {
           </div>
 
           {/* Right: 4 Cols Stacked Promo Banners (Hidden on Mobile, Visible on Desktop like Star Tech) */}
-          <div className="hidden lg:flex lg:col-span-4 flex-col gap-4">
+          <div className="hidden lg:flex lg:col-span-4 flex-col gap-3 xl:gap-4">
             {/* Promo Card 1: Blue Customer Care & After Sales */}
-            <div className={`flex-1 rounded-xl p-6 bg-gradient-to-br ${
+            <div className={`flex-1 rounded-xl p-4 xl:p-6 bg-slate-900 bg-gradient-to-br ${
               promoSideBanners[0]?.bgGradient || "from-[#0e3c88] to-[#122444]"
-            } text-white flex flex-col justify-between shadow-lg relative overflow-hidden group`}>
-              <div className="relative z-10 space-y-2">
-                <div className="flex items-center gap-2 text-blue-300 text-xs font-bold uppercase tracking-wider">
-                  <MessageSquare className="w-4 h-4 text-blue-400" />
-                  <span>{promoSideBanners[0]?.tag || "Customer Support & RMA"}</span>
+            } text-white flex flex-col justify-between shadow-lg relative overflow-hidden group min-w-0`}>
+              <div className="relative z-10 space-y-1.5 xl:space-y-2">
+                <div className="flex items-center gap-2 text-blue-300 text-[11px] xl:text-xs font-bold uppercase tracking-wider">
+                  <MessageSquare className="w-3.5 h-3.5 xl:w-4 xl:h-4 text-blue-400 shrink-0" />
+                  <span className="truncate">{promoSideBanners[0]?.tag || "Customer Support & RMA"}</span>
                 </div>
-                <h3 className="text-lg sm:text-xl font-black leading-snug">
+                <h3 className="text-base xl:text-xl font-black leading-snug">
                   {promoSideBanners[0]?.title || "Customer Support & RMA Inquiries"}
                 </h3>
-                <p className="text-slate-300 text-xs">
+                <p className="text-slate-300 text-[11px] xl:text-xs line-clamp-2">
                   {promoSideBanners[0]?.subtitle || "Get genuine box serial warranty tracking and dedicated after-sales support."}
                 </p>
               </div>
-              <div className="relative z-10 pt-4">
+              <div className="relative z-10 pt-3 xl:pt-4">
                 <Link
                   href={promoSideBanners[0]?.buttonLink || "/track-order"}
                   className="inline-block bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold px-4 py-2 rounded text-xs shadow-md transition-colors"
@@ -331,22 +333,22 @@ export default function StorefrontHomePage() {
             </div>
 
             {/* Promo Card 2: Deep Blue Corporate Solutions & PC Builder */}
-            <div className={`flex-1 rounded-xl p-6 bg-gradient-to-br ${
+            <div className={`flex-1 rounded-xl p-4 xl:p-6 bg-slate-900 bg-gradient-to-br ${
               promoSideBanners[1]?.bgGradient || "from-[#1e3a8a] to-[#0f172a]"
-            } text-white flex flex-col justify-between shadow-lg relative overflow-hidden group`}>
-              <div className="relative z-10 space-y-2">
-                <div className="flex items-center gap-2 text-cyan-300 text-xs font-bold uppercase tracking-wider">
-                  <Cpu className="w-4 h-4 text-cyan-400" />
-                  <span>{promoSideBanners[1]?.tag || "Custom Rig & B2B Solutions"}</span>
+            } text-white flex flex-col justify-between shadow-lg relative overflow-hidden group min-w-0`}>
+              <div className="relative z-10 space-y-1.5 xl:space-y-2">
+                <div className="flex items-center gap-2 text-cyan-300 text-[11px] xl:text-xs font-bold uppercase tracking-wider">
+                  <Cpu className="w-3.5 h-3.5 xl:w-4 xl:h-4 text-cyan-400 shrink-0" />
+                  <span className="truncate">{promoSideBanners[1]?.tag || "Custom Rig & B2B Solutions"}</span>
                 </div>
-                <h3 className="text-lg sm:text-xl font-black leading-snug">
+                <h3 className="text-base xl:text-xl font-black leading-snug">
                   {promoSideBanners[1]?.title || "Shape Your Dream Battlestation With Us!"}
                 </h3>
-                <p className="text-slate-300 text-xs">
+                <p className="text-slate-300 text-[11px] xl:text-xs line-clamp-2">
                   {promoSideBanners[1]?.subtitle || "Official distributor warranty & nationwide fast delivery across Bangladesh."}
                 </p>
               </div>
-              <div className="relative z-10 pt-4">
+              <div className="relative z-10 pt-3 xl:pt-4">
                 <Link
                   href={promoSideBanners[1]?.buttonLink || "/pc-builder"}
                   className="inline-block bg-white hover:bg-slate-100 text-blue-700 font-extrabold px-4 py-2 rounded text-xs shadow-md transition-colors"

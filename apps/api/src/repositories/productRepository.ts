@@ -1,9 +1,26 @@
-import { db, products, eq, desc, and } from "@solusation/database";
+import { db, products, eq, desc, and, or, ilike } from "@solusation/database";
 
 export type ProductEntity = typeof products.$inferSelect;
 
 export class ProductRepository {
-  async findAll(limit = 20, offset = 0): Promise<any[]> {
+  async findAll(limit = 20, offset = 0, search?: string): Promise<any[]> {
+    if (search && search.trim()) {
+      const term = `%${search.trim()}%`;
+      return db.query.products.findMany({
+        where: or(
+          ilike(products.name, term),
+          ilike(products.sku, term)
+        ),
+        with: {
+          brand: true,
+          category: true,
+        },
+        orderBy: desc(products.createdAt),
+        limit,
+        offset,
+      });
+    }
+
     return db.query.products.findMany({
       with: {
         brand: true,
@@ -39,7 +56,7 @@ export class ProductRepository {
     return result || null;
   }
 
-  async findByCategory(categorySlugOrId: string, limit = 20): Promise<any[]> {
+  async findByCategory(categorySlugOrId: string, limit = 20, search?: string): Promise<any[]> {
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(categorySlugOrId);
     const cat = await db.query.categories.findFirst({
       where: isUuid
@@ -52,9 +69,20 @@ export class ProductRepository {
     }
 
     const targetCatId = cat ? cat.id : categorySlugOrId;
+    const catCondition = eq(products.categoryId, targetCatId);
+
+    const condition = search && search.trim()
+      ? and(
+          catCondition,
+          or(
+            ilike(products.name, `%${search.trim()}%`),
+            ilike(products.sku, `%${search.trim()}%`)
+          )
+        )
+      : catCondition;
 
     return db.query.products.findMany({
-      where: eq(products.categoryId, targetCatId),
+      where: condition,
       with: {
         brand: true,
         category: true,

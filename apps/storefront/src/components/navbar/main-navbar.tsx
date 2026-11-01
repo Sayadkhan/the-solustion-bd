@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Search,
   ShoppingCart,
@@ -21,7 +21,7 @@ import { useCartStore } from "@/stores/cart-store";
 import { formatBdt } from "@solusation/shared-types";
 import { CATALOG_PRODUCTS, Product } from "@/lib/catalog";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { storefrontApi, ApiCategory, ApiSiteSettings } from "@/lib/api";
+import { storefrontApi, ApiCategory, ApiSiteSettings, normalizeImageUrl } from "@/lib/api";
 
 // Default Star Tech Categories (Fallback if database is empty or loading)
 const DEFAULT_MEGA_CATEGORIES = [
@@ -207,19 +207,28 @@ const DEFAULT_MEGA_CATEGORIES = [
 
 export function MainNavbar() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [expandedCat, setExpandedCat] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState(searchParams?.get("q") || "");
   const [searchOpen, setSearchOpen] = useState(false);
   const [liveSearchResults, setLiveSearchResults] = useState<any[]>([]);
   const [navCategories, setNavCategories] = useState(DEFAULT_MEGA_CATEGORIES.slice(0, 10));
   const [siteSettings, setSiteSettings] = useState<ApiSiteSettings | null>(null);
   const searchRef = useRef<HTMLDivElement>(null);
+  const mobileSearchRef = useRef<HTMLDivElement>(null);
 
   const cartCount = useCartStore((s) => s.getItemCount());
   const cartCashTotal = useCartStore((s) => s.getTotalCashBdt());
+
+  // Sync searchQuery with URL query parameter
+  useEffect(() => {
+    const q = searchParams?.get("q");
+    if (q !== null && q !== undefined) {
+      setSearchQuery(q);
+    }
+  }, [searchParams]);
 
   // 1. Fetch live categories & settings from backend on mount
   useEffect(() => {
@@ -276,36 +285,48 @@ export function MainNavbar() {
     loadNavData();
   }, []);
 
-  // 2. Live database search query with debounce
+  // 2. Live database & catalog search query with debounce
   useEffect(() => {
-    if (searchQuery.trim().length < 2) {
+    const q = searchQuery.trim().toLowerCase();
+    if (q.length < 2) {
       setLiveSearchResults([]);
       return;
     }
 
     const timer = setTimeout(async () => {
       try {
-        const results = await storefrontApi.getProducts({ search: searchQuery.trim(), limit: 6 });
+        const results = await storefrontApi.getProducts({ search: q, limit: 8 });
         if (results && results.length > 0) {
-          setLiveSearchResults(results);
-        } else {
-          // Fallback to local catalog
-          const fallback = CATALOG_PRODUCTS.filter(
-            (p) =>
-              p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-              p.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
-              p.brand.toLowerCase().includes(searchQuery.toLowerCase()) ||
-              p.categoryName.toLowerCase().includes(searchQuery.toLowerCase())
-          ).slice(0, 6);
-          setLiveSearchResults(fallback);
+          const matched = results.filter((p: any) => {
+            const name = (p.name || "").toLowerCase();
+            const sku = (p.sku || "").toLowerCase();
+            const brand = (typeof p.brand === "object" ? p.brand?.name : p.brand || "").toLowerCase();
+            return name.includes(q) || sku.includes(q) || brand.includes(q);
+          });
+          if (matched.length > 0) {
+            setLiveSearchResults(matched);
+            return;
+          }
         }
+
+        // Fallback to local catalog
+        const fallback = CATALOG_PRODUCTS.filter(
+          (p) =>
+            p.name.toLowerCase().includes(q) ||
+            p.sku.toLowerCase().includes(q) ||
+            p.brand.toLowerCase().includes(q) ||
+            p.categoryName.toLowerCase().includes(q)
+        ).slice(0, 8);
+        setLiveSearchResults(fallback);
       } catch {
         const fallback = CATALOG_PRODUCTS.filter((p) =>
-          p.name.toLowerCase().includes(searchQuery.toLowerCase())
-        ).slice(0, 6);
+          p.name.toLowerCase().includes(q) ||
+          p.sku.toLowerCase().includes(q) ||
+          p.brand.toLowerCase().includes(q)
+        ).slice(0, 8);
         setLiveSearchResults(fallback);
       }
-    }, 250);
+    }, 200);
 
     return () => clearTimeout(timer);
   }, [searchQuery]);
@@ -313,7 +334,10 @@ export function MainNavbar() {
   // Handle outside click for search dropdown
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      const insideDesktop = searchRef.current && searchRef.current.contains(target);
+      const insideMobile = mobileSearchRef.current && mobileSearchRef.current.contains(target);
+      if (!insideDesktop && !insideMobile) {
         setSearchOpen(false);
       }
     };
@@ -321,8 +345,8 @@ export function MainNavbar() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSearchSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (searchQuery.trim()) {
       setSearchOpen(false);
       router.push(`/products?q=${encodeURIComponent(searchQuery.trim())}`);
@@ -331,75 +355,85 @@ export function MainNavbar() {
 
   return (
     <header className="w-full z-40 sticky top-0 shadow-md">
-      {/* 1. Mobile Top Header Bar (Clean White) */}
-      <div className="lg:hidden bg-white text-slate-900 px-3 py-2.5 flex items-center justify-between border-b border-slate-200 shadow-sm">
-        {/* Left: Hamburger menu toggle */}
-        <button
-          onClick={() => {
-            setMobileMenuOpen(!mobileMenuOpen);
-            if (mobileSearchOpen) setMobileSearchOpen(false);
-          }}
-          className="p-1.5 text-slate-800 hover:text-blue-600 transition-colors focus:outline-none"
-          aria-label="Toggle Menu"
-        >
-          {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-        </button>
-
-        {/* Center: Logo */}
-        <Link href="/" className="flex items-center">
-          <img
-            src="/logo.png"
-            alt="The Solutions BD"
-            className="h-7 w-auto object-contain"
-          />
-        </Link>
-
-        {/* Right: Search icon and Cart icon with red badge */}
-        <div className="flex items-center gap-1">
+      {/* 1. Mobile Top Header Bar (With Always-Visible Search) */}
+      <div className="lg:hidden bg-white text-slate-900 px-3 py-2 border-b border-slate-200 shadow-sm space-y-2">
+        <div className="flex items-center justify-between">
+          {/* Left: Hamburger menu toggle */}
           <button
-            onClick={() => {
-              setMobileSearchOpen(!mobileSearchOpen);
-              if (mobileMenuOpen) setMobileMenuOpen(false);
-            }}
-            className={`p-1.5 rounded transition-colors ${
-              mobileSearchOpen ? "text-blue-600 bg-slate-100" : "text-slate-800 hover:text-blue-600"
-            }`}
-            aria-label="Toggle Search"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="p-1.5 text-slate-800 hover:text-blue-600 transition-colors focus:outline-none"
+            aria-label="Toggle Menu"
           >
-            <Search className="w-5 h-5" />
+            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>
 
-          <Link
-            href="/cart"
-            className="p-1.5 text-slate-800 hover:text-blue-600 relative transition-colors"
-            title="Cart"
-          >
-            <ShoppingCart className="w-5 h-5" />
-            <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center shadow">
-              {cartCount}
-            </span>
+          {/* Center: Logo */}
+          <Link href="/" className="flex items-center">
+            <img
+              src="/logo.png"
+              alt="The Solutions BD"
+              className="h-7 w-auto object-contain"
+            />
           </Link>
-        </div>
-      </div>
 
-      {/* Mobile Expandable Search Bar */}
-      {mobileSearchOpen && (
-        <div className="lg:hidden bg-slate-50 p-2.5 border-b border-slate-200 shadow-sm animate-in slide-in-from-top-1 duration-150">
+          {/* Right: PC Builder CTA & Cart */}
+          <div className="flex items-center gap-2">
+            <Link
+              href="/pc-builder"
+              className="bg-[#1340b8] text-white text-[11px] font-bold px-2.5 py-1.5 rounded flex items-center gap-1 shadow-sm"
+            >
+              <Cpu className="w-3.5 h-3.5" />
+              <span>Builder</span>
+            </Link>
+
+            <Link
+              href="/cart"
+              className="p-1.5 text-slate-800 hover:text-blue-600 relative transition-colors"
+              title="Cart"
+            >
+              <ShoppingCart className="w-5 h-5" />
+              {cartCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center shadow">
+                  {cartCount}
+                </span>
+              )}
+            </Link>
+          </div>
+        </div>
+
+        {/* Mobile Search Bar: Always prominent and working */}
+        <div ref={mobileSearchRef} className="relative w-full">
           <form onSubmit={handleSearchSubmit} className="relative flex items-center">
             <input
               type="text"
-              autoFocus
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
                 setSearchOpen(true);
               }}
+              onFocus={() => {
+                if (searchQuery.trim().length >= 2) setSearchOpen(true);
+              }}
               placeholder="Search components, laptops, gaming rigs..."
-              className="w-full bg-white text-slate-900 placeholder-slate-400 pl-3.5 pr-10 py-2 text-xs rounded-md border border-slate-300 focus:border-blue-600 focus:ring-1 focus:ring-blue-600 outline-none"
+              className="w-full bg-slate-50 text-slate-900 placeholder-slate-400 pl-3.5 pr-16 py-2 text-xs rounded-md border border-slate-300 focus:border-blue-600 focus:ring-1 focus:ring-blue-600 outline-none"
             />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery("");
+                  setLiveSearchResults([]);
+                  setSearchOpen(false);
+                }}
+                className="absolute right-8 top-0 bottom-0 px-1.5 flex items-center justify-center text-slate-400 hover:text-slate-600"
+                title="Clear search"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
             <button
               type="submit"
-              className="absolute right-0 top-0 bottom-0 px-3 flex items-center justify-center text-slate-500 hover:text-blue-600"
+              className="absolute right-0 top-0 bottom-0 px-2.5 flex items-center justify-center text-slate-500 hover:text-blue-600"
               title="Search"
             >
               <Search className="w-4 h-4" />
@@ -408,31 +442,45 @@ export function MainNavbar() {
 
           {/* Mobile Live Search Dropdown */}
           {searchOpen && liveSearchResults.length > 0 && (
-            <div className="mt-2 bg-white text-slate-900 rounded-lg shadow-2xl overflow-hidden divide-y divide-slate-100 max-h-60 overflow-y-auto">
-              {liveSearchResults.map((item) => (
-                <Link
-                  key={item.id}
-                  href={`/products/${item.slug}`}
-                  onClick={() => {
-                    setSearchOpen(false);
-                    setMobileSearchOpen(false);
-                  }}
-                  className="flex items-center justify-between p-2.5 hover:bg-slate-50 transition-colors"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <img
-                      src={item.thumbnailUrl}
-                      alt={item.name}
-                      className="w-8 h-8 object-contain rounded bg-slate-100 p-0.5"
-                    />
-                    <div className="text-left">
-                      <span className="text-xs font-bold text-slate-900 line-clamp-1">{item.name}</span>
-                      <span className="text-[10px] text-slate-500">{item.brand} • SKU: {item.sku}</span>
+            <div className="absolute top-full left-0 right-0 mt-1 bg-white text-slate-900 rounded-lg shadow-2xl border border-slate-200 overflow-hidden z-50 divide-y divide-slate-100 max-h-72 overflow-y-auto">
+              {liveSearchResults.map((item) => {
+                const brandName =
+                  typeof item.brand === "object" && item.brand !== null
+                    ? item.brand.name
+                    : item.brand || "Authentic";
+                const thumb = normalizeImageUrl(
+                  item.thumbnailUrl || (Array.isArray(item.images) && item.images[0])
+                );
+                const price = item.cashPriceBdt || item.regularPriceBdt || 0;
+
+                return (
+                  <Link
+                    key={item.id}
+                    href={`/products/${item.slug}`}
+                    onClick={() => setSearchOpen(false)}
+                    className="flex items-center justify-between p-2.5 hover:bg-slate-50 transition-colors"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <img
+                        src={thumb}
+                        alt={item.name}
+                        className="w-9 h-9 object-contain rounded bg-slate-100 p-0.5 shrink-0"
+                      />
+                      <div className="text-left min-w-0">
+                        <span className="text-xs font-bold text-slate-900 line-clamp-1">
+                          {item.name}
+                        </span>
+                        <span className="text-[10px] text-slate-500 block truncate">
+                          {brandName} • SKU: {item.sku}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                  <span className="text-xs font-black text-rose-600 shrink-0 ml-2">{formatBdt(item.cashPriceBdt)}</span>
-                </Link>
-              ))}
+                    <span className="text-xs font-black text-rose-600 shrink-0 ml-2">
+                      {formatBdt(price)}
+                    </span>
+                  </Link>
+                );
+              })}
               <div className="p-2 text-center bg-slate-50">
                 <button
                   onClick={handleSearchSubmit}
@@ -445,22 +493,22 @@ export function MainNavbar() {
             </div>
           )}
         </div>
-      )}
+      </div>
 
-      {/* 2. Desktop Main Header Bar (Hidden on Mobile) */}
-      <div className="hidden lg:block bg-white text-slate-900 py-3 px-4 border-b border-slate-200/80 shadow-sm transition-colors">
-        <div className="max-w-[1600px] mx-auto flex items-center justify-between gap-4">
-          {/* Logo - Sitting naturally on clean white background */}
+      {/* 2. Desktop Main Header Bar (Responsive on Laptops & Desktops) */}
+      <div className="hidden lg:block bg-white text-slate-900 py-3 px-3 xl:px-6 border-b border-slate-200/80 shadow-sm transition-colors">
+        <div className="max-w-[1600px] mx-auto flex items-center justify-between gap-3 xl:gap-6">
+          {/* Logo */}
           <Link href="/" className="flex items-center shrink-0 group py-0.5">
             <img
               src="/logo.png"
               alt="The Solutions BD - An Incomparable IT Solution Provider"
-              className="h-9 sm:h-10 w-auto object-contain transition-transform group-hover:scale-105"
+              className="h-8 xl:h-10 w-auto object-contain transition-transform group-hover:scale-105"
             />
           </Link>
 
           {/* Search Bar (Star Tech Style) */}
-          <div ref={searchRef} className="flex-1 max-w-2xl mx-6 relative">
+          <div ref={searchRef} className="flex-1 max-w-2xl mx-1 xl:mx-4 relative min-w-0">
             <form onSubmit={handleSearchSubmit} className="relative flex items-center">
               <input
                 type="text"
@@ -469,13 +517,29 @@ export function MainNavbar() {
                   setSearchQuery(e.target.value);
                   setSearchOpen(true);
                 }}
-                onFocus={() => setSearchOpen(true)}
+                onFocus={() => {
+                  if (searchQuery.trim().length >= 2) setSearchOpen(true);
+                }}
                 placeholder="Search components, laptops, gaming rigs..."
-                className="w-full bg-slate-50 hover:bg-slate-100/60 focus:bg-white text-slate-900 placeholder-slate-400 pl-4 pr-12 py-2.5 text-sm rounded-md border border-slate-300 focus:border-blue-600 outline-none focus:ring-2 focus:ring-blue-100 transition-all shadow-sm"
+                className="w-full bg-slate-50 hover:bg-slate-100/60 focus:bg-white text-slate-900 placeholder-slate-400 pl-4 pr-16 py-2.5 text-sm rounded-md border border-slate-300 focus:border-blue-600 outline-none focus:ring-2 focus:ring-blue-100 transition-all shadow-sm"
               />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery("");
+                    setLiveSearchResults([]);
+                    setSearchOpen(false);
+                  }}
+                  className="absolute right-9 top-0 bottom-0 px-1.5 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors"
+                  title="Clear search"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
               <button
                 type="submit"
-                className="absolute right-0 top-0 bottom-0 px-3.5 flex items-center justify-center text-slate-600 hover:text-blue-600 transition-colors"
+                className="absolute right-0 top-0 bottom-0 px-3 flex items-center justify-center text-slate-600 hover:text-blue-600 transition-colors"
                 title="Search"
               >
                 <Search className="w-4 h-4" />
@@ -485,39 +549,51 @@ export function MainNavbar() {
             {/* Live Autocomplete Results */}
             {searchOpen && liveSearchResults.length > 0 && (
               <div className="absolute top-full left-0 right-0 mt-1.5 bg-white text-slate-900 rounded-lg shadow-2xl border border-slate-200 overflow-hidden z-50 divide-y divide-slate-100 animate-in fade-in duration-150">
-                <div className="px-4 py-2 bg-slate-50 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                  Products ({liveSearchResults.length})
+                <div className="px-4 py-2 bg-slate-50 text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center justify-between">
+                  <span>Products ({liveSearchResults.length})</span>
+                  <span className="text-[10px] text-slate-400 font-normal">Press Enter to view all</span>
                 </div>
-                {liveSearchResults.map((item) => (
-                  <Link
-                    key={item.id}
-                    href={`/products/${item.slug}`}
-                    onClick={() => setSearchOpen(false)}
-                    className="flex items-center justify-between px-4 py-2.5 hover:bg-slate-50 transition-colors group"
-                  >
-                    <div className="flex items-center gap-3">
-                      <img
-                        src={item.thumbnailUrl}
-                        alt={item.name}
-                        className="w-10 h-10 object-contain rounded bg-slate-100 p-1 shrink-0"
-                      />
-                      <div className="text-left">
-                        <div className="text-xs font-semibold text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-1">
-                          {item.name}
-                        </div>
-                        <div className="text-[10px] text-slate-500">
-                          {item.brand} • SKU: {item.sku}
+                {liveSearchResults.map((item) => {
+                  const brandName =
+                    typeof item.brand === "object" && item.brand !== null
+                      ? item.brand.name
+                      : item.brand || "Authentic";
+                  const thumb = normalizeImageUrl(
+                    item.thumbnailUrl || (Array.isArray(item.images) && item.images[0])
+                  );
+                  const price = item.cashPriceBdt || item.regularPriceBdt || 0;
+
+                  return (
+                    <Link
+                      key={item.id}
+                      href={`/products/${item.slug}`}
+                      onClick={() => setSearchOpen(false)}
+                      className="flex items-center justify-between px-4 py-2.5 hover:bg-slate-50 transition-colors group"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <img
+                          src={thumb}
+                          alt={item.name}
+                          className="w-10 h-10 object-contain rounded bg-slate-100 p-1 shrink-0"
+                        />
+                        <div className="text-left min-w-0">
+                          <div className="text-xs font-semibold text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-1">
+                            {item.name}
+                          </div>
+                          <div className="text-[10px] text-slate-500 truncate">
+                            {brandName} • SKU: {item.sku}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <div className="text-xs font-bold text-blue-600">
-                        {formatBdt(item.cashPriceBdt)}
+                      <div className="text-right shrink-0 ml-3">
+                        <div className="text-xs font-bold text-rose-600">
+                          {formatBdt(price)}
+                        </div>
+                        <span className="text-[9px] text-emerald-600 font-medium">In Stock</span>
                       </div>
-                      <span className="text-[9px] text-emerald-600 font-medium">In Stock</span>
-                    </div>
-                  </Link>
-                ))}
+                    </Link>
+                  );
+                })}
                 <div className="p-2 text-center bg-slate-50">
                   <button
                     onClick={handleSearchSubmit}
@@ -531,17 +607,18 @@ export function MainNavbar() {
             )}
           </div>
 
-          {/* Right Header Navigation Icons */}
-          <div className="flex items-center gap-6 shrink-0">
+          {/* Right Header Navigation Icons (Responsive collapsing on laptops) */}
+          <div className="flex items-center gap-2.5 xl:gap-5 shrink-0">
             {/* Offers */}
             <Link
               href="/products?deals=true"
               className="flex items-center gap-2 hover:text-blue-600 transition-colors group text-left"
+              title="Offers"
             >
               <div className="p-2 rounded-full bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
                 <Gift className="w-4 h-4" />
               </div>
-              <div className="flex flex-col leading-tight">
+              <div className="hidden xl:flex flex-col leading-tight">
                 <span className="font-bold text-slate-900 text-sm">Offers</span>
                 <span className="text-[11px] text-slate-500">Latest Deals</span>
               </div>
@@ -551,11 +628,12 @@ export function MainNavbar() {
             <Link
               href="/cart"
               className="flex items-center gap-2 hover:text-blue-600 transition-colors group text-left"
+              title="Account"
             >
               <div className="p-2 rounded-full bg-slate-100 text-slate-700 group-hover:bg-blue-600 group-hover:text-white transition-colors">
                 <User className="w-4 h-4" />
               </div>
-              <div className="flex flex-col leading-tight">
+              <div className="hidden xl:flex flex-col leading-tight">
                 <span className="font-bold text-slate-900 text-sm">Account</span>
                 <span className="text-[11px] text-slate-500">Register / Login</span>
               </div>
@@ -564,7 +642,7 @@ export function MainNavbar() {
             {/* Star Tech Signature Royal Blue PC Builder Button */}
             <Link
               href="/pc-builder"
-              className="bg-[#1340b8] hover:bg-blue-800 text-white font-bold px-4 py-2.5 rounded text-sm flex items-center gap-2 shadow-sm hover:shadow transition-all"
+              className="bg-[#1340b8] hover:bg-blue-800 text-white font-bold px-3 xl:px-4 py-2.5 rounded text-xs xl:text-sm flex items-center gap-1.5 shadow-sm hover:shadow transition-all shrink-0"
             >
               <Cpu className="w-4 h-4" />
               <span>PC Builder</span>
@@ -589,29 +667,29 @@ export function MainNavbar() {
         </div>
       </div>
 
-      {/* 3. Horizontal Category Mega Menu Bar (Desktop Only) */}
-      <nav className="bg-[#081621] text-white border-b border-slate-900 hidden lg:block font-semibold text-sm relative shadow-md">
-        <div className="max-w-[1440px] mx-auto px-4 flex items-center justify-center">
-          <ul className="flex items-center justify-center gap-1 lg:gap-2 xl:gap-3">
+      {/* 3. Horizontal Category Mega Menu Bar (Non-Overflowing & Smooth Scrollable on Laptops) */}
+      <nav className="bg-[#081621] text-white border-b border-slate-900 hidden lg:block font-semibold text-sm relative shadow-md overflow-x-auto no-scrollbar">
+        <div className="max-w-[1600px] mx-auto px-2 xl:px-4 flex items-center justify-center">
+          <ul className="flex items-center justify-center gap-0.5 xl:gap-2">
             {navCategories.slice(0, 10).map((cat) => (
               <li
                 key={cat.name}
                 onMouseEnter={() => setActiveDropdown(cat.name)}
                 onMouseLeave={() => setActiveDropdown(null)}
-                className="relative py-2.5"
+                className="relative py-2 xl:py-2.5 shrink-0"
               >
                 <Link
                   href={cat.href}
-                  className="px-3 py-1.5 rounded text-slate-200 hover:text-white hover:bg-slate-800 transition-colors flex items-center gap-1.5 whitespace-nowrap text-[13.5px] lg:text-sm font-semibold"
+                  className="px-2 xl:px-3 py-1.5 rounded text-slate-200 hover:text-white hover:bg-slate-800 transition-colors flex items-center gap-1 whitespace-nowrap text-[12.5px] xl:text-sm font-semibold"
                 >
                   <span>{cat.name}</span>
                   {cat.badge && (
-                    <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full uppercase leading-none shadow-sm">
+                    <span className="bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase leading-none shadow-sm">
                       {cat.badge}
                     </span>
                   )}
                   {cat.subcategories && cat.subcategories.length > 0 && (
-                    <ChevronDown className="w-3.5 h-3.5 text-slate-400 group-hover:text-white transition-transform" />
+                    <ChevronDown className="w-3 h-3 text-slate-400 group-hover:text-white transition-transform" />
                   )}
                 </Link>
 
@@ -640,6 +718,7 @@ export function MainNavbar() {
           </ul>
         </div>
       </nav>
+
 
       {/* 4. Mobile Navigation Drawer (Clean White) */}
       {mobileMenuOpen && (

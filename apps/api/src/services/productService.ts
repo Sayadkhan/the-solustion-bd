@@ -43,18 +43,47 @@ export class ProductService {
     };
   }
 
-  async getProducts(categorySlug?: string, limit = 24, page = 1) {
+  async getProducts(categorySlug?: string, limit = 24, page = 1, search?: string) {
     const offset = (page - 1) * limit;
-    const products = categorySlug
-      ? await productRepository.findByCategory(categorySlug, limit)
-      : await productRepository.findAll(limit, offset);
+    const products = categorySlug && categorySlug !== "all"
+      ? await productRepository.findByCategory(categorySlug, limit, search)
+      : await productRepository.findAll(limit, offset, search);
 
-    return products.map((p) => ({
-      ...p,
-      formattedCashPrice: formatBdt(p.cashPriceBdt),
-      formattedRegularPrice: formatBdt(p.regularPriceBdt),
-      cashDiscountBdt: p.regularPriceBdt - p.cashPriceBdt,
-    }));
+    return products.map((p) => {
+      const brandName =
+        typeof p.brand === "object" && p.brand !== null
+          ? p.brand.name
+          : typeof p.brand === "string"
+          ? p.brand
+          : "Authentic";
+      const categoryName =
+        typeof p.category === "object" && p.category !== null
+          ? p.category.name
+          : typeof p.categoryName === "string"
+          ? p.categoryName
+          : "Hardware";
+      const categorySlugVal =
+        typeof p.category === "object" && p.category !== null
+          ? p.category.slug
+          : typeof p.categorySlug === "string"
+          ? p.categorySlug
+          : "hardware";
+      const thumb =
+        p.thumbnailUrl ||
+        (Array.isArray(p.images) && p.images[0]) ||
+        null;
+
+      return {
+        ...p,
+        brand: brandName,
+        categoryName,
+        categorySlug: categorySlugVal,
+        thumbnailUrl: thumb,
+        formattedCashPrice: formatBdt(p.cashPriceBdt),
+        formattedRegularPrice: formatBdt(p.regularPriceBdt),
+        cashDiscountBdt: p.regularPriceBdt - p.cashPriceBdt,
+      };
+    });
   }
 }
 

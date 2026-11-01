@@ -1,6 +1,6 @@
 import { typesenseClient } from "../config/typesense";
 import { redis } from "../config/redis";
-import { db, products, eq } from "@solusation/database";
+import { db, products, eq, or, ilike } from "@solusation/database";
 import {
   ProductSearchQuery,
   SearchProductsResponse,
@@ -262,7 +262,13 @@ export class ProductSyncService {
       // If Typesense is empty or unreachable during dev, fallback to PostgreSQL search
       console.warn(`[TYPESENSE SEARCH FALLBACK] Fallback to PostgreSQL due to: ${(error as Error).message}`);
 
+      const searchTerm = query.q && query.q !== "*" ? `%${query.q.trim()}%` : null;
+      const whereCondition = searchTerm
+        ? or(ilike(products.name, searchTerm), ilike(products.sku, searchTerm))
+        : undefined;
+
       const pgHits = await db.query.products.findMany({
+        where: whereCondition,
         limit: query.per_page || 20,
         offset: ((query.page || 1) - 1) * (query.per_page || 20),
         with: {

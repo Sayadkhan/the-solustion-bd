@@ -26,11 +26,13 @@ export const getProductBySlug = async (req: Request, res: Response): Promise<voi
 
 export const getProducts = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { category, limit, page } = req.query;
+    const { category, limit, page, q, search } = req.query;
+    const searchQuery = (q || search) as string | undefined;
     const products = await productService.getProducts(
       category as string | undefined,
       limit ? parseInt(limit as string, 10) : 24,
-      page ? parseInt(page as string, 10) : 1
+      page ? parseInt(page as string, 10) : 1,
+      searchQuery
     );
     res.json({ success: true, count: products.length, data: products });
   } catch (error) {
