@@ -462,6 +462,7 @@ export function MainNavbar() {
               src="/logo.png"
               alt="The Solutions BD"
               className="h-7 w-auto object-contain"
+              style={{ maxHeight: "28px", maxWidth: "160px", width: "auto" }}
             />
           </Link>
 
@@ -593,6 +594,7 @@ export function MainNavbar() {
               src="/logo.png"
               alt="The Solutions BD - An Incomparable IT Solution Provider"
               className="h-8 xl:h-10 w-auto object-contain transition-transform group-hover:scale-105"
+              style={{ maxHeight: "40px", maxWidth: "220px", width: "auto" }}
             />
           </Link>
 
