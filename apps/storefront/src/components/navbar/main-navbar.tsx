@@ -205,6 +205,81 @@ const DEFAULT_MEGA_CATEGORIES = [
   },
 ];
 
+// Clean category display names (concise, sleek, no parentheses or long suffixes)
+export function cleanCategoryLabel(rawName: string): string {
+  if (!rawName) return "";
+  let name = rawName.trim();
+  // Strip parentheses and anything inside, e.g. "(CPU)", "(GPU)", "(PSU)", "(Memory)", "(SSD / HDD)"
+  name = name.replace(/\s*\([^)]*\)/g, "").trim();
+
+  const lower = name.toLowerCase();
+  if (lower === "processors" || lower === "processor") return "Processor";
+  if (lower === "motherboards" || lower === "motherboard") return "Motherboard";
+  if (lower === "graphics cards" || lower === "graphics card") return "Graphics Card";
+  if (lower === "power supplies" || lower === "power supply") return "Power Supply";
+  if (lower === "cpu coolers" || lower === "cpu cooler" || lower === "cooling") return "Cooler";
+  if (lower === "gaming monitors" || lower === "gaming monitor" || lower === "monitors") return "Monitor";
+  if (lower === "casings" || lower === "casing") return "Casing";
+  if (lower === "ram" || lower === "memory") return "RAM";
+  if (lower === "storage") return "Storage";
+  return name;
+}
+
+// Priority mapping for sorting PC hardware & electronics categories logically (Star Tech style)
+const CATEGORY_PRIORITY: Record<string, number> = {
+  processor: 1,
+  motherboard: 2,
+  "graphics-card": 3,
+  ram: 4,
+  storage: 5,
+  "power-supply": 6,
+  casing: 7,
+  cooling: 8,
+  cooler: 8,
+  monitor: 9,
+  desktop: 10,
+  laptop: 11,
+  component: 12,
+  ups: 13,
+  phone: 14,
+  tablet: 15,
+  office: 16,
+  camera: 17,
+  security: 18,
+  networking: 19,
+  software: 20,
+  accessories: 21,
+  gadget: 22,
+  gaming: 23,
+  tv: 24,
+  appliance: 25,
+};
+
+interface NavCategoryItem {
+  name: string;
+  href: string;
+  badge?: string;
+  subcategories?: { name: string; href: string }[];
+}
+
+// Instant initial categories for SSR/hydration without layout shift
+const INITIAL_HARDWARE_CATEGORIES: NavCategoryItem[] = [
+  { name: "Processor", href: "/products?category=processor", badge: "Hot", subcategories: [] },
+  { name: "Motherboard", href: "/products?category=motherboard", subcategories: [] },
+  { name: "Graphics Card", href: "/products?category=graphics-card", subcategories: [] },
+  { name: "RAM", href: "/products?category=ram", subcategories: [] },
+  { name: "Storage", href: "/products?category=storage", subcategories: [] },
+  { name: "Power Supply", href: "/products?category=power-supply", subcategories: [] },
+  { name: "Casing", href: "/products?category=casing", subcategories: [] },
+  { name: "Cooler", href: "/products?category=cooling", subcategories: [] },
+  { name: "Monitor", href: "/products?category=monitor", subcategories: [] },
+  { name: "Desktop", href: "/products?category=desktop", subcategories: [] },
+  { name: "Laptop", href: "/products?category=laptop", subcategories: [] },
+  { name: "Power & UPS", href: "/products?category=ups", subcategories: [] },
+  { name: "Networking", href: "/products?category=networking", subcategories: [] },
+  { name: "Accessories", href: "/products?category=accessories", subcategories: [] },
+];
+
 export function MainNavbar() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -214,7 +289,7 @@ export function MainNavbar() {
   const [searchQuery, setSearchQuery] = useState(searchParams?.get("q") || "");
   const [searchOpen, setSearchOpen] = useState(false);
   const [liveSearchResults, setLiveSearchResults] = useState<any[]>([]);
-  const [navCategories, setNavCategories] = useState(DEFAULT_MEGA_CATEGORIES.slice(0, 10));
+  const [navCategories, setNavCategories] = useState<NavCategoryItem[]>(INITIAL_HARDWARE_CATEGORIES);
   const [siteSettings, setSiteSettings] = useState<ApiSiteSettings | null>(null);
   const searchRef = useRef<HTMLDivElement>(null);
   const mobileSearchRef = useRef<HTMLDivElement>(null);
@@ -243,39 +318,53 @@ export function MainNavbar() {
           setSiteSettings(settingsRes);
         }
 
-        // If backend has categories, build dynamic hierarchy (already ordered by sortOrder)
+        // If backend has categories, build dynamic hierarchy with clean names and priority sort
         if (catRes.main && catRes.main.length > 0) {
-          const dynamicMenu = catRes.main.map((mainCat) => {
+          // Filter out dummy test categories like "categorry-1"
+          const validMain = catRes.main.filter(
+            (c) =>
+              !c.slug.toLowerCase().includes("categorry") &&
+              !c.name.toLowerCase().includes("categorry") &&
+              !c.slug.toLowerCase().includes("subcategory-1")
+          );
+
+          // Sort by Star Tech PC hardware priority
+          const sortedMain = [...validMain].sort((a, b) => {
+            const pA = CATEGORY_PRIORITY[a.slug.toLowerCase()] ?? (a.sortOrder || 90);
+            const pB = CATEGORY_PRIORITY[b.slug.toLowerCase()] ?? (b.sortOrder || 90);
+            if (pA !== pB) return pA - pB;
+            return a.name.localeCompare(b.name);
+          });
+
+          const dynamicMenu: NavCategoryItem[] = sortedMain.map((mainCat) => {
             const children = catRes.sub.filter((s) => s.parentId === mainCat.id);
+            const cleanName = cleanCategoryLabel(mainCat.name);
             return {
-              name: mainCat.name,
+              name: cleanName,
               href: `/products?category=${encodeURIComponent(mainCat.slug)}`,
               badge: mainCat.slug === "processor" ? "Hot" : undefined,
               subcategories:
                 children.length > 0
                   ? children.map((c) => ({
-                      name: c.name,
+                      name: cleanCategoryLabel(c.name),
                       href: `/products?category=${encodeURIComponent(
                         mainCat.slug
                       )}&sub=${encodeURIComponent(c.slug)}`,
                     }))
-                  : [
-                      {
-                        name: `All ${mainCat.name}`,
-                        href: `/products?category=${encodeURIComponent(mainCat.slug)}`,
-                      },
-                    ],
+                  : [],
             };
           });
 
-          // Merge any categories from default list if fewer than 10 in database
-          const existingSlugs = new Set(catRes.main.map((m) => m.slug.toLowerCase()));
+          // Merge any categories from default list if not already present
+          const existingSlugs = new Set(validMain.map((m) => m.slug.toLowerCase()));
+          const existingNames = new Set(validMain.map((m) => cleanCategoryLabel(m.name).toLowerCase()));
           const extraDefaults = DEFAULT_MEGA_CATEGORIES.filter(
-            (def) => !existingSlugs.has(def.name.toLowerCase())
+            (def) =>
+              !existingSlugs.has(def.name.toLowerCase()) &&
+              !existingNames.has(def.name.toLowerCase())
           );
 
-          // Strictly keep exactly 10 categories ordered by serial
-          setNavCategories([...dynamicMenu, ...extraDefaults].slice(0, 10));
+          setNavCategories([...dynamicMenu, ...extraDefaults]);
         }
       } catch (err) {
         console.warn("Failed to load live nav data:", err);
@@ -667,20 +756,21 @@ export function MainNavbar() {
         </div>
       </div>
 
-      {/* 3. Horizontal Category Mega Menu Bar (Non-Overflowing & Smooth Scrollable on Laptops) */}
-      <nav className="bg-[#081621] text-white border-b border-slate-900 hidden lg:block font-semibold text-sm relative shadow-md overflow-x-auto no-scrollbar">
+      {/* 3. Horizontal Category Mega Menu Bar (Clean & Non-Overflowing on Laptops) */}
+      <nav className="bg-[#081621] text-white border-b border-slate-900 hidden lg:block font-semibold text-sm relative shadow-md">
         <div className="max-w-[1600px] mx-auto px-2 xl:px-4 flex items-center justify-center">
-          <ul className="flex items-center justify-center gap-0.5 xl:gap-2">
-            {navCategories.slice(0, 10).map((cat) => (
+          <ul className="flex items-center justify-center gap-0.5 xl:gap-1.5 2xl:gap-2">
+            {/* Primary categories (Items 0 to 6 always visible on lg+; Items 7 & 8 visible on xl+) */}
+            {navCategories.slice(0, 9).map((cat, idx) => (
               <li
                 key={cat.name}
                 onMouseEnter={() => setActiveDropdown(cat.name)}
                 onMouseLeave={() => setActiveDropdown(null)}
-                className="relative py-2 xl:py-2.5 shrink-0"
+                className={`relative py-2 xl:py-2.5 shrink-0 ${idx >= 7 ? "hidden xl:block" : "block"}`}
               >
                 <Link
                   href={cat.href}
-                  className="px-2 xl:px-3 py-1.5 rounded text-slate-200 hover:text-white hover:bg-slate-800 transition-colors flex items-center gap-1 whitespace-nowrap text-[12.5px] xl:text-sm font-semibold"
+                  className="px-2 xl:px-2.5 2xl:px-3 py-1.5 rounded text-slate-200 hover:text-white hover:bg-slate-800 transition-colors flex items-center gap-1 whitespace-nowrap text-[12px] xl:text-[13px] 2xl:text-sm font-semibold"
                 >
                   <span>{cat.name}</span>
                   {cat.badge && (
@@ -694,10 +784,10 @@ export function MainNavbar() {
                 </Link>
 
                 {/* Subcategory Dropdown Panel */}
-                {activeDropdown === cat.name && cat.subcategories && (
-                  <div className="absolute top-full left-0 min-w-[280px] bg-[#0c1926] border border-slate-700 shadow-2xl rounded-b-md z-50 py-2 divide-y divide-slate-800 animate-in fade-in slide-in-from-top-1 duration-150">
+                {activeDropdown === cat.name && cat.subcategories && cat.subcategories.length > 0 && (
+                  <div className="absolute top-full left-0 min-w-[240px] bg-[#0c1926] border border-slate-700 shadow-2xl rounded-b-md z-50 py-2 divide-y divide-slate-800 animate-in fade-in slide-in-from-top-1 duration-150">
                     <div className="px-4 py-2 text-xs font-bold text-slate-400 uppercase tracking-wider">
-                      {cat.name} Categories
+                      {cat.name}
                     </div>
                     <div className="py-1">
                       {cat.subcategories.map((sub) => (
@@ -705,7 +795,7 @@ export function MainNavbar() {
                           key={sub.name}
                           href={sub.href}
                           onClick={() => setActiveDropdown(null)}
-                          className="block px-4 py-2.5 text-sm font-normal text-slate-200 hover:bg-slate-800 hover:text-blue-400 transition-colors"
+                          className="block px-4 py-2 text-sm font-normal text-slate-200 hover:bg-slate-800 hover:text-blue-400 transition-colors"
                         >
                           {sub.name}
                         </Link>
@@ -715,6 +805,68 @@ export function MainNavbar() {
                 )}
               </li>
             ))}
+
+            {/* "More ▾" Dropdown for remaining categories */}
+            {navCategories.length > 7 && (
+              <li
+                onMouseEnter={() => setActiveDropdown("__MORE__")}
+                onMouseLeave={() => setActiveDropdown(null)}
+                className="relative py-2 xl:py-2.5 shrink-0"
+              >
+                <button
+                  type="button"
+                  className="px-2 xl:px-2.5 2xl:px-3 py-1.5 rounded text-slate-300 hover:text-white hover:bg-slate-800 transition-colors flex items-center gap-1 whitespace-nowrap text-[12px] xl:text-[13px] 2xl:text-sm font-semibold"
+                >
+                  <span>More</span>
+                  <ChevronDown className="w-3 h-3 text-slate-400 group-hover:text-white transition-transform" />
+                </button>
+
+                {/* More Dropdown Menu */}
+                {activeDropdown === "__MORE__" && (
+                  <div className="absolute top-full right-0 w-[260px] bg-[#0c1926] border border-slate-700 shadow-2xl rounded-b-md z-50 py-2 divide-y divide-slate-800 animate-in fade-in slide-in-from-top-1 duration-150">
+                    <div className="px-4 py-2 text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
+                      <span>More Categories</span>
+                      <span className="text-[10px] text-blue-400 font-normal">All Categories</span>
+                    </div>
+                    <div className="py-1 max-h-[380px] overflow-y-auto">
+                      {/* On lg screens: items 7 and 8 (Cooler, Monitor) are shown in More */}
+                      {navCategories.slice(7, 9).map((cat) => (
+                        <Link
+                          key={`lg-more-${cat.name}`}
+                          href={cat.href}
+                          onClick={() => setActiveDropdown(null)}
+                          className="xl:hidden flex items-center justify-between px-4 py-2 text-sm text-slate-200 hover:bg-slate-800 hover:text-blue-400 transition-colors"
+                        >
+                          <span>{cat.name}</span>
+                          {cat.badge && (
+                            <span className="bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase leading-none">
+                              {cat.badge}
+                            </span>
+                          )}
+                        </Link>
+                      ))}
+
+                      {/* Items 9+ always shown in More dropdown */}
+                      {navCategories.slice(9).map((cat) => (
+                        <Link
+                          key={`all-more-${cat.name}`}
+                          href={cat.href}
+                          onClick={() => setActiveDropdown(null)}
+                          className="flex items-center justify-between px-4 py-2 text-sm text-slate-200 hover:bg-slate-800 hover:text-blue-400 transition-colors"
+                        >
+                          <span>{cat.name}</span>
+                          {cat.badge && (
+                            <span className="bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase leading-none">
+                              {cat.badge}
+                            </span>
+                          )}
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </li>
+            )}
           </ul>
         </div>
       </nav>

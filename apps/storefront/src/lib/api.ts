@@ -41,6 +41,7 @@ export interface ApiCategory {
   parentId?: string | null;
   filterableAttributes?: string[];
   isFeaturedInMegaMenu?: boolean;
+  sortOrder?: number;
 }
 
 export interface ApiSiteSettings {
