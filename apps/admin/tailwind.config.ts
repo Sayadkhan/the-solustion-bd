@@ -10,6 +10,9 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        success: "hsl(var(--success))",
+        warning: "hsl(var(--warning))",
+        deal: "hsl(var(--deal))",
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
@@ -46,8 +49,8 @@ const config: Config = {
         sm: "calc(var(--radius) - 4px)",
       },
       fontFamily: {
-        sans: ["var(--font-roboto)", "Roboto", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "sans-serif"],
-        roboto: ["var(--font-roboto)", "Roboto", "sans-serif"],
+        sans: ["var(--font-sans)", "Segoe UI", "system-ui", "sans-serif"],
+        mono: ["var(--font-mono)", "Consolas", "monospace"],
       },
     },
   },

@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common";
+import { APP_GUARD } from "@nestjs/core";
 import { DatabaseModule } from "./modules/database/database.module";
 import { AuthModule } from "./modules/auth/auth.module";
 import { ProductsModule } from "./modules/products/products.module";
@@ -12,6 +13,9 @@ import { UploadModule } from "./modules/upload/upload.module";
 import { BlogModule } from "./modules/blog/blog.module";
 import { BannersModule } from "./modules/banners/banners.module";
 import { BkashModule } from "./modules/bkash/bkash.module";
+import { RateLimitGuard } from "./common/guards/rate-limit.guard";
+import { JwtAuthGuard } from "./common/guards/jwt-auth.guard";
+import { RolesGuard } from "./common/guards/roles.guard";
 
 @Module({
   imports: [
@@ -28,6 +32,12 @@ import { BkashModule } from "./modules/bkash/bkash.module";
     BlogModule,
     BannersModule,
     BkashModule,
+  ],
+  providers: [
+    // Runs in this order. Routes are closed by default; see @Public() and @Roles().
+    { provide: APP_GUARD, useClass: RateLimitGuard },
+    { provide: APP_GUARD, useClass: JwtAuthGuard },
+    { provide: APP_GUARD, useClass: RolesGuard },
   ],
 })
 export class AppModule {}

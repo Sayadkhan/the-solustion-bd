@@ -79,11 +79,11 @@ export default function OrdersPage() {
   };
 
   const handleVerifyCodDeposit = async (orderNumber: string) => {
-    const trxId = prompt("Enter bKash/Nagad Deposit TrxID (Min. ৳1,000):", "TRX-" + Math.floor(100000 + Math.random() * 900000));
-    if (!trxId) return;
+    const trxId = prompt("Check the payment in your bKash account, then enter its TrxID:", "");
+    if (!trxId?.trim()) return;
 
     try {
-      const res = await adminApi.verifyOrderDeposit(orderNumber, trxId, 1000);
+      const res = await adminApi.verifyOrderDeposit(orderNumber, trxId.trim());
       if (res?.success) {
         showToast(`Order #${orderNumber} deposit verified successfully!`);
         await loadData();
@@ -101,8 +101,7 @@ export default function OrdersPage() {
       ALL: orders.length,
       PENDING: 0,
       CONFIRMED: 0,
-      PROCESSING: 0,
-      SHIPPED: 0,
+      DISPATCHED: 0,
       DELIVERED: 0,
       CANCELLED: 0,
       PENDING_DEPOSIT: 0,
@@ -111,8 +110,7 @@ export default function OrdersPage() {
       const s = (o.orderStatus || o.status || "PENDING").toUpperCase();
       if (s === "PENDING") counts.PENDING++;
       else if (s === "CONFIRMED") counts.CONFIRMED++;
-      else if (s === "PROCESSING") counts.PROCESSING++;
-      else if (s === "SHIPPED") counts.SHIPPED++;
+      else if (s === "DISPATCHED") counts.DISPATCHED++;
       else if (s === "DELIVERED") counts.DELIVERED++;
       else if (s === "CANCELLED") counts.CANCELLED++;
 
@@ -200,8 +198,8 @@ export default function OrdersPage() {
         </div>
         <div className="flex items-center gap-2">
           {isStreamingMore && (
-            <span className="flex items-center gap-1.5 text-[11px] font-medium text-blue-600 dark:text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2.5 py-1 rounded-full animate-pulse">
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-ping" />
+            <span className="flex items-center gap-1.5 text-[11px] font-medium text-primary dark:text-primary bg-primary/10 border border-primary/20 px-2.5 py-1 rounded-full animate-pulse">
+              <span className="w-1.5 h-1.5 rounded-full bg-primary animate-ping" />
               <span>Hydrating full list...</span>
             </span>
           )}
@@ -218,8 +216,7 @@ export default function OrdersPage() {
           { key: "PENDING", label: "Pending", count: statusCounts.PENDING },
           { key: "CONFIRMED", label: "Confirmed", count: statusCounts.CONFIRMED },
           { key: "PENDING_DEPOSIT", label: "Deposit Needed", count: statusCounts.PENDING_DEPOSIT },
-          { key: "PROCESSING", label: "Processing", count: statusCounts.PROCESSING },
-          { key: "SHIPPED", label: "Shipped", count: statusCounts.SHIPPED },
+          { key: "DISPATCHED", label: "Dispatched", count: statusCounts.DISPATCHED },
           { key: "DELIVERED", label: "Delivered", count: statusCounts.DELIVERED },
           { key: "CANCELLED", label: "Cancelled", count: statusCounts.CANCELLED },
         ].map((tab) => {
@@ -233,7 +230,7 @@ export default function OrdersPage() {
               }}
               className={`px-3 py-1.5 rounded-xl font-bold flex items-center gap-2 shrink-0 transition-all border text-xs cursor-pointer ${
                 isActive
-                  ? "bg-primary text-white border-primary shadow-sm shadow-primary/25"
+                  ? "bg-primary text-primary-foreground border-primary"
                   : "bg-card border-border text-muted-foreground hover:text-foreground hover:bg-muted/50"
               }`}
             >
@@ -284,8 +281,7 @@ export default function OrdersPage() {
             <option value="PENDING">Pending ({statusCounts.PENDING})</option>
             <option value="CONFIRMED">Confirmed ({statusCounts.CONFIRMED})</option>
             <option value="PENDING_DEPOSIT">Deposit Needed ({statusCounts.PENDING_DEPOSIT})</option>
-            <option value="PROCESSING">Processing ({statusCounts.PROCESSING})</option>
-            <option value="SHIPPED">Shipped ({statusCounts.SHIPPED})</option>
+            <option value="DISPATCHED">Dispatched ({statusCounts.DISPATCHED})</option>
             <option value="DELIVERED">Delivered ({statusCounts.DELIVERED})</option>
             <option value="CANCELLED">Cancelled ({statusCounts.CANCELLED})</option>
           </select>
@@ -374,10 +370,10 @@ export default function OrdersPage() {
                       <td className="px-5 py-3.5">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           {ord.paymentMethod === "BKASH" ? (
-                            <span className="px-2 py-0.5 rounded text-[10px] font-black bg-[#E2136E] text-white tracking-wide shadow-sm inline-flex items-center gap-1">
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#E2136E] text-white tracking-wide shadow-sm inline-flex items-center gap-1">
                               <span>bKash</span>
                               {ord.trxId && (
-                                <span className="opacity-90 font-mono text-[9px]">
+                                <span className="opacity-90 font-mono text-[10px]">
                                   ({ord.trxId})
                                 </span>
                               )}
@@ -429,10 +425,8 @@ export default function OrdersPage() {
                           className="bg-card border border-border text-foreground rounded-lg px-2.5 py-1 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-primary"
                         >
                           <option value="PENDING">PENDING</option>
-                          <option value="PENDING_DEPOSIT">PENDING DEPOSIT</option>
                           <option value="CONFIRMED">CONFIRMED</option>
-                          <option value="PROCESSING">PROCESSING</option>
-                          <option value="SHIPPED">SHIPPED</option>
+                          <option value="DISPATCHED">DISPATCHED</option>
                           <option value="DELIVERED">DELIVERED</option>
                           <option value="CANCELLED">CANCELLED</option>
                         </select>

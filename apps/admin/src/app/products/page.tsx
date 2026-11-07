@@ -225,8 +225,8 @@ export default function ProductsPage() {
         </div>
         <div className="flex items-center gap-2">
           {isStreamingMore && (
-            <span className="flex items-center gap-1.5 text-[11px] font-medium text-blue-600 dark:text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2.5 py-1 rounded-full animate-pulse">
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-ping" />
+            <span className="flex items-center gap-1.5 text-[11px] font-medium text-primary dark:text-primary bg-primary/10 border border-primary/20 px-2.5 py-1 rounded-full animate-pulse">
+              <span className="w-1.5 h-1.5 rounded-full bg-primary animate-ping" />
               <span>Hydrating full catalog...</span>
             </span>
           )}

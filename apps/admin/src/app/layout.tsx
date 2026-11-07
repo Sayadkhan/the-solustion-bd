@@ -1,21 +1,36 @@
 import type { Metadata } from "next";
-import { Roboto } from "next/font/google";
+import { Hind_Siliguri, IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
 import { Suspense } from "react";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { TopProgressBar } from "@/components/top-progress-bar";
 
-const roboto = Roboto({
-  weight: ["300", "400", "500", "700", "900"],
+const sans = IBM_Plex_Sans({
+  weight: ["400", "500", "600", "700"],
   subsets: ["latin"],
   display: "swap",
-  variable: "--font-roboto",
+  variable: "--font-plex",
+});
+
+// Plex Sans has no Bangla, including the taka sign, so this supplies those glyphs.
+const bangla = Hind_Siliguri({
+  weight: ["400", "500", "600", "700"],
+  subsets: ["bengali"],
+  display: "swap",
+  variable: "--font-bangla",
+});
+
+const mono = IBM_Plex_Mono({
+  weight: ["400", "500"],
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-mono",
 });
 
 export const metadata: Metadata = {
-  title: "The Solutions BD Admin & POS Dashboard",
-  description:
-    "Omnichannel Point of Sale, multi-branch inventory, serial number warranty management, and outside-Dhaka COD deposit queue.",
+  title: "The Solutions BD Admin",
+  description: "Manage products, orders, warranty serials, content and store settings.",
+  robots: { index: false, follow: false },
 };
 
 export default function RootLayout({
@@ -24,16 +39,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={roboto.variable} suppressHydrationWarning>
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,300;0,400;0,500;0,700;0,900;1,400;1,700&display=swap"
-          rel="stylesheet"
-        />
-      </head>
-      <body className={`${roboto.className} min-h-screen bg-background text-foreground antialiased font-sans`}>
+    <html
+      lang="en"
+      className={`${sans.variable} ${bangla.variable} ${mono.variable}`}
+      style={{ "--font-sans": "var(--font-plex), var(--font-bangla)" } as React.CSSProperties}
+      suppressHydrationWarning
+    >
+      <body className="min-h-screen bg-background text-foreground antialiased font-sans">
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"

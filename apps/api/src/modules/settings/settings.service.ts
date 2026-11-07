@@ -1,10 +1,49 @@
-import { Injectable } from "@nestjs/common";
+import { BadRequestException, Injectable } from "@nestjs/common";
 import { db, siteSettings, contactInquiries, desc, eq } from "@solusation/database";
-import { normalizeBdPhone } from "@solusation/shared-types";
+import { normalizeBdPhone, UserRole } from "@solusation/shared-types";
 import { redis } from "../../config/redis";
 import { emailService } from "../../services/emailService";
 
 const SETTINGS_CACHE_KEY = "cache:settings:global";
+
+const SEO_FIELDS = [
+  "gtmId",
+  "gaMeasurementId",
+  "googleSearchConsoleCode",
+  "facebookPixelId",
+  "defaultMetaTitle",
+  "defaultMetaDescription",
+  "defaultMetaKeywords",
+  "robotsTxt",
+] as const;
+
+const BUSINESS_FIELDS = [
+  "logoLightUrl",
+  "logoDarkUrl",
+  "contactEmail",
+  "whatsappNumber",
+  "hotlineNumber",
+  "secondaryPhone",
+  "landlinePhone",
+  "ceoName",
+  "ceoDesignation",
+  "ceoPhone",
+  "gulshanAddress",
+  "idbAddress",
+  "websiteUrl",
+  "headerNoticeText",
+  "usdToBdtRate",
+] as const;
+
+// Raw scripts run on every storefront page, so only full admins may set them.
+const ADMIN_ONLY_FIELDS = ["customHeadScript", "customBodyScript"] as const;
+
+// These values are placed inside inline scripts on the storefront.
+const TRACKING_ID_FORMATS: Record<string, RegExp> = {
+  gtmId: /^GTM-[A-Z0-9]+$/,
+  gaMeasurementId: /^(G|UA)-[A-Z0-9-]+$/,
+  facebookPixelId: /^[0-9]+$/,
+};
 
 @Injectable()
 export class SettingsService {
@@ -31,8 +70,23 @@ export class SettingsService {
     return record;
   }
 
-  async updateSiteSettings(data: any) {
-    const { id, createdAt, updatedAt, ...allowedData } = data || {};
+  async updateSiteSettings(data: Record<string, unknown>, role: UserRole) {
+    const isFullAdmin = role === "SUPER_ADMIN" || role === "ADMIN";
+    const allowedFields: readonly string[] = isFullAdmin
+      ? [...SEO_FIELDS, ...BUSINESS_FIELDS, ...ADMIN_ONLY_FIELDS]
+      : SEO_FIELDS;
+
+    const allowedData = Object.fromEntries(
+      Object.entries(data || {}).filter(([key]) => allowedFields.includes(key))
+    );
+
+    for (const [field, format] of Object.entries(TRACKING_ID_FORMATS)) {
+      const value = allowedData[field];
+      if (value && (typeof value !== "string" || !format.test(value))) {
+        throw new BadRequestException(`Invalid format for ${field}.`);
+      }
+    }
+
     const existing = await db.query.siteSettings.findFirst();
     let updated;
 

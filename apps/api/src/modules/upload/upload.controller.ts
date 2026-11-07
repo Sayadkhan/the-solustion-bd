@@ -9,7 +9,11 @@ import {
 } from "@nestjs/common";
 import { FileInterceptor, FilesInterceptor } from "@nestjs/platform-express";
 import { ApiTags, ApiOperation, ApiConsumes, ApiBody, ApiQuery } from "@nestjs/swagger";
-import { UploadService } from "./upload.service";
+import { MAX_FILE_SIZE, UploadService } from "./upload.service";
+import { Roles } from "../../common/decorators/roles.decorator";
+
+const singleFileLimits = { limits: { fileSize: MAX_FILE_SIZE, files: 1 } };
+const galleryLimits = { limits: { fileSize: MAX_FILE_SIZE, files: 10 } };
 
 @ApiTags("Image Uploads")
 @Controller("upload")
@@ -37,8 +41,9 @@ export class UploadController {
       required: ["file"],
     },
   })
+  @Roles("ADMIN", "SEO_MANAGER")
   @Post("single")
-  @UseInterceptors(FileInterceptor("file"))
+  @UseInterceptors(FileInterceptor("file", singleFileLimits))
   async uploadSingle(
     @UploadedFile() file: Express.Multer.File,
     @Query("folder") folder?: string
@@ -74,8 +79,9 @@ export class UploadController {
       required: ["files"],
     },
   })
+  @Roles("ADMIN", "SEO_MANAGER")
   @Post("multiple")
-  @UseInterceptors(FilesInterceptor("files", 10))
+  @UseInterceptors(FilesInterceptor("files", 10, galleryLimits))
   async uploadMultiple(
     @UploadedFiles() files: Express.Multer.File[],
     @Query("folder") folder?: string

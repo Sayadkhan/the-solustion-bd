@@ -307,7 +307,7 @@ export default function SettingsPage() {
 
             {/* CEO Profile */}
             <div className="text-left sm:text-right space-y-0.5">
-              <h3 className="font-black text-base sm:text-lg text-slate-900 tracking-tight">
+              <h3 className="font-bold text-base sm:text-lg text-slate-900 tracking-tight">
                 {settingsData.ceoName}
               </h3>
               <p className="text-xs font-bold text-slate-700">CEO</p>
@@ -325,7 +325,7 @@ export default function SettingsPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 py-4 text-xs divide-y sm:divide-y-0 sm:divide-x divide-slate-200">
             {/* Gulshan Office */}
             <div className="space-y-1.5 sm:pr-4">
-              <h4 className="font-extrabold text-xs text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+              <h4 className="font-semibold text-xs text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
                 <Building2 className="w-3.5 h-3.5 text-primary" />
                 <span>Gulshan Office</span>
               </h4>
@@ -346,7 +346,7 @@ export default function SettingsPage() {
 
             {/* IDB Office */}
             <div className="space-y-1.5 pt-3 sm:pt-0 sm:pl-4">
-              <h4 className="font-extrabold text-xs text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+              <h4 className="font-semibold text-xs text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
                 <MapPin className="w-3.5 h-3.5 text-primary" />
                 <span>IDB Office</span>
               </h4>
@@ -470,7 +470,7 @@ export default function SettingsPage() {
             {/* Secondary Mobile */}
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-                <Phone className="w-3.5 h-3.5 text-blue-500" />
+                <Phone className="w-3.5 h-3.5 text-primary" />
                 <span>Secondary Mobile Number</span>
               </label>
               <input

@@ -24,9 +24,10 @@ import {
   Mail,
 } from "lucide-react";
 import { useCartStore } from "@/stores/cart-store";
-import { formatBdt, calculateAdvanceDepositRequirement, isValidBdPhone } from "@solusation/shared-types";
+import { formatBdt, calculateAdvanceDepositRequirement, calculateDeliveryFee, isValidBdPhone } from "@solusation/shared-types";
 import { storefrontApi } from "@/lib/api";
 import { BkashModal } from "@/components/bkash-modal";
+import { savePendingBkashInvoice } from "@/lib/bkash-pending";
 
 const BD_DISTRICTS = [
   "Dhaka",
@@ -110,7 +111,6 @@ export default function CartPage() {
 
   // Payment Method
   const [paymentMethod, setPaymentMethod] = useState<"COD" | "BKASH">("COD");
-  const [bkashTrxId, setBkashTrxId] = useState<string | null>(null);
   const [isBkashModalOpen, setIsBkashModalOpen] = useState(false);
 
   // Submission State
@@ -119,7 +119,7 @@ export default function CartPage() {
   const [placedOrder, setPlacedOrder] = useState<any | null>(null);
 
   const cashSubtotal = getTotalCashBdt();
-  const deliveryFee = deliveryZone === "INSIDE_DHAKA" ? 70 : 140;
+  const deliveryFee = calculateDeliveryFee(deliveryZone === "INSIDE_DHAKA" ? "Dhaka" : district);
   const grandTotal = cashSubtotal + deliveryFee;
 
   // Handle District Change
@@ -187,68 +187,82 @@ export default function CartPage() {
     return true;
   };
 
-  const handleBkashPaymentSuccess = async (trxId: string, paymentDetails: any) => {
-    setBkashTrxId(trxId);
-    setIsBkashModalOpen(false);
-    await executeOrderPlacement(trxId);
+  /** Creates the order. The server calculates every amount; expectedTotalBdt catches a stale cart. */
+  const placeOrder = async (submittedTrxId?: string) => {
+    const cleanPhone = customerPhone.trim().replace(/[\s-]/g, "");
+    return storefrontApi.createOrder({
+      customerName: customerName.trim(),
+      customerPhone: cleanPhone,
+      customerEmail: customerEmail.trim() ? customerEmail.trim().toLowerCase() : null,
+      district: district.trim(),
+      area: area.trim(),
+      address: `${address.trim()}${notes.trim() ? ` (Note: ${notes.trim()})` : ""}`,
+      paymentMethod,
+      pricingTierUsed: "CASH",
+      trxId: submittedTrxId || null,
+      expectedTotalBdt: grandTotal,
+      items: items.map((i) => ({
+        productId: i.productId,
+        sku: i.sku,
+        qty: i.quantity,
+      })),
+    });
   };
 
-  const executeOrderPlacement = async (verifiedTrxId?: string | null) => {
+  const showConfirmation = (order: any, paymentNote?: string) => {
+    setPlacedOrder({ ...order, itemsSummary: items, paymentNote });
+    clearCart();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const submitOrder = async (submittedTrxId?: string) => {
     setIsSubmitting(true);
     setErrorMessage(null);
-
-    const cleanPhone = customerPhone.trim().replace(/[\s-]/g, "");
-    const formattedPhone = cleanPhone.startsWith("+88")
-      ? cleanPhone
-      : cleanPhone.startsWith("88")
-      ? `+${cleanPhone}`
-      : `+88${cleanPhone}`;
-
-    const activeTrxId = verifiedTrxId || bkashTrxId;
-    const isPayingWithBkash = paymentMethod === "BKASH";
-
     try {
-      const payload = {
-        customerName: customerName.trim(),
-        customerPhone: formattedPhone,
-        customerEmail: customerEmail.trim() ? customerEmail.trim().toLowerCase() : null,
-        district: district.trim(),
-        area: area.trim(),
-        address: `${address.trim()}${notes.trim() ? ` (Note: ${notes.trim()})` : ""}`,
-        paymentMethod: isPayingWithBkash ? "BKASH" : "COD",
-        pricingTierUsed: "CASH",
-        totalPayableBdt: grandTotal,
-        paidAmountBdt: isPayingWithBkash ? grandTotal : 0,
-        dueAmountBdt: isPayingWithBkash ? 0 : grandTotal,
-        trxId: isPayingWithBkash ? activeTrxId : null,
-        orderStatus: isPayingWithBkash && activeTrxId ? "CONFIRMED" : "PENDING",
-        items: items.map((i) => ({
-          productId: i.productId,
-          productName: i.name,
-          qty: i.quantity,
-          unitPriceBdt: i.cashPriceBdt,
-        })),
-      };
-
-      const res = await storefrontApi.createOrder(payload);
-
+      const res = await placeOrder(submittedTrxId);
       if (res?.success && res.data) {
-        setPlacedOrder({
-          ...res.data,
-          customerEmail: customerEmail.trim() || res.data.customerEmail,
-          itemsSummary: items,
-          deliveryFee,
-          deliveryZone,
-          paymentMethodUsed: isPayingWithBkash ? "BKASH" : "COD",
-          trxId: activeTrxId || res.data.trxId,
-        });
-        clearCart();
-        window.scrollTo({ top: 0, behavior: "smooth" });
+        setIsBkashModalOpen(false);
+        showConfirmation(res.data);
       } else {
         setErrorMessage(res?.message || "Failed to place order. Please try again.");
+        setIsBkashModalOpen(false);
       }
     } catch (err: any) {
       setErrorMessage(err.message || "An unexpected error occurred while placing order.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  /** Creates the order, then sends the customer to bKash's own page to authorise payment. */
+  const payWithBkashGateway = async () => {
+    setIsSubmitting(true);
+    setErrorMessage(null);
+    try {
+      const res = await placeOrder();
+      if (!res?.success || !res.data) {
+        setErrorMessage(res?.message || "Failed to place order. Please try again.");
+        setIsBkashModalOpen(false);
+        return;
+      }
+
+      const payment = await storefrontApi.createBkashPayment(res.data.invoiceNo);
+      if (payment?.success && payment.data?.bkashURL) {
+        savePendingBkashInvoice(res.data.invoiceNo);
+        clearCart();
+        window.location.href = payment.data.bkashURL;
+        return;
+      }
+
+      // The order exists, so show it instead of letting the customer order twice.
+      setIsBkashModalOpen(false);
+      showConfirmation(
+        res.data,
+        payment?.message || "We could not open bKash. Your order is saved and is waiting for payment."
+      );
+    } catch (err: any) {
+      setErrorMessage(err.message || "An unexpected error occurred while placing order.");
+      setIsBkashModalOpen(false);
     } finally {
       setIsSubmitting(false);
     }
@@ -260,17 +274,20 @@ export default function CartPage() {
 
     if (!validateForm()) return;
 
-    if (paymentMethod === "BKASH" && !bkashTrxId) {
+    if (paymentMethod === "BKASH") {
       setIsBkashModalOpen(true);
       return;
     }
 
-    await executeOrderPlacement();
+    await submitOrder();
   };
 
   // SUCCESS SCREEN
   if (placedOrder) {
-    const isOrderBkash = placedOrder.paymentMethodUsed === "BKASH";
+    const isOrderBkash = placedOrder.paymentMethod === "BKASH";
+    const isFullyPaid = placedOrder.dueAmountBdt === 0;
+    const isAwaitingBkash = isOrderBkash && !isFullyPaid;
+    const depositRequirement = placedOrder.depositRequirement;
 
     return (
       <div className="container mx-auto px-4 py-12 max-w-3xl space-y-8">
@@ -281,14 +298,20 @@ export default function CartPage() {
 
           <div className="space-y-2">
             <span className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-              Order Confirmed
+              {placedOrder.orderStatus === "CONFIRMED" ? "Order Confirmed" : "Order Received"}
             </span>
-            <h1 className="text-2xl sm:text-3xl font-black text-foreground">
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
               Thank you for your order!
             </h1>
             <p className="text-sm text-muted-foreground max-w-lg mx-auto">
-              {isOrderBkash
-                ? "Your bKash payment has been verified successfully. Your order is confirmed and will be dispatched shortly."
+              {placedOrder.paymentNote
+                ? placedOrder.paymentNote
+                : isAwaitingBkash && placedOrder.trxId
+                ? "We have received your TrxID. Your order will be confirmed once our team has checked the payment."
+                : isAwaitingBkash
+                ? "Your order is saved and is waiting for payment."
+                : depositRequirement?.requiresDeposit
+                ? depositRequirement.reason
                 : "Your Cash on Delivery order has been received. Our team will contact you shortly to confirm delivery."}
             </p>
           </div>
@@ -297,7 +320,7 @@ export default function CartPage() {
           <div className="bg-muted/40 rounded-xl p-4 border border-border flex flex-wrap items-center justify-between gap-4 text-left">
             <div>
               <div className="text-xs text-muted-foreground font-medium">Invoice Number:</div>
-              <div className="text-base font-black text-primary tracking-wide">
+              <div className="text-base font-bold text-primary tracking-wide">
                 #{placedOrder.invoiceNo}
               </div>
             </div>
@@ -306,10 +329,10 @@ export default function CartPage() {
               <div className="text-xs text-muted-foreground font-medium">Payment Method:</div>
               {isOrderBkash ? (
                 <div className="text-sm font-bold text-[#E2136E] flex items-center gap-1.5">
-                  <div className="w-4 h-4 bg-[#E2136E] text-white rounded-full flex items-center justify-center text-[10px] font-black">
+                  <div className="w-4 h-4 bg-[#E2136E] text-white rounded-full flex items-center justify-center text-[11px] font-bold">
                     ৳
                   </div>
-                  <span>bKash (Paid)</span>
+                  <span>{isFullyPaid ? "bKash (Paid)" : "bKash (Payment Pending)"}</span>
                 </div>
               ) : (
                 <div className="text-sm font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
@@ -323,12 +346,12 @@ export default function CartPage() {
               <div className="text-xs text-muted-foreground font-medium">Order Status:</div>
               <span
                 className={`text-xs font-bold px-2.5 py-0.5 rounded border ${
-                  isOrderBkash
+                  placedOrder.orderStatus === "CONFIRMED"
                     ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
                     : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
                 }`}
               >
-                {isOrderBkash ? "CONFIRMED" : placedOrder.orderStatus || "PENDING"}
+                {placedOrder.orderStatus || "PENDING"}
               </span>
             </div>
           </div>
@@ -338,15 +361,15 @@ export default function CartPage() {
             <div className="p-3 bg-pink-50 dark:bg-pink-950/30 border border-pink-200 dark:border-pink-800/50 rounded-xl flex items-center justify-between text-xs text-left">
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-[#E2136E]" />
-                <span className="text-slate-700 dark:text-slate-300 font-medium">
+                <span className="text-foreground/85 font-medium">
                   Transaction ID (TrxID):
                 </span>
-                <span className="font-black text-[#E2136E] tracking-wider text-sm">
+                <span className="font-bold text-[#E2136E] tracking-wider text-sm">
                   {placedOrder.trxId}
                 </span>
               </div>
-              <span className="px-2 py-0.5 rounded bg-[#E2136E] text-white font-bold text-[10px]">
-                VERIFIED
+              <span className="px-2 py-0.5 rounded bg-[#E2136E] text-white font-bold text-[11px]">
+                {isFullyPaid ? "VERIFIED" : "PENDING CHECK"}
               </span>
             </div>
           )}
@@ -405,21 +428,21 @@ export default function CartPage() {
           <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 space-y-2 text-xs text-left">
             <div className="flex justify-between text-muted-foreground">
               <span>Item Subtotal:</span>
-              <span className="font-semibold text-foreground">{formatBdt(placedOrder.totalPayableBdt || 0)}</span>
+              <span className="font-semibold text-foreground">{formatBdt(placedOrder.subtotalBdt || 0)}</span>
             </div>
             <div className="flex justify-between text-muted-foreground">
               <span>Delivery Charge:</span>
-              <span className="font-semibold text-foreground">৳{placedOrder.deliveryFee || 70}</span>
+              <span className="font-semibold text-foreground">৳{placedOrder.deliveryFeeBdt || 0}</span>
             </div>
             <div className="pt-2 border-t border-primary/20 flex justify-between items-baseline">
-              <span className="font-black text-sm text-foreground">
-                {isOrderBkash ? "Total Paid (bKash):" : "Total Payable on Delivery:"}
+              <span className="font-bold text-sm text-foreground">
+                {isFullyPaid ? "Total Paid (bKash):" : isOrderBkash ? "Total Payable (bKash):" : "Total Payable on Delivery:"}
               </span>
-              <span className="text-xl font-black text-primary">
-                {formatBdt((placedOrder.totalPayableBdt || 0) + (placedOrder.deliveryFee || 70))}
+              <span className="text-xl font-bold text-primary">
+                {formatBdt(placedOrder.totalPayableBdt || 0)}
               </span>
             </div>
-            {isOrderBkash && (
+            {isFullyPaid && (
               <div className="flex justify-between items-center text-emerald-600 font-bold pt-1">
                 <span>Amount Due:</span>
                 <span>৳0 (Fully Paid)</span>
@@ -431,7 +454,7 @@ export default function CartPage() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
             <Link
               href="/products"
-              className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-white font-bold px-6 py-3 rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-primary/20 transition-all"
+              className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground font-bold px-6 py-3 rounded-xl text-xs flex items-center justify-center gap-2 transition-all"
             >
               <ShoppingCart className="w-4 h-4" />
               <span>Continue Shopping</span>
@@ -456,14 +479,14 @@ export default function CartPage() {
         <div className="w-16 h-16 bg-muted/60 rounded-full flex items-center justify-center mx-auto text-muted-foreground">
           <ShoppingCart className="w-8 h-8 stroke-1 text-primary" />
         </div>
-        <h2 className="text-2xl font-black text-foreground">Your Shopping Cart is Empty</h2>
+        <h2 className="text-2xl font-bold text-foreground">Your Shopping Cart is Empty</h2>
         <p className="text-sm text-muted-foreground leading-relaxed">
           Looks like you haven&apos;t added any products to your cart yet. Explore our high-performance hardware catalog or build your custom PC.
         </p>
         <div className="flex items-center justify-center gap-3 pt-2">
           <Link
             href="/products"
-            className="bg-primary hover:bg-primary/90 text-white font-bold px-6 py-2.5 rounded-xl text-xs shadow-md shadow-primary/20 transition-all"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold px-6 py-2.5 rounded-xl text-xs transition-all"
           >
             Browse Products
           </Link>
@@ -487,7 +510,7 @@ export default function CartPage() {
       {/* Header */}
       <div className="flex items-center justify-between pb-4 border-b border-border">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight flex items-center gap-2.5">
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight flex items-center gap-2.5">
             <ShoppingCart className="w-7 h-7 text-primary" />
             <span>Checkout</span>
           </h1>
@@ -526,7 +549,7 @@ export default function CartPage() {
                   Enter your delivery address and contact information
                 </p>
               </div>
-              <span className="text-[10px] uppercase font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+              <span className="text-[11px] uppercase font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
                 Guest Checkout
               </span>
             </div>
@@ -562,7 +585,7 @@ export default function CartPage() {
                   placeholder="e.g. 01712345678"
                   className="w-full bg-background border border-border focus:border-primary rounded-xl px-3.5 py-2.5 text-xs text-foreground outline-none transition-colors"
                 />
-                <div className="text-[10px] text-muted-foreground">
+                <div className="text-[11px] text-muted-foreground">
                   Required for delivery call and verification.
                 </div>
               </div>
@@ -575,7 +598,7 @@ export default function CartPage() {
                   <Mail className="w-3.5 h-3.5 text-primary" />
                   <span>Email Address</span>
                 </span>
-                <span className="text-[10px] text-muted-foreground font-normal">Optional (for invoice & digital receipt)</span>
+                <span className="text-[11px] text-muted-foreground font-normal">Optional (for invoice & digital receipt)</span>
               </label>
               <input
                 type="email"
@@ -603,9 +626,9 @@ export default function CartPage() {
                 >
                   <div>
                     <div className="text-foreground">Inside Dhaka City</div>
-                    <div className="text-[10px] text-muted-foreground">Standard Home Delivery: 24-48 hrs</div>
+                    <div className="text-[11px] text-muted-foreground">Standard Home Delivery: 24-48 hrs</div>
                   </div>
-                  <div className="text-primary font-black text-sm">৳70</div>
+                  <div className="text-primary font-bold text-sm">৳70</div>
                 </div>
 
                 <div
@@ -618,9 +641,9 @@ export default function CartPage() {
                 >
                   <div>
                     <div className="text-foreground">Outside Dhaka (All Districts)</div>
-                    <div className="text-[10px] text-muted-foreground">Courier Delivery: 48-72 hrs</div>
+                    <div className="text-[11px] text-muted-foreground">Courier Delivery: 48-72 hrs</div>
                   </div>
-                  <div className="text-primary font-black text-sm">৳140</div>
+                  <div className="text-primary font-bold text-sm">৳140</div>
                 </div>
               </div>
             </div>
@@ -704,7 +727,6 @@ export default function CartPage() {
               <div
                 onClick={() => {
                   setPaymentMethod("COD");
-                  setBkashTrxId(null);
                 }}
                 className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
                   paymentMethod === "COD"
@@ -736,7 +758,7 @@ export default function CartPage() {
                 onClick={() => setPaymentMethod("BKASH")}
                 className={`p-4 rounded-xl border-2 cursor-pointer transition-all relative overflow-hidden ${
                   paymentMethod === "BKASH"
-                    ? "border-[#E2136E] bg-pink-500/5 shadow-md shadow-pink-500/10"
+                    ? "border-[#E2136E] bg-pink-500/5"
                     : "border-border hover:bg-muted/30"
                 }`}
               >
@@ -750,8 +772,8 @@ export default function CartPage() {
                       }`}
                     />
                     <div className="flex items-center gap-1.5">
-                      <span className="font-black text-sm text-foreground">bKash Payment</span>
-                      <span className="px-1.5 py-0.5 rounded text-[10px] font-black bg-[#E2136E] text-white tracking-wide">
+                      <span className="font-bold text-sm text-foreground">bKash Payment</span>
+                      <span className="px-1.5 py-0.5 rounded text-[11px] font-bold bg-[#E2136E] text-white tracking-wide">
                         bKash
                       </span>
                     </div>
@@ -772,7 +794,7 @@ export default function CartPage() {
                       <ShieldCheck className="w-4 h-4" />
                       <span>bKash Official Merchant Payment</span>
                     </h4>
-                    <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+                    <p className="text-xs text-muted-foreground mt-0.5">
                       Make direct online payment from your personal bKash account.
                     </p>
                   </div>
@@ -783,23 +805,16 @@ export default function CartPage() {
                       if (!validateForm()) return;
                       setIsBkashModalOpen(true);
                     }}
-                    className="bg-[#E2136E] hover:bg-[#c20f5d] text-white font-extrabold px-4 py-2.5 rounded-xl text-xs flex items-center justify-center gap-2 shadow-md shadow-pink-500/25 transition-all whitespace-nowrap"
+                    className="bg-[#E2136E] hover:bg-[#c20f5d] text-white font-semibold px-4 py-2.5 rounded-xl text-xs flex items-center justify-center gap-2 transition-all whitespace-nowrap"
                   >
-                    <span>{bkashTrxId ? "Change Payment" : "Pay with bKash"}</span>
+                    <span>Pay with bKash</span>
                     <ExternalLink className="w-3.5 h-3.5" />
                   </button>
                 </div>
 
-                {bkashTrxId ? (
-                  <div className="p-2.5 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-lg flex items-center gap-2 text-xs text-emerald-700 dark:text-emerald-400 font-bold">
-                    <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
-                    <span>Payment Verified! Transaction ID: {bkashTrxId}</span>
-                  </div>
-                ) : (
-                  <div className="text-[11px] text-slate-500 dark:text-slate-400 bg-white/60 dark:bg-slate-900/40 p-2.5 rounded-lg border border-pink-100 dark:border-pink-900/50">
-                    💡 Clicking &quot;Place Order&quot; below will also launch the secure bKash checkout popup.
-                  </div>
-                )}
+                <div className="text-[11px] text-muted-foreground bg-white/60 dark:bg-slate-900/40 p-2.5 rounded-lg border border-pink-100 dark:border-pink-900/50">
+                  You will enter your bKash PIN only on bKash&apos;s own secure page, never on this website.
+                </div>
               </div>
             )}
 
@@ -842,7 +857,7 @@ export default function CartPage() {
                       />
                     </div>
                     <div className="min-w-0 space-y-0.5">
-                      <div className="text-[10px] font-semibold text-muted-foreground uppercase">
+                      <div className="text-[11px] font-semibold text-muted-foreground uppercase">
                         SKU: {item.sku}
                       </div>
                       <h4 className="font-bold text-xs text-foreground truncate max-w-[190px]">
@@ -892,7 +907,7 @@ export default function CartPage() {
 
           {/* Order Summary Card */}
           <div className="bg-card rounded-2xl border border-border p-5 sm:p-6 space-y-5 shadow-sm text-left">
-            <h3 className="font-black text-base text-foreground pb-3 border-b border-border">
+            <h3 className="font-bold text-base text-foreground pb-3 border-b border-border">
               Order Summary
             </h3>
 
@@ -925,14 +940,14 @@ export default function CartPage() {
 
               <div className="pt-3 border-t border-border flex justify-between items-baseline">
                 <div>
-                  <span className="font-extrabold text-sm text-foreground block">
+                  <span className="font-semibold text-sm text-foreground block">
                     Total Payable
                   </span>
-                  <span className="text-[10px] text-muted-foreground">
+                  <span className="text-[11px] text-muted-foreground">
                     {paymentMethod === "BKASH" ? "Instant bKash Payment" : "Due on Delivery"}
                   </span>
                 </div>
-                <span className="text-2xl font-black text-primary">{formatBdt(grandTotal)}</span>
+                <span className="text-2xl font-bold text-primary">{formatBdt(grandTotal)}</span>
               </div>
             </div>
 
@@ -948,10 +963,10 @@ export default function CartPage() {
               id="confirm-order-btn"
               type="submit"
               disabled={isSubmitting}
-              className={`w-full text-white font-black py-3.5 px-4 rounded-xl text-sm flex items-center justify-center gap-2 shadow-xl transition-all hover:scale-[1.01] active:scale-95 disabled:opacity-60 ${
+              className={`w-full text-primary-foreground font-bold py-3.5 px-4 rounded-xl text-sm flex items-center justify-center gap-2 shadow-xl transition-all disabled:opacity-60 ${
                 paymentMethod === "BKASH"
                   ? "bg-[#E2136E] hover:bg-[#c20f5d] shadow-pink-600/25"
-                  : "bg-[#1340b8] hover:bg-blue-800 shadow-blue-600/20"
+                  : "bg-primary hover:bg-primary/90 shadow-blue-600/20"
               }`}
             >
               {isSubmitting ? (
@@ -959,7 +974,7 @@ export default function CartPage() {
                   <Loader2 className="w-4 h-4 animate-spin" />
                   <span>Processing Order...</span>
                 </>
-              ) : paymentMethod === "BKASH" && !bkashTrxId ? (
+              ) : paymentMethod === "BKASH" ? (
                 <span>Pay with bKash ({formatBdt(grandTotal)})</span>
               ) : (
                 <span>Confirm Order</span>
@@ -973,7 +988,7 @@ export default function CartPage() {
                 <span>100% Genuine Products with Official Warranty</span>
               </div>
               <div className="flex items-center gap-2">
-                <Truck className="w-4 h-4 text-blue-500 shrink-0" />
+                <Truck className="w-4 h-4 text-primary shrink-0" />
                 <span>Fast 24-48 Hours Express Delivery</span>
               </div>
               <div className="flex items-center gap-2">
@@ -990,9 +1005,9 @@ export default function CartPage() {
         isOpen={isBkashModalOpen}
         onClose={() => setIsBkashModalOpen(false)}
         amount={grandTotal}
-        invoiceNo={`SOL-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`}
-        customerPhone={customerPhone}
-        onPaymentSuccess={handleBkashPaymentSuccess}
+        isSubmitting={isSubmitting}
+        onPayWithGateway={payWithBkashGateway}
+        onSubmitTrxId={submitOrder}
       />
     </div>
   );

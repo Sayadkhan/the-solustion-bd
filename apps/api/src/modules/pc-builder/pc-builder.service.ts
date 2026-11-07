@@ -1,12 +1,16 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import {
   SelectedBuildComponents,
   validatePcBuildCompatibility,
   CompatibilityCheckResult,
   ComponentType,
 } from "@solusation/shared-types";
-import { db, savedPcBuilds, products, eq, inArray } from "@solusation/database";
+import { db, savedPcBuilds, products, categories, eq, inArray, desc } from "@solusation/database";
 import crypto from "crypto";
+import { classifyPart, PC_BUILDER_SLOTS, PcBuilderSlot } from "./part-classifier";
+
+const MAX_CATALOG_SIZE = 1000;
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export interface BuildValidationInput {
   components: Partial<Record<ComponentType, string>>;
@@ -40,11 +44,57 @@ export interface ComprehensiveValidationResult extends CompatibilityCheckResult 
 
 @Injectable()
 export class PcBuilderService {
+  /** Every buildable product in the database, grouped by the slot it fits. */
+  async getParts() {
+    const [productRows, categoryRows] = await Promise.all([
+      db.query.products.findMany({
+        with: { brand: true, category: true },
+        orderBy: desc(products.createdAt),
+        limit: MAX_CATALOG_SIZE,
+      }),
+      db.select({ id: categories.id, slug: categories.slug }).from(categories),
+    ]);
+
+    const slugById = new Map(categoryRows.map((c) => [c.id, c.slug]));
+    const grouped = Object.fromEntries(
+      PC_BUILDER_SLOTS.map((slot) => [slot, [] as unknown[]])
+    ) as Record<PcBuilderSlot, unknown[]>;
+
+    for (const product of productRows) {
+      const slot = classifyPart({
+        componentType: product.compatibility?.componentType,
+        categorySlug: product.category?.slug,
+        parentCategorySlug: product.category?.parentId
+          ? slugById.get(product.category.parentId)
+          : undefined,
+      });
+      if (!slot) continue;
+
+      grouped[slot].push({
+        id: product.id,
+        name: product.name,
+        slug: product.slug,
+        sku: product.sku,
+        brand: product.brand?.name ?? null,
+        cashPriceBdt: product.cashPriceBdt,
+        regularPriceBdt: product.regularPriceBdt,
+        stockStatus: product.stockStatus,
+        totalStock: product.totalStock,
+        image: Array.isArray(product.images) ? product.images[0] ?? null : null,
+        keyFeatures: Array.isArray(product.keyFeatures) ? product.keyFeatures.slice(0, 3) : [],
+        warrantyDurationMonths: product.warrantyDurationMonths,
+        compatibility: { ...(product.compatibility ?? {}), componentType: slot },
+      });
+    }
+
+    return grouped;
+  }
+
   async validateBuildByProductIds(
     input: BuildValidationInput
   ): Promise<ComprehensiveValidationResult> {
-    const componentEntries = Object.entries(input.components).filter(
-      ([, id]) => typeof id === "string" && (id as string).trim().length > 0
+    const componentEntries = Object.entries(input.components ?? {}).filter(
+      ([, id]) => typeof id === "string" && UUID_REGEX.test(id)
     ) as [ComponentType, string][];
 
     const productIds = componentEntries.map(([, id]) => id);
@@ -69,11 +119,11 @@ export class PcBuilderService {
     for (const [slot, prodId] of componentEntries) {
       const prod = productMap.get(prodId);
       if (prod) {
-        if (slot !== "OTHER") {
-          (selectedComponents as any)[slot] = {
-            name: prod.name,
-            specs: (prod.compatibility as any) || {},
-          };
+        const component = { name: prod.name, specs: (prod.compatibility as any) || {} };
+        if (slot === "STORAGE") {
+          selectedComponents.STORAGE = [component];
+        } else if (slot !== "OTHER") {
+          (selectedComponents as any)[slot] = component;
         }
 
         resolvedComponents[slot] = {
@@ -172,23 +222,26 @@ export class PcBuilderService {
     ];
   }
 
-  async saveBuild(data: {
-    userId?: string;
-    title?: string;
-    componentIds: Record<string, string>;
-    totalCashBdt: number;
-    totalRegularBdt: number;
-    estimatedTdpWatts: number;
-  }) {
-    const shortCode = `SOL-PC-${crypto.randomBytes(3).toString("hex").toUpperCase()}`;
+  /** Totals are worked out here from database prices, so a saved quote cannot be altered. */
+  async saveBuild(data: { userId?: string; components: Partial<Record<ComponentType, string>> }) {
+    const validation = await this.validateBuildByProductIds({ components: data.components });
+
+    const components = Object.fromEntries(
+      Object.entries(validation.resolvedComponents).map(([slot, part]) => [slot, part.id])
+    );
+    if (Object.keys(components).length === 0) {
+      throw new BadRequestException("Add at least one component before saving this build.");
+    }
+
+    const shortCode = `SOL-PC-${crypto.randomBytes(4).toString("hex").toUpperCase()}`;
     const [saved] = await db
       .insert(savedPcBuilds)
       .values({
         shortCode,
         userId: data.userId || null,
-        components: data.componentIds,
-        totalCashPriceBdt: data.totalCashBdt,
-        totalWattage: data.estimatedTdpWatts,
+        components,
+        totalCashPriceBdt: validation.totalCashPriceBdt,
+        totalWattage: validation.totalEstimatedTdpWatts,
         isSimulatorBuild: true,
       })
       .returning();

@@ -1,3 +1,5 @@
+import type { CompatibilitySpecs } from "@solusation/shared-types";
+
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api/v1";
 export const API_HOST = API_BASE.replace(/\/api\/v1\/?$/, "");
 
@@ -169,10 +171,13 @@ export const storefrontApi = {
     }
   },
 
-  // Lookup order by invoice/order number
-  async getOrderByNumber(orderNumber: string): Promise<any | null> {
+  // Customer order tracking: needs the invoice number and the mobile number on the order
+  async trackOrder(orderNumber: string, phone: string): Promise<any | null> {
     try {
-      const res = await fetch(`${API_BASE}/orders/${encodeURIComponent(orderNumber.trim())}`, { cache: "no-store" });
+      const res = await fetch(
+        `${API_BASE}/orders/track/${encodeURIComponent(orderNumber.trim())}?phone=${encodeURIComponent(phone.trim())}`,
+        { cache: "no-store" }
+      );
       if (!res.ok) return null;
       const json = await res.json();
       return json?.data || null;
@@ -181,67 +186,91 @@ export const storefrontApi = {
     }
   },
 
-  // bKash Payment Gateway: Fetch merchant config
-  async getBkashConfig(): Promise<{ success: boolean; data?: any }> {
+  // bKash: merchant number and whether the online gateway is enabled
+  async getBkashConfig(): Promise<{ success: boolean; data?: { merchantNumber: string; gatewayEnabled: boolean } }> {
     try {
       const res = await fetch(`${API_BASE}/bkash/config`, { cache: "no-store" });
-      const json = await res.json();
-      return json;
+      return await res.json();
     } catch (e: any) {
       return { success: false };
     }
   },
 
-  // bKash Payment Gateway: Create tokenized payment session
-  async createBkashPayment(payload: {
-    amount: number;
-    invoiceNo?: string;
-    customerPhone?: string;
-    callbackUrl?: string;
-  }): Promise<{ success: boolean; data?: any; message?: string }> {
+  // bKash: start checkout for an order. The server decides the amount.
+  async createBkashPayment(invoiceNo: string): Promise<{ success: boolean; data?: { bkashURL: string }; message?: string }> {
     try {
       const res = await fetch(`${API_BASE}/bkash/create`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ invoiceNo }),
       });
-      const json = await res.json();
-      return json;
+      return await res.json();
     } catch (e: any) {
-      return { success: false, message: e.message || "Failed to initiate bKash payment" };
+      return { success: false, message: e.message || "Failed to start bKash payment" };
     }
   },
 
-  // bKash Payment Gateway: Execute payment
-  async executeBkashPayment(payload: {
-    paymentID: string;
-    invoiceNo?: string;
-  }): Promise<{ success: boolean; data?: any; message?: string }> {
+  // bKash: complete the payment after the customer returns from bKash's page
+  async executeBkashPayment(paymentID: string): Promise<{ success: boolean; data?: any; message?: string }> {
     try {
       const res = await fetch(`${API_BASE}/bkash/execute`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ paymentID }),
       });
-      const json = await res.json();
-      return json;
+      return await res.json();
     } catch (e: any) {
-      return { success: false, message: e.message || "Failed to execute bKash payment" };
+      return { success: false, message: e.message || "Failed to confirm bKash payment" };
     }
   },
 
-  // bKash Payment Gateway: Verify manual TrxID
-  async verifyBkashTrx(trxId: string): Promise<{ success: boolean; data?: any; message?: string }> {
+  // PC Builder: every buildable product in the database, grouped by slot. Throws on failure.
+  async getPcParts(): Promise<Partial<Record<string, ApiPcPart[]>>> {
+    const res = await fetch(`${API_BASE}/pc-builder/parts`, { cache: "no-store" });
+    if (!res.ok) throw new Error(`Could not load components (HTTP ${res.status})`);
+    return (await res.json()).data ?? {};
+  },
+
+  // PC Builder: server estimates for the current build
+  async validatePcBuild(components: Record<string, string>): Promise<ApiPcValidation | null> {
     try {
-      const res = await fetch(`${API_BASE}/bkash/verify-trx`, {
+      const res = await fetch(`${API_BASE}/pc-builder/validate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ trxId }),
+        body: JSON.stringify({ components }),
       });
-      const json = await res.json();
-      return json;
-    } catch (e: any) {
-      return { success: false, message: e.message || "Invalid bKash TrxID" };
+      if (!res.ok) return null;
+      return (await res.json()).data ?? null;
+    } catch {
+      return null;
+    }
+  },
+
+  // PC Builder: save the build and get a short code for its share link
+  async savePcBuild(components: Record<string, string>): Promise<string | null> {
+    try {
+      const res = await fetch(`${API_BASE}/pc-builder/save`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ components }),
+      });
+      if (!res.ok) return null;
+      return (await res.json()).shortCode ?? null;
+    } catch {
+      return null;
+    }
+  },
+
+  // PC Builder: slot -> product id for a shared build
+  async getSharedPcBuild(shortCode: string): Promise<Record<string, string> | null> {
+    try {
+      const res = await fetch(`${API_BASE}/pc-builder/share/${encodeURIComponent(shortCode)}`, {
+        cache: "no-store",
+      });
+      if (!res.ok) return null;
+      return (await res.json()).data?.components ?? null;
+    } catch {
+      return null;
     }
   },
 
@@ -271,6 +300,32 @@ export const storefrontApi = {
     }
   },
 };
+
+export interface ApiPcPart {
+  id: string;
+  name: string;
+  slug: string;
+  sku: string;
+  brand: string | null;
+  cashPriceBdt: number;
+  regularPriceBdt: number;
+  stockStatus: ApiProduct["stockStatus"];
+  totalStock: number;
+  image: string | null;
+  keyFeatures: string[];
+  warrantyDurationMonths: number;
+  compatibility: CompatibilitySpecs;
+}
+
+export interface ApiPcValidation {
+  estimatedFps: Array<{
+    gameTitle: string;
+    resolution: string;
+    preset: string;
+    averageFps: number;
+    experienceRating: "playable" | "smooth" | "competitive" | "ultra";
+  }>;
+}
 
 export interface ApiBanner {
   id: string;

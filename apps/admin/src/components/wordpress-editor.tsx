@@ -147,7 +147,7 @@ export function WordPressEditor({
     const targetAttr = linkTargetBlank ? 'target="_blank"' : '';
     const displayText = linkText.trim() || linkUrl;
 
-    const linkHtml = `<a href="${linkUrl.trim()}" ${targetAttr} ${relAttr} class="text-primary font-medium underline underline-offset-2 hover:text-blue-400 transition-colors">${displayText}</a>`;
+    const linkHtml = `<a href="${linkUrl.trim()}" ${targetAttr} ${relAttr} class="text-primary font-medium underline underline-offset-2 hover:text-primary transition-colors">${displayText}</a>`;
 
     document.execCommand("insertHTML", false, linkHtml);
     handleEditorInput();
@@ -217,8 +217,8 @@ const config = {
   // Insert Callout Box
   const handleInsertCallout = () => {
     const calloutHtml = `
-      <div class="p-4 my-4 rounded-xl border border-blue-500/30 bg-blue-500/10 text-foreground flex items-start gap-3">
-        <span class="text-blue-500 font-bold text-sm">💡 Pro Tip:</span>
+      <div class="p-4 my-4 rounded-xl border border-primary/30 bg-primary/10 text-foreground flex items-start gap-3">
+        <span class="text-primary font-bold text-sm">💡 Pro Tip:</span>
         <div class="text-xs leading-relaxed">
           Always check box serial number on the outer retail box and match it with the processor heat-spreader to guarantee 3-years official Bangladesh distributor replacement warranty!
         </div>
@@ -328,7 +328,7 @@ const config = {
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            <FileCode className="w-3.5 h-3.5 text-blue-500" />
+            <FileCode className="w-3.5 h-3.5 text-primary" />
             <span>Text / HTML</span>
           </button>
         </div>
@@ -489,7 +489,7 @@ const config = {
             title="Insert Code Benchmark Block"
             className="flex items-center gap-1 px-2 py-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground text-xs font-medium"
           >
-            <Code className="w-3.5 h-3.5 text-blue-500" />
+            <Code className="w-3.5 h-3.5 text-primary" />
             <span className="hidden sm:inline">Code</span>
           </button>
 
@@ -554,7 +554,7 @@ const config = {
             style={{ minHeight }}
             data-placeholder={placeholder}
             className="p-6 text-foreground text-sm leading-relaxed focus:outline-none overflow-y-auto max-h-[500px] prose dark:prose-invert max-w-none
-              [&_h1]:text-2xl [&_h1]:font-black [&_h1]:tracking-tight [&_h1]:mt-6 [&_h1]:mb-3 [&_h1]:text-foreground
+              [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:tracking-tight [&_h1]:mt-6 [&_h1]:mb-3 [&_h1]:text-foreground
               [&_h2]:text-xl [&_h2]:font-bold [&_h2]:tracking-tight [&_h2]:mt-5 [&_h2]:mb-2 [&_h2]:pb-1 [&_h2]:border-b [&_h2]:border-border [&_h2]:text-foreground
               [&_h3]:text-base [&_h3]:font-bold [&_h3]:mt-4 [&_h3]:mb-1.5 [&_h3]:text-foreground
               [&_h4]:text-sm [&_h4]:font-bold [&_h4]:mt-3 [&_h4]:mb-1 [&_h4]:text-foreground

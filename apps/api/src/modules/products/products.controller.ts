@@ -7,14 +7,13 @@ import {
   Param,
   Query,
   Body,
-  UseGuards,
   Inject,
 } from "@nestjs/common";
 import { ApiTags, ApiOperation } from "@nestjs/swagger";
 import { ProductsService } from "./products.service";
-import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
-import { RolesGuard } from "../../common/guards/roles.guard";
+import { Public } from "../../common/decorators/public.decorator";
 import { Roles } from "../../common/decorators/roles.decorator";
+import { parsePagination } from "../../common/utils/pagination";
 
 @ApiTags("Products")
 @Controller("products")
@@ -22,14 +21,16 @@ export class ProductsController {
   constructor(@Inject(ProductsService) private readonly productsService: ProductsService) {}
 
   @ApiOperation({ summary: "Get featured products for homepage" })
+  @Public()
   @Get("featured")
   async getFeatured(@Query("limit") limit?: string) {
-    const l = limit ? parseInt(limit, 10) : 12;
+    const { limit: l } = parsePagination(limit, undefined, { limit: 12, maxLimit: 50 });
     const products = await this.productsService.getFeaturedProducts(l);
     return { success: true, count: products.length, data: products };
   }
 
   @ApiOperation({ summary: "Get all product categories with Star Tech tree hierarchy" })
+  @Public()
   @Get("categories")
   async getCategories() {
     const { flat, mainCategories } = await this.productsService.getCategories();
@@ -42,6 +43,7 @@ export class ProductsController {
   }
 
   @ApiOperation({ summary: "Create new product category" })
+  @Roles("ADMIN")
   @Post("categories")
   async createCategory(@Body() body: any) {
     const cat = await this.productsService.createCategory(body);
@@ -49,6 +51,7 @@ export class ProductsController {
   }
 
   @ApiOperation({ summary: "Update category sort order (Serial number)" })
+  @Roles("ADMIN")
   @Patch("categories/:id/sort-order")
   async updateCategorySortOrder(
     @Param("id") id: string,
@@ -59,6 +62,7 @@ export class ProductsController {
   }
 
   @ApiOperation({ summary: "Reorder multiple categories serials at once" })
+  @Roles("ADMIN")
   @Post("categories/reorder")
   async reorderCategories(@Body() body: { orders: Array<{ id: string; sortOrder: number }> }) {
     const updated = await this.productsService.reorderCategories(body.orders || []);
@@ -66,6 +70,7 @@ export class ProductsController {
   }
 
   @ApiOperation({ summary: "Delete product category by ID" })
+  @Roles("ADMIN")
   @Delete("categories/:id")
   async deleteCategory(@Param("id") id: string) {
     const cat = await this.productsService.deleteCategory(id);
@@ -73,6 +78,7 @@ export class ProductsController {
   }
 
   @ApiOperation({ summary: "Get all authorized brands" })
+  @Public()
   @Get("brands")
   async getBrands() {
     const brandList = await this.productsService.getBrands();
@@ -80,6 +86,7 @@ export class ProductsController {
   }
 
   @ApiOperation({ summary: "Create new brand" })
+  @Roles("ADMIN")
   @Post("brands")
   async createBrand(@Body() body: any) {
     const brand = await this.productsService.createBrand(body);
@@ -87,6 +94,7 @@ export class ProductsController {
   }
 
   @ApiOperation({ summary: "Delete brand by ID" })
+  @Roles("ADMIN")
   @Delete("brands/:id")
   async deleteBrand(@Param("id") id: string) {
     const brand = await this.productsService.deleteBrand(id);
@@ -94,19 +102,20 @@ export class ProductsController {
   }
 
   @ApiOperation({ summary: "List products with optional category and pagination" })
+  @Public()
   @Get()
   async getProducts(
     @Query("category") category?: string,
     @Query("limit") limit?: string,
     @Query("page") page?: string
   ) {
-    const l = limit ? parseInt(limit, 10) : 24;
-    const p = page ? parseInt(page, 10) : 1;
+    const { limit: l, page: p } = parsePagination(limit, page, { limit: 24 });
     const products = await this.productsService.getProducts(category, l, p);
     return { success: true, count: products.length, data: products };
   }
 
   @ApiOperation({ summary: "Quick stock update for product" })
+  @Roles("ADMIN", "BRANCH_MANAGER")
   @Patch(":id/stock")
   async updateStock(
     @Param("id") id: string,
@@ -117,6 +126,7 @@ export class ProductsController {
   }
 
   @ApiOperation({ summary: "Delete product" })
+  @Roles("ADMIN")
   @Delete(":id")
   async deleteProduct(@Param("id") id: string) {
     const deleted = await this.productsService.deleteProduct(id);
@@ -124,6 +134,7 @@ export class ProductsController {
   }
 
   @ApiOperation({ summary: "Get detailed product by slug with dual pricing & specs" })
+  @Public()
   @Get(":slug")
   async getProductBySlug(@Param("slug") slug: string) {
     const product = await this.productsService.getProductBySlug(slug);
@@ -131,6 +142,7 @@ export class ProductsController {
   }
 
   @ApiOperation({ summary: "Create new product (Admin only)" })
+  @Roles("ADMIN")
   @Post()
   async createProduct(@Body() body: any) {
     const product = await this.productsService.createProduct(body);

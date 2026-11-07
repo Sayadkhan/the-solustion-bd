@@ -46,7 +46,7 @@ export default async function BlogsPage({
   ];
 
   return (
-    <div className="min-h-screen bg-background text-foreground antialiased selection:bg-blue-600/20 selection:text-blue-500 font-sans pb-16">
+    <div className="min-h-screen bg-background text-foreground antialiased selection:bg-primary/20 selection:text-primary font-sans pb-16">
       {/* Hero Header */}
       <div className="relative border-b border-border bg-card/60 backdrop-blur-md py-12 px-4 sm:px-6 overflow-hidden">
         <div className="absolute top-0 right-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
@@ -64,7 +64,7 @@ export default async function BlogsPage({
               <Sparkles className="w-3.5 h-3.5" />
               <span>The Solutions BD Editorial Hub</span>
             </div>
-            <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-foreground">
+            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground">
               Tech Hardware Guides & Benchmarks
             </h1>
             <p className="text-sm text-muted-foreground leading-relaxed">

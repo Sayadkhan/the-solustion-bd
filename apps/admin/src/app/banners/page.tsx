@@ -298,7 +298,7 @@ export default function BannersPage() {
             target="_blank"
             className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold bg-muted hover:bg-muted/80 text-foreground border border-border transition-colors"
           >
-            <ExternalLink className="w-3.5 h-3.5 text-blue-500" />
+            <ExternalLink className="w-3.5 h-3.5 text-primary" />
             <span>View Live Storefront</span>
           </Link>
           <button
@@ -354,8 +354,8 @@ export default function BannersPage() {
           <div className="bg-card border border-border rounded-xl p-5 shadow-sm">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="font-extrabold text-base text-foreground flex items-center gap-2">
-                  <Layers className="w-5 h-5 text-blue-500" />
+                <h3 className="font-semibold text-base text-foreground flex items-center gap-2">
+                  <Layers className="w-5 h-5 text-primary" />
                   <span>Active Hero Carousel Banners</span>
                 </h3>
                 <p className="text-xs text-muted-foreground mt-0.5">
@@ -404,20 +404,20 @@ export default function BannersPage() {
                       >
                         <div className="relative z-10">
                           {banner.tag && (
-                            <span className="inline-block bg-white/20 backdrop-blur-sm text-[9px] font-black uppercase px-2 py-0.5 rounded-full border border-white/30">
+                            <span className="inline-block bg-white/20 backdrop-blur-sm text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border border-white/30">
                               {banner.tag}
                             </span>
                           )}
-                          <h4 className="text-xs font-black line-clamp-1 mt-1">{banner.title}</h4>
+                          <h4 className="text-xs font-bold line-clamp-1 mt-1">{banner.title}</h4>
                           <p className="text-[10px] text-slate-200 line-clamp-1 opacity-90 mt-0.5">
                             {banner.subtitle}
                           </p>
                         </div>
 
                         <div className="relative z-10">
-                          <span className="inline-flex items-center gap-1 bg-white text-slate-900 text-[9px] font-black px-2 py-1 rounded">
+                          <span className="inline-flex items-center gap-1 bg-white text-slate-900 text-[10px] font-bold px-2 py-1 rounded">
                             {banner.buttonText || "Shop Now"}
-                            <ArrowRight className="w-2.5 h-2.5 text-blue-600" />
+                            <ArrowRight className="w-2.5 h-2.5 text-primary" />
                           </span>
                         </div>
 
@@ -448,7 +448,7 @@ export default function BannersPage() {
                             {banner.isActive ? "ACTIVE" : "INACTIVE"}
                           </span>
                         </div>
-                        <h4 className="font-extrabold text-sm text-foreground">{banner.title}</h4>
+                        <h4 className="font-semibold text-sm text-foreground">{banner.title}</h4>
                         <p className="text-xs text-muted-foreground line-clamp-1">
                           {banner.subtitle || "No subtitle provided."}
                         </p>
@@ -529,7 +529,7 @@ export default function BannersPage() {
           <div className="bg-card border border-border rounded-xl p-5 shadow-sm">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="font-extrabold text-base text-foreground flex items-center gap-2">
+                <h3 className="font-semibold text-base text-foreground flex items-center gap-2">
                   <Sparkles className="w-5 h-5 text-amber-500" />
                   <span>Homepage Side Promotional Cards (4-Columns)</span>
                 </h3>
@@ -567,7 +567,7 @@ export default function BannersPage() {
                         )}
                         <span>{card.tag || "Promotional Spotlight"}</span>
                       </div>
-                      <h4 className="text-base font-black leading-snug">{card.title}</h4>
+                      <h4 className="text-base font-bold leading-snug">{card.title}</h4>
                       <p className="text-slate-200 text-xs line-clamp-2">{card.subtitle}</p>
                     </div>
 
@@ -620,7 +620,7 @@ export default function BannersPage() {
             <div className="p-5 border-b border-border flex items-center justify-between bg-muted/30">
               <div className="flex items-center gap-2">
                 <ImageIcon className="w-5 h-5 text-primary" />
-                <h3 className="font-extrabold text-base text-foreground">
+                <h3 className="font-semibold text-base text-foreground">
                   {editingBannerId ? "Edit Promotional Banner" : "Create New Promotional Banner"}
                 </h3>
               </div>
@@ -644,20 +644,20 @@ export default function BannersPage() {
                 >
                   <div className="relative z-10 max-w-md space-y-2">
                     {formData.tag && (
-                      <span className="inline-block bg-white/20 backdrop-blur-sm text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full border border-white/30">
+                      <span className="inline-block bg-white/20 backdrop-blur-sm text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full border border-white/30">
                         {formData.tag}
                       </span>
                     )}
-                    <h3 className="text-xl font-black leading-tight">
+                    <h3 className="text-xl font-bold leading-tight">
                       {formData.title || "Banner Title Preview"}
                     </h3>
                     <p className="text-xs text-slate-200 line-clamp-2">
                       {formData.subtitle || "Banner subtitle and promo description..."}
                     </p>
                     <div className="pt-1">
-                      <span className="inline-flex items-center gap-1.5 bg-white text-slate-900 font-extrabold text-xs px-3.5 py-1.5 rounded-md shadow">
+                      <span className="inline-flex items-center gap-1.5 bg-white text-slate-900 font-semibold text-xs px-3.5 py-1.5 rounded-md shadow">
                         {formData.buttonText || "Shop Now"}
-                        <ArrowRight className="w-3.5 h-3.5 text-blue-600" />
+                        <ArrowRight className="w-3.5 h-3.5 text-primary" />
                       </span>
                     </div>
                   </div>
@@ -864,7 +864,7 @@ export default function BannersPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-extrabold rounded-lg shadow-sm flex items-center gap-1.5 transition-all"
+                  className="px-5 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold rounded-lg shadow-sm flex items-center gap-1.5 transition-all"
                 >
                   <Save className="w-4 h-4" />
                   <span>{editingBannerId ? "Save Changes" : "Create Banner"}</span>

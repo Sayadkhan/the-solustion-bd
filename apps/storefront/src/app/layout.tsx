@@ -8,14 +8,29 @@ import { FloatingWidgets } from "@/components/floating-widgets";
 import { TopProgressBar } from "@/components/top-progress-bar";
 import { GtmAnalytics } from "@/components/analytics/gtm-analytics";
 
-import { Roboto } from "next/font/google";
+import { Hind_Siliguri, IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
 import { Suspense } from "react";
 
-const roboto = Roboto({
-  weight: ["300", "400", "500", "700", "900"],
+const sans = IBM_Plex_Sans({
+  weight: ["400", "500", "600", "700"],
   subsets: ["latin"],
   display: "swap",
-  variable: "--font-roboto",
+  variable: "--font-plex",
+});
+
+// Plex Sans has no Bangla, including the taka sign, so this supplies those glyphs.
+const bangla = Hind_Siliguri({
+  weight: ["400", "500", "600", "700"],
+  subsets: ["bengali"],
+  display: "swap",
+  variable: "--font-bangla",
+});
+
+const mono = IBM_Plex_Mono({
+  weight: ["400", "500"],
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-mono",
 });
 
 export const metadata: Metadata = {
@@ -38,16 +53,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={roboto.variable} suppressHydrationWarning>
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,300;0,400;0,500;0,700;0,900;1,400;1,700&display=swap"
-          rel="stylesheet"
-        />
-      </head>
-      <body className={`${roboto.className} min-h-screen flex flex-col antialiased selection:bg-blue-600/20 selection:text-blue-500 font-sans`}>
+    <html
+      lang="en"
+      className={`${sans.variable} ${bangla.variable} ${mono.variable}`}
+      style={{ "--font-sans": "var(--font-plex), var(--font-bangla)" } as React.CSSProperties}
+      suppressHydrationWarning
+    >
+      <body className="min-h-screen flex flex-col font-sans">
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"
@@ -58,7 +70,7 @@ export default function RootLayout({
             <TopProgressBar />
           </Suspense>
           <GtmAnalytics />
-          <Suspense fallback={<div className="w-full h-16 bg-white dark:bg-slate-900 border-b border-slate-200" />}>
+          <Suspense fallback={<div className="w-full h-[var(--header-height)] bg-card border-b border-border" />}>
             <MainNavbar />
           </Suspense>
           <main className="flex-1 pb-20 md:pb-0">

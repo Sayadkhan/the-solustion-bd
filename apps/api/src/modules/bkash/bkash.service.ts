@@ -1,281 +1,247 @@
-import { Injectable, Logger, BadRequestException } from "@nestjs/common";
+import {
+  BadGatewayException,
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+  ServiceUnavailableException,
+} from "@nestjs/common";
 import { db, orders, eq } from "@solusation/database";
-import crypto from "crypto";
+import { OUTSIDE_DHAKA_STANDARD_DEPOSIT_BDT } from "@solusation/shared-types";
+import { ENV } from "../../config/env";
+import { applyPayment } from "../orders/order-pricing";
 
-export interface BkashCreatePaymentParams {
-  amount: number;
-  invoiceNo: string;
-  customerPhone?: string;
-  callbackUrl?: string;
+const TOKEN_REFRESH_MARGIN_MS = 5 * 60 * 1000;
+const REQUEST_TIMEOUT_MS = 30_000;
+
+interface BkashPaymentResult {
+  statusCode?: string;
+  statusMessage?: string;
+  transactionStatus?: string;
+  paymentID?: string;
+  trxID?: string;
+  amount?: string;
+  merchantInvoiceNumber?: string;
 }
 
-export interface BkashExecutePaymentParams {
-  paymentID: string;
-  invoiceNo?: string;
-}
-
+/**
+ * bKash Tokenized Checkout. The customer enters their wallet number, OTP and PIN
+ * on bKash's own page, never on this site. An order is marked paid only after
+ * bKash itself reports the transaction as completed.
+ */
 @Injectable()
 export class BkashService {
   private readonly logger = new Logger(BkashService.name);
+  private cachedToken: { value: string; expiresAt: number } | null = null;
 
-  private readonly appKey = process.env.BKASH_APP_KEY || "sandbox_app_key_solusation_2026";
-  private readonly appSecret = process.env.BKASH_APP_SECRET || "sandbox_app_secret_solusation_2026";
-  private readonly username = process.env.BKASH_USERNAME || "sandbox_user_solusation";
-  private readonly password = process.env.BKASH_PASSWORD || "sandbox_pass_solusation";
-  private readonly baseUrl =
-    process.env.BKASH_BASE_URL || "https://tokenized.sandbox.bka.sh/v1.2.0-beta";
-  private readonly merchantNumber = process.env.BKASH_MERCHANT_NUMBER || "01922-730343";
+  private get isGatewayConfigured(): boolean {
+    const { APP_KEY, APP_SECRET, USERNAME, PASSWORD } = ENV.BKASH;
+    // Keys beginning "sandbox_" are placeholders that were never issued by bKash.
+    return Boolean(APP_KEY && APP_SECRET && USERNAME && PASSWORD) && !APP_KEY.startsWith("sandbox_");
+  }
 
-  // In-memory payment session store for fast lookup and simulated execution
-  private paymentSessions = new Map<
-    string,
-    {
-      paymentID: string;
-      invoiceNo: string;
-      amount: number;
-      customerPhone?: string;
-      status: "Initiated" | "Completed" | "Failed";
-      createdAt: Date;
-    }
-  >();
-
-  /**
-   * Retrieves public bKash configuration for storefront checkout UI
-   */
   getConfig() {
     return {
-      merchantNumber: this.merchantNumber,
-      brandName: "The Solusation BD",
-      isLive: !this.baseUrl.includes("sandbox"),
-      gatewayUrl: this.baseUrl,
-      supportedMethods: ["DIRECT_GATEWAY", "MERCHANT_PAY"],
-      notice: "বিকাশ অ্যাপ অথবা গেটওয়ের মাধ্যমে সরাসরি ইনস্ট্যান্ট পেমেন্ট সম্পন্ন করুন।",
+      merchantNumber: ENV.BKASH.MERCHANT_NUMBER,
+      brandName: "The Solutions BD",
+      gatewayEnabled: this.isGatewayConfigured,
     };
   }
 
-  /**
-   * Generates or retrieves a valid bKash Grant Token
-   */
-  async grantToken(): Promise<string> {
-    try {
-      if (this.appKey.startsWith("sandbox_") || !process.env.BKASH_APP_KEY) {
-        return "mock_id_token_" + crypto.randomBytes(16).toString("hex");
-      }
-
-      const res = await fetch(`${this.baseUrl}/tokenized/checkout/token/grant`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-          username: this.username,
-          password: this.password,
-        },
-        body: JSON.stringify({
-          app_key: this.appKey,
-          app_secret: this.appSecret,
-        }),
-      });
-
-      if (!res.ok) {
-        throw new Error(`Failed to grant token: ${res.statusText}`);
-      }
-
-      const data = await res.json();
-      return data.id_token;
-    } catch (err: any) {
-      this.logger.warn(`bKash grantToken error: ${err.message}. Using simulated session.`);
-      return "mock_id_token_" + crypto.randomBytes(16).toString("hex");
-    }
-  }
-
-  /**
-   * Creates a new bKash Payment session (Tokenized Checkout)
-   */
-  async createPayment(params: BkashCreatePaymentParams) {
-    const { amount, invoiceNo, customerPhone, callbackUrl } = params;
-
-    if (!amount || amount <= 0) {
-      throw new BadRequestException("Payment amount must be greater than 0");
-    }
-
-    const token = await this.grantToken();
-
-    // Check if using live credentials or fallback
-    if (!token.startsWith("mock_") && !this.appKey.startsWith("sandbox_")) {
-      try {
-        const res = await fetch(`${this.baseUrl}/tokenized/checkout/create`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-            Authorization: token,
-            "X-APP-Key": this.appKey,
-          },
-          body: JSON.stringify({
-            mode: "0011",
-            payerReference: customerPhone || "01711319090",
-            callbackURL: callbackUrl || "http://localhost:3000/cart",
-            amount: amount.toString(),
-            currency: "BDT",
-            intent: "sale",
-            merchantInvoiceNumber: invoiceNo,
-          }),
-        });
-
-        const data = await res.json();
-        if (data && data.paymentID) {
-          this.paymentSessions.set(data.paymentID, {
-            paymentID: data.paymentID,
-            invoiceNo,
-            amount,
-            customerPhone,
-            status: "Initiated",
-            createdAt: new Date(),
-          });
-          return {
-            paymentID: data.paymentID,
-            bkashURL: data.bkashURL,
-            amount: data.amount,
-            currency: "BDT",
-            invoiceNo,
-            status: "Initiated",
-          };
-        }
-      } catch (err: any) {
-        this.logger.warn(`bKash createPayment upstream call failed: ${err.message}`);
-      }
-    }
-
-    // Instant Seamless Simulator Session
-    const paymentID = "BKA-" + crypto.randomBytes(6).toString("hex").toUpperCase();
-    this.paymentSessions.set(paymentID, {
-      paymentID,
-      invoiceNo,
-      amount,
-      customerPhone,
-      status: "Initiated",
-      createdAt: new Date(),
+  private async bkashRequest<T>(path: string, headers: Record<string, string>, body: unknown): Promise<T> {
+    const res = await fetch(`${ENV.BKASH.BASE_URL}/tokenized/checkout/${path}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json", ...headers },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
-
-    return {
-      paymentID,
-      bkashURL: `https://payment.bkash.com/checkout?paymentID=${paymentID}`,
-      amount,
-      currency: "BDT",
-      invoiceNo,
-      customerPhone,
-      status: "Initiated",
-      merchantNumber: this.merchantNumber,
-    };
+    if (!res.ok) {
+      throw new Error(`bKash ${path} responded with HTTP ${res.status}`);
+    }
+    return (await res.json()) as T;
   }
 
-  /**
-   * Executes a bKash Payment upon PIN/OTP confirmation
-   */
-  async executePayment(params: BkashExecutePaymentParams) {
-    const { paymentID, invoiceNo } = params;
-
-    const session = this.paymentSessions.get(paymentID);
-    const resolvedInvoice = invoiceNo || session?.invoiceNo;
-    const amount = session?.amount || 0;
-
-    // Generate authenticated bKash Transaction ID (Format: BLA92KJ831)
-    const randomHex = crypto.randomBytes(4).toString("hex").toUpperCase();
-    const trxID = `BK${new Date().getFullYear().toString().slice(-2)}${randomHex}`;
-
-    if (session) {
-      session.status = "Completed";
+  /** bKash asks merchants to reuse a grant token for its lifetime. */
+  private async getToken(): Promise<string> {
+    if (this.cachedToken && this.cachedToken.expiresAt > Date.now()) {
+      return this.cachedToken.value;
     }
 
-    // Update order in database if invoice is found
-    if (resolvedInvoice) {
-      try {
-        const existingOrder = await db.query.orders.findFirst({
-          where: eq(orders.invoiceNo, resolvedInvoice),
-        });
+    const data = await this.bkashRequest<{ id_token?: string; expires_in?: number | string; statusMessage?: string }>(
+      "token/grant",
+      { username: ENV.BKASH.USERNAME, password: ENV.BKASH.PASSWORD },
+      { app_key: ENV.BKASH.APP_KEY, app_secret: ENV.BKASH.APP_SECRET }
+    );
 
-        if (existingOrder) {
-          await db
-            .update(orders)
-            .set({
-              paymentMethod: "BKASH",
-              orderStatus: "CONFIRMED",
-              trxId: trxID,
-              paidAmountBdt: existingOrder.totalPayableBdt,
-              dueAmountBdt: 0,
-              updatedAt: new Date(),
-            })
-            .where(eq(orders.id, existingOrder.id));
-
-          this.logger.log(
-            `Order #${resolvedInvoice} successfully updated with bKash TrxID: ${trxID}`
-          );
-        }
-      } catch (err: any) {
-        this.logger.error(`Error updating order for bKash payment: ${err.message}`);
-      }
+    if (!data.id_token) {
+      throw new Error(`bKash token grant refused: ${data.statusMessage || "no token returned"}`);
     }
 
-    return {
-      statusCode: "0000",
-      statusMessage: "Successful",
-      paymentID,
-      trxID,
-      amount: amount || 0,
-      currency: "BDT",
-      transactionStatus: "Completed",
-      paymentExecuteTime: new Date().toISOString(),
-      merchantInvoiceNumber: resolvedInvoice,
-      customerMsisdn: session?.customerPhone || "01711319090",
+    const lifetimeMs = Number(data.expires_in || 3600) * 1000;
+    this.cachedToken = {
+      value: data.id_token,
+      expiresAt: Date.now() + Math.max(lifetimeMs - TOKEN_REFRESH_MARGIN_MS, 0),
     };
+    return data.id_token;
   }
 
-  /**
-   * Query status of an existing bKash Payment
-   */
-  async queryPayment(paymentID: string) {
-    const session = this.paymentSessions.get(paymentID);
-    if (!session) {
-      return {
-        paymentID,
-        status: "NOT_FOUND",
-        message: "No active session found for this payment ID",
-      };
-    }
-
-    return {
-      paymentID: session.paymentID,
-      invoiceNo: session.invoiceNo,
-      amount: session.amount,
-      status: session.status,
-      createdAt: session.createdAt,
-    };
+  private async authedRequest<T>(path: string, body: unknown): Promise<T> {
+    const token = await this.getToken();
+    return this.bkashRequest<T>(path, { Authorization: token, "X-APP-Key": ENV.BKASH.APP_KEY }, body);
   }
 
-  /**
-   * Validate a manual TrxID provided by customer
-   */
-  verifyTrx(trxId: string) {
-    if (!trxId || typeof trxId !== "string") {
-      throw new BadRequestException("TrxID is required");
-    }
+  /** The amount always comes from the order, never from the browser. */
+  private amountToCollect(order: typeof orders.$inferSelect): number {
+    if (order.paymentMethod === "BKASH") return order.dueAmountBdt;
+    return order.paidAmountBdt === 0 ? Math.min(OUTSIDE_DHAKA_STANDARD_DEPOSIT_BDT, order.dueAmountBdt) : 0;
+  }
 
-    const clean = trxId.trim().toUpperCase();
-    // Typical bKash TrxID format: 8-12 alphanumeric characters
-    const isValidFormat = /^[A-Z0-9]{8,14}$/.test(clean);
-
-    if (!isValidFormat) {
-      throw new BadRequestException(
-        "Invalid bKash TrxID format. Expected 8-12 alphanumeric characters (e.g. BLA92KJ831)."
+  async createPayment(invoiceNo: string) {
+    if (!this.isGatewayConfigured) {
+      throw new ServiceUnavailableException(
+        "Online bKash payment is not available right now. Please pay by bKash Send Money and enter your TrxID."
       );
     }
 
+    const order = await db.query.orders.findFirst({ where: eq(orders.invoiceNo, invoiceNo) });
+    if (!order) {
+      throw new NotFoundException(`Order #${invoiceNo} not found`);
+    }
+    if (order.orderStatus === "CANCELLED") {
+      throw new BadRequestException("This order has been cancelled.");
+    }
+
+    const amount = this.amountToCollect(order);
+    if (amount <= 0) {
+      throw new BadRequestException("Nothing is due on this order.");
+    }
+
+    let data: BkashPaymentResult & { bkashURL?: string };
+    try {
+      data = await this.authedRequest("create", {
+        mode: "0011",
+        payerReference: order.customerPhone.replace(/^\+88/, ""),
+        callbackURL: `${ENV.STOREFRONT_URL}/payment/bkash`,
+        amount: amount.toFixed(2),
+        currency: "BDT",
+        intent: "sale",
+        merchantInvoiceNumber: order.invoiceNo,
+      });
+    } catch (err) {
+      this.logger.error(`bKash create failed for #${invoiceNo}: ${(err as Error).message}`);
+      throw new BadGatewayException("Could not reach bKash. Please try again shortly.");
+    }
+
+    if (!data.paymentID || !data.bkashURL) {
+      this.logger.error(`bKash create refused for #${invoiceNo}: ${data.statusCode} ${data.statusMessage}`);
+      throw new BadGatewayException(data.statusMessage || "bKash could not start this payment.");
+    }
+
+    return { paymentID: data.paymentID, bkashURL: data.bkashURL, amount, invoiceNo: order.invoiceNo };
+  }
+
+  /**
+   * Called after bKash redirects the customer back. The order, amount and TrxID
+   * are all taken from bKash's response, so nothing the browser sends can mark an
+   * order paid. Safe to repeat: a second call finds the payment already recorded.
+   */
+  async executePayment(paymentID: string) {
+    if (!this.isGatewayConfigured) {
+      throw new ServiceUnavailableException("Online bKash payment is not available right now.");
+    }
+
+    const result = await this.confirmWithBkash(paymentID);
+
+    if (result.transactionStatus !== "Completed" || !result.trxID || !result.merchantInvoiceNumber) {
+      throw new BadRequestException(result.statusMessage || "The bKash payment was not completed.");
+    }
+
+    const invoiceNo = result.merchantInvoiceNumber;
+    const trxID = result.trxID;
+    const amount = Math.round(Number(result.amount));
+
+    return db.transaction(async (tx) => {
+      const [order] = await tx.select().from(orders).where(eq(orders.invoiceNo, invoiceNo)).for("update");
+
+      if (!order) {
+        // Money has moved at this point, so this needs a person to look at it.
+        this.logger.error(`bKash payment ${paymentID} (TrxID ${trxID}) has unknown invoice ${invoiceNo}`);
+        throw new NotFoundException(`Order #${invoiceNo} not found. Please contact support with TrxID ${trxID}.`);
+      }
+
+      if (order.trxId === trxID && order.paidAmountBdt > 0) {
+        return this.toReceipt(order, trxID, amount);
+      }
+
+      const payment = applyPayment(order, amount);
+      if (!payment) {
+        this.logger.error(
+          `bKash TrxID ${trxID} paid ${amount} on #${invoiceNo} with ${order.dueAmountBdt} due. Needs manual review.`
+        );
+        throw new BadRequestException(`Payment needs manual review. Please contact support with TrxID ${trxID}.`);
+      }
+
+      if (order.orderStatus === "CANCELLED") {
+        this.logger.error(`bKash TrxID ${trxID} paid on cancelled order #${invoiceNo}. A refund may be needed.`);
+      }
+
+      // A COD deposit confirms the order. A bKash order is confirmed once fully paid.
+      const isConfirmed = order.paymentMethod === "COD" || payment.dueAmountBdt === 0;
+
+      const [updated] = await tx
+        .update(orders)
+        .set({
+          ...payment,
+          trxId: trxID,
+          orderStatus:
+            order.orderStatus === "PENDING" && isConfirmed ? "CONFIRMED" : order.orderStatus,
+          updatedAt: new Date(),
+        })
+        .where(eq(orders.id, order.id))
+        .returning();
+
+      this.logger.log(`Order #${invoiceNo} received ${amount} BDT, bKash TrxID ${trxID}`);
+      return this.toReceipt(updated, trxID, amount);
+    });
+  }
+
+  /** Executes the payment. If that is inconclusive, asks bKash for the payment's real state. */
+  private async confirmWithBkash(paymentID: string): Promise<BkashPaymentResult> {
+    try {
+      const executed = await this.authedRequest<BkashPaymentResult>("execute", { paymentID });
+      if (executed.transactionStatus === "Completed") return executed;
+      this.logger.warn(`bKash execute for ${paymentID}: ${executed.statusCode} ${executed.statusMessage}`);
+    } catch (err) {
+      // A timeout here does not mean the payment failed, so the status check decides.
+      this.logger.warn(`bKash execute failed for ${paymentID}: ${(err as Error).message}`);
+    }
+
+    try {
+      return await this.authedRequest<BkashPaymentResult>("payment/status", { paymentID });
+    } catch (err) {
+      this.logger.error(`bKash status check failed for ${paymentID}: ${(err as Error).message}`);
+      throw new BadGatewayException(
+        "Could not confirm your payment with bKash. If money was deducted, please contact support."
+      );
+    }
+  }
+
+  private toReceipt(order: typeof orders.$inferSelect, trxID: string, amount: number) {
     return {
-      valid: true,
-      trxId: clean,
-      verifiedAt: new Date().toISOString(),
-      provider: "bKash",
-      status: "VERIFIED",
+      trxID,
+      amount,
+      invoiceNo: order.invoiceNo,
+      orderStatus: order.orderStatus,
+      paidAmountBdt: order.paidAmountBdt,
+      dueAmountBdt: order.dueAmountBdt,
     };
+  }
+
+  /** Admin lookup of what bKash reports for a payment. */
+  async queryPayment(paymentID: string) {
+    if (!this.isGatewayConfigured) {
+      throw new ServiceUnavailableException("Online bKash payment is not configured.");
+    }
+    return this.authedRequest<BkashPaymentResult>("payment/status", { paymentID });
   }
 }

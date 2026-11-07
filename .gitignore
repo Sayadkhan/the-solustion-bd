@@ -27,6 +27,9 @@ yarn-error.log*
 pnpm-debug.log*
 *.log
 
+# User uploads belong on the server, not in git
+apps/api/uploads/
+
 # Docker Volumes
 mongo_data
 redis_data

@@ -11,7 +11,7 @@ import { BRANCH_CODES } from "@solusation/shared-types";
 import crypto from "crypto";
 
 async function main() {
-  console.log("🌱 Starting idempotent database seed for The Solusation BD...");
+  console.log("🌱 Starting idempotent database seed for The Solutions BD...");
 
   await db.transaction(async (tx) => {
     // 1. Site Settings (Idempotent single configuration row)

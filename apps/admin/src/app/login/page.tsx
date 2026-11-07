@@ -10,14 +10,9 @@ import {
   Eye,
   EyeOff,
   ShieldAlert,
-  ShieldCheck,
-  Sparkles,
   ArrowRight,
-  Search,
-  Crown,
-  KeyRound,
-  CheckCircle2,
 } from "lucide-react";
+import Link from "next/link";
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -52,17 +47,19 @@ export default function AdminLoginPage() {
       setLoading(true);
       setErrorMessage(null);
 
+      const identifier = email.trim();
       const res = await adminApi.login({
-        email: email.trim(),
-        password: password.trim(),
+        ...(identifier.includes("@") ? { email: identifier } : { phone: identifier }),
+        password,
       });
 
-      if (res?.success && res?.user && res?.accessToken) {
-        setAdminSession(res.accessToken, res.user);
+      if (res?.success && res?.user) {
+        setAdminSession(res.user);
 
         // Redirect based on role
         const redirectParam = searchParams.get("redirect");
-        if (redirectParam) {
+        // Only same-site paths, so a crafted login link cannot send staff elsewhere.
+        if (redirectParam && /^\/(?![/\\])/.test(redirectParam)) {
           router.push(redirectParam);
         } else if (res.user.role === "SEO_MANAGER") {
           router.push("/seo");
@@ -79,84 +76,22 @@ export default function AdminLoginPage() {
     }
   };
 
-  const fillCredentials = (type: "SUPER_ADMIN" | "SEO_MANAGER") => {
-    if (type === "SUPER_ADMIN") {
-      setEmail("admin@thesolutionsbd.com");
-      setPassword("admin123");
-    } else {
-      setEmail("seo@thesolutionsbd.com");
-      setPassword("seo123");
-    }
-    setErrorMessage(null);
-  };
-
   return (
-    <div className="min-h-screen w-full bg-slate-950 text-slate-100 flex flex-col justify-center items-center p-4 relative overflow-hidden font-sans">
-      {/* Background Glows & Ambience */}
-      <div className="absolute top-[-15%] left-[-10%] w-[500px] h-[500px] rounded-full bg-blue-600/15 blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[-15%] right-[-10%] w-[500px] h-[500px] rounded-full bg-purple-600/15 blur-[120px] pointer-events-none" />
-
+    <div className="min-h-screen w-full bg-background text-foreground flex flex-col justify-center items-center p-4">
       {/* Main Container */}
       <div className="w-full max-w-md z-10 space-y-6">
         {/* Brand Header */}
         <div className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center p-3 rounded-2xl bg-white shadow-xl shadow-blue-500/10 border border-slate-800">
+          <div className="inline-flex items-center justify-center p-3 rounded-xl bg-white border border-border">
             <img src="/logo.png" alt="The Solutions BD" className="h-10 w-auto object-contain" />
           </div>
-          <h1 className="text-2xl font-black tracking-tight text-white flex items-center justify-center gap-2">
-            The Solutions BD
-            <span className="text-xs px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 font-mono border border-blue-500/30 font-semibold">
-              Admin Portal
-            </span>
-          </h1>
-          <p className="text-xs text-slate-400">
-            Secure Role-Based Access Control • High-Performance Tech Management
-          </p>
-        </div>
-
-        {/* Quick Demo Fill Buttons */}
-        <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800/80 backdrop-blur-sm space-y-2">
-          <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5 px-1">
-            <KeyRound className="w-3.5 h-3.5 text-blue-400" />
-            Quick Demo Login Accounts:
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => fillCredentials("SUPER_ADMIN")}
-              className="flex flex-col items-start p-2.5 rounded-lg border border-slate-700 bg-slate-800/60 hover:bg-slate-800 hover:border-blue-500/50 transition-all text-left group"
-            >
-              <span className="text-xs font-bold text-white flex items-center gap-1">
-                <Crown className="w-3.5 h-3.5 text-amber-400" />
-                Super Admin
-              </span>
-              <span className="text-[10px] text-slate-400 mt-0.5">Full System Access</span>
-              <span className="text-[9px] text-blue-400 font-mono mt-1 group-hover:underline">
-                admin@thesolutionsbd.com
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => fillCredentials("SEO_MANAGER")}
-              className="flex flex-col items-start p-2.5 rounded-lg border border-slate-700 bg-slate-800/60 hover:bg-slate-800 hover:border-emerald-500/50 transition-all text-left group"
-            >
-              <span className="text-xs font-bold text-white flex items-center gap-1">
-                <Search className="w-3.5 h-3.5 text-emerald-400" />
-                SEO Sub-Admin
-              </span>
-              <span className="text-[10px] text-slate-400 mt-0.5">Blogs, GTM & Traffic Only</span>
-              <span className="text-[9px] text-emerald-400 font-mono mt-1 group-hover:underline">
-                seo@thesolutionsbd.com
-              </span>
-            </button>
-          </div>
+          <h1 className="text-xl font-bold tracking-tight text-foreground">Sign in to the admin panel</h1>
         </div>
 
         {/* Login Card */}
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/90 backdrop-blur-xl p-6 shadow-2xl shadow-black/60 space-y-5">
+        <div className="rounded-xl border border-border bg-card p-6 space-y-5">
           {errorMessage && (
-            <div className="flex items-start gap-2.5 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs animate-shake">
+            <div className="flex items-start gap-2.5 p-3 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive text-xs">
               <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5" />
               <span>{errorMessage}</span>
             </div>
@@ -165,8 +100,8 @@ export default function AdminLoginPage() {
           <form onSubmit={handleLogin} className="space-y-4">
             {/* Email / Identifier */}
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-slate-300 flex items-center gap-1.5">
-                <Mail className="w-3.5 h-3.5 text-slate-400" />
+              <label className="text-xs font-medium text-foreground flex items-center gap-1.5">
+                <Mail className="w-3.5 h-3.5 text-muted-foreground" />
                 Email or Phone Number
               </label>
               <div className="relative">
@@ -176,16 +111,16 @@ export default function AdminLoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="admin@thesolutionsbd.com or phone"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/70 border border-slate-800 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all font-mono"
+                  className="w-full px-3.5 py-2.5 rounded-lg bg-background border border-input text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
                 />
               </div>
             </div>
 
             {/* Password */}
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-slate-300 flex items-center justify-between">
+              <label className="text-xs font-medium text-foreground flex items-center justify-between">
                 <span className="flex items-center gap-1.5">
-                  <Lock className="w-3.5 h-3.5 text-slate-400" />
+                  <Lock className="w-3.5 h-3.5 text-muted-foreground" />
                   Password
                 </span>
               </label>
@@ -196,12 +131,12 @@ export default function AdminLoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full px-3.5 py-2.5 pr-10 rounded-xl bg-slate-950/70 border border-slate-800 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all font-mono"
+                  className="w-full px-3.5 py-2.5 pr-10 rounded-lg bg-background border border-input text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -210,32 +145,34 @@ export default function AdminLoginPage() {
 
             {/* Remember Me */}
             <div className="flex items-center justify-between text-xs">
-              <label className="flex items-center gap-2 cursor-pointer select-none text-slate-400 hover:text-slate-200">
+              <label className="flex items-center gap-2 cursor-pointer select-none text-muted-foreground hover:text-foreground">
                 <input
                   type="checkbox"
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}
-                  className="rounded border-slate-700 bg-slate-950 text-blue-600 focus:ring-blue-500 focus:ring-offset-0"
+                  className="rounded border-input accent-[hsl(var(--primary))]"
                 />
-                <span>Remember this terminal</span>
+                <span>Keep me signed in</span>
               </label>
-              <span className="text-[11px] text-slate-500 font-mono">TLS 1.3 256-bit</span>
+              <Link href="/reset-password" className="text-[11px] text-primary hover:underline">
+                Forgot password?
+              </Link>
             </div>
 
             {/* Submit Button */}
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-sm tracking-wide shadow-lg shadow-blue-500/25 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed group"
+              className="w-full py-2.5 px-4 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed group"
             >
               {loading ? (
                 <>
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  <span>Verifying Credentials...</span>
+                  <div className="w-4 h-4 border-2 border-current/30 border-t-current rounded-full animate-spin" />
+                  <span>Signing in…</span>
                 </>
               ) : (
                 <>
-                  <span>Sign In to Admin Console</span>
+                  <span>Sign in</span>
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </>
               )}
@@ -243,20 +180,14 @@ export default function AdminLoginPage() {
           </form>
         </div>
 
-        {/* Security Footer Notice */}
-        <div className="flex items-center justify-center gap-4 text-[11px] text-slate-500">
-          <span className="flex items-center gap-1">
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-            Protected by Cloud Auth
-          </span>
-          <span>•</span>
+        <div className="text-center text-[11px] text-muted-foreground">
           <a
-            href="http://localhost:3000"
+            href={process.env.NEXT_PUBLIC_STOREFRONT_URL || "http://localhost:3000"}
             target="_blank"
             rel="noopener noreferrer"
-            className="hover:text-slate-300 underline underline-offset-2"
+            className="hover:text-foreground underline underline-offset-2"
           >
-            Visit Live Storefront
+            View store
           </a>
         </div>
       </div>

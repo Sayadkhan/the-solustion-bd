@@ -1,5 +1,39 @@
+import { clearAdminSession } from "./auth";
+
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api/v1";
 const API_HOST = API_BASE.replace(/\/api\/v1\/?$/, "");
+
+/** Shared so that parallel 401s trigger one refresh: refresh tokens are single-use. */
+let refreshInFlight: Promise<boolean> | null = null;
+
+function refreshSession(): Promise<boolean> {
+  refreshInFlight ??= fetch(`${API_BASE}/auth/refresh`, { method: "POST", credentials: "include" })
+    .then((res) => res.ok)
+    .catch(() => false)
+    .finally(() => {
+      refreshInFlight = null;
+    });
+  return refreshInFlight;
+}
+
+/**
+ * The session lives in HttpOnly cookies set by the API, which page scripts cannot
+ * read. An expired access token is renewed once; if that fails the user signs in again.
+ */
+async function apiFetch(url: string, init: RequestInit = {}): Promise<Response> {
+  const send = () => fetch(url, { ...init, credentials: "include" });
+
+  const res = await send();
+  if (res.status !== 401) return res;
+
+  if (await refreshSession()) return send();
+
+  clearAdminSession();
+  if (typeof window !== "undefined" && window.location.pathname !== "/login") {
+    window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname)}`;
+  }
+  return res;
+}
 
 export interface ApiResponse<T = any> {
   success: boolean;
@@ -17,12 +51,39 @@ export const adminApi = {
       const res = await fetch(`${API_BASE}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(credentials),
       });
       return await res.json();
     } catch (err: any) {
       return { success: false, message: err.message || "Network error during login" };
     }
+  },
+
+  async logout() {
+    try {
+      await fetch(`${API_BASE}/auth/logout`, { method: "POST", credentials: "include" });
+    } catch {
+      // The local session is cleared regardless.
+    }
+  },
+
+  async forgotPassword(email: string) {
+    const res = await fetch(`${API_BASE}/auth/forgot-password`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+    return await res.json();
+  },
+
+  async resetPassword(token: string, newPassword: string) {
+    const res = await fetch(`${API_BASE}/auth/reset-password`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token, newPassword }),
+    });
+    return await res.json();
   },
 
   // Traffic & Analytics
@@ -85,7 +146,7 @@ export const adminApi = {
       if (params?.category) q.append("category", params.category);
       if (params?.limit) q.append("limit", params.limit.toString());
       if (params?.page) q.append("page", params.page.toString());
-      const res = await fetch(`${API_BASE}/products?${q.toString()}`);
+      const res = await apiFetch(`${API_BASE}/products?${q.toString()}`);
       if (!res.ok) throw new Error("Failed to fetch products");
       return await res.json();
     } catch {
@@ -94,7 +155,7 @@ export const adminApi = {
   },
 
   async createProduct(payload: any) {
-    const res = await fetch(`${API_BASE}/products`, {
+    const res = await apiFetch(`${API_BASE}/products`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -108,7 +169,7 @@ export const adminApi = {
       const q = new URLSearchParams();
       if (params?.limit) q.append("limit", params.limit.toString());
       if (params?.page) q.append("page", params.page.toString());
-      const res = await fetch(`${API_BASE}/orders?${q.toString()}`);
+      const res = await apiFetch(`${API_BASE}/orders?${q.toString()}`);
       if (!res.ok) throw new Error("Failed to fetch orders");
       return await res.json();
     } catch {
@@ -117,7 +178,7 @@ export const adminApi = {
   },
 
   async updateOrderStatus(orderNumber: string, status: string) {
-    const res = await fetch(`${API_BASE}/orders/${orderNumber}/status`, {
+    const res = await apiFetch(`${API_BASE}/orders/${orderNumber}/status`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status }),
@@ -125,8 +186,9 @@ export const adminApi = {
     return await res.json();
   },
 
-  async verifyOrderDeposit(orderNumber: string, trxId: string, amount: number) {
-    const res = await fetch(`${API_BASE}/orders/${orderNumber}/deposit`, {
+  // Without an amount the server applies the right one for the order's payment method.
+  async verifyOrderDeposit(orderNumber: string, trxId: string, amount?: number) {
+    const res = await apiFetch(`${API_BASE}/orders/${orderNumber}/deposit`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ trxId, amount }),
@@ -136,7 +198,7 @@ export const adminApi = {
 
   // Warranty Serials
   async lookupWarranty(serialNumber: string) {
-    const res = await fetch(`${API_BASE}/serials/warranty/${encodeURIComponent(serialNumber)}`);
+    const res = await apiFetch(`${API_BASE}/serials/warranty/${encodeURIComponent(serialNumber)}`);
     return await res.json();
   },
 
@@ -146,7 +208,7 @@ export const adminApi = {
     supplierName: string;
     warrantyExpiresAt?: string;
   }) {
-    const res = await fetch(`${API_BASE}/serials`, {
+    const res = await apiFetch(`${API_BASE}/serials`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -160,7 +222,7 @@ export const adminApi = {
       const q = new URLSearchParams();
       if (params?.category) q.append("category", params.category);
       if (params?.search) q.append("search", params.search);
-      const res = await fetch(`${API_BASE}/blogs?${q.toString()}`);
+      const res = await apiFetch(`${API_BASE}/blogs?${q.toString()}`);
       if (!res.ok) throw new Error("Failed to fetch blogs");
       return await res.json();
     } catch {
@@ -169,7 +231,7 @@ export const adminApi = {
   },
 
   async createBlog(payload: any) {
-    const res = await fetch(`${API_BASE}/blogs`, {
+    const res = await apiFetch(`${API_BASE}/blogs`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -178,14 +240,14 @@ export const adminApi = {
   },
 
   async deleteBlog(id: string) {
-    const res = await fetch(`${API_BASE}/blogs/${id}`, {
+    const res = await apiFetch(`${API_BASE}/blogs/${id}`, {
       method: "DELETE",
     });
     return await res.json();
   },
 
   async updateBlog(id: string, payload: any) {
-    const res = await fetch(`${API_BASE}/blogs/${id}`, {
+    const res = await apiFetch(`${API_BASE}/blogs/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -196,7 +258,7 @@ export const adminApi = {
   // Inquiries
   // Product Actions
   async updateProductStock(id: string, stock: number, status?: string) {
-    const res = await fetch(`${API_BASE}/products/${id}/stock`, {
+    const res = await apiFetch(`${API_BASE}/products/${id}/stock`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ stock, status }),
@@ -205,7 +267,7 @@ export const adminApi = {
   },
 
   async deleteProduct(id: string) {
-    const res = await fetch(`${API_BASE}/products/${id}`, {
+    const res = await apiFetch(`${API_BASE}/products/${id}`, {
       method: "DELETE",
     });
     return await res.json();
@@ -214,7 +276,7 @@ export const adminApi = {
   // Categories
   async getCategories() {
     try {
-      const res = await fetch(`${API_BASE}/products/categories`);
+      const res = await apiFetch(`${API_BASE}/products/categories`);
       if (!res.ok) throw new Error("Failed to fetch categories");
       return await res.json();
     } catch {
@@ -231,7 +293,7 @@ export const adminApi = {
     parentId?: string | null;
     sortOrder?: number;
   }) {
-    const res = await fetch(`${API_BASE}/products/categories`, {
+    const res = await apiFetch(`${API_BASE}/products/categories`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -240,14 +302,14 @@ export const adminApi = {
   },
 
   async deleteCategory(id: string) {
-    const res = await fetch(`${API_BASE}/products/categories/${id}`, {
+    const res = await apiFetch(`${API_BASE}/products/categories/${id}`, {
       method: "DELETE",
     });
     return await res.json();
   },
 
   async updateCategorySortOrder(id: string, sortOrder: number) {
-    const res = await fetch(`${API_BASE}/products/categories/${id}/sort-order`, {
+    const res = await apiFetch(`${API_BASE}/products/categories/${id}/sort-order`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ sortOrder }),
@@ -256,7 +318,7 @@ export const adminApi = {
   },
 
   async reorderCategories(orders: Array<{ id: string; sortOrder: number }>) {
-    const res = await fetch(`${API_BASE}/products/categories/reorder`, {
+    const res = await apiFetch(`${API_BASE}/products/categories/reorder`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ orders }),
@@ -267,7 +329,7 @@ export const adminApi = {
   // Brands
   async getBrands() {
     try {
-      const res = await fetch(`${API_BASE}/products/brands`);
+      const res = await apiFetch(`${API_BASE}/products/brands`);
       if (!res.ok) throw new Error("Failed to fetch brands");
       return await res.json();
     } catch {
@@ -276,7 +338,7 @@ export const adminApi = {
   },
 
   async createBrand(payload: { name: string; slug: string; logoUrl?: string }) {
-    const res = await fetch(`${API_BASE}/products/brands`, {
+    const res = await apiFetch(`${API_BASE}/products/brands`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -285,7 +347,7 @@ export const adminApi = {
   },
 
   async deleteBrand(id: string) {
-    const res = await fetch(`${API_BASE}/products/brands/${id}`, {
+    const res = await apiFetch(`${API_BASE}/products/brands/${id}`, {
       method: "DELETE",
     });
     return await res.json();
@@ -294,7 +356,7 @@ export const adminApi = {
   // Serials
   async getSerials() {
     try {
-      const res = await fetch(`${API_BASE}/serials`);
+      const res = await apiFetch(`${API_BASE}/serials`);
       if (!res.ok) throw new Error("Failed to fetch serials");
       return await res.json();
     } catch {
@@ -305,7 +367,7 @@ export const adminApi = {
   // Inquiries
   async getInquiries() {
     try {
-      const res = await fetch(`${API_BASE}/settings/inquiries`);
+      const res = await apiFetch(`${API_BASE}/settings/inquiries`);
       if (!res.ok) throw new Error("Failed to fetch inquiries");
       return await res.json();
     } catch {
@@ -314,7 +376,7 @@ export const adminApi = {
   },
 
   async updateInquiryStatus(id: string, status: "PENDING" | "CONTACTED" | "RESOLVED" | "ARCHIVED") {
-    const res = await fetch(`${API_BASE}/settings/inquiries/${id}/status`, {
+    const res = await apiFetch(`${API_BASE}/settings/inquiries/${id}/status`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status }),
@@ -325,7 +387,7 @@ export const adminApi = {
   // Settings
   async getSettings() {
     try {
-      const res = await fetch(`${API_BASE}/settings`);
+      const res = await apiFetch(`${API_BASE}/settings`);
       if (!res.ok) throw new Error("Failed to fetch settings");
       return await res.json();
     } catch {
@@ -334,7 +396,7 @@ export const adminApi = {
   },
 
   async updateSettings(payload: any) {
-    const res = await fetch(`${API_BASE}/settings`, {
+    const res = await apiFetch(`${API_BASE}/settings`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -346,7 +408,7 @@ export const adminApi = {
   async uploadImage(file: File, folder = "products"): Promise<{ url: string; success: boolean }> {
     const formData = new FormData();
     formData.append("file", file);
-    const res = await fetch(`${API_BASE}/upload/single?folder=${folder}`, {
+    const res = await apiFetch(`${API_BASE}/upload/single?folder=${folder}`, {
       method: "POST",
       body: formData,
     });
@@ -361,7 +423,7 @@ export const adminApi = {
   async getBanners(type?: string) {
     try {
       const url = type ? `${API_BASE}/banners/admin?type=${encodeURIComponent(type)}` : `${API_BASE}/banners/admin`;
-      const res = await fetch(url);
+      const res = await apiFetch(url);
       if (!res.ok) throw new Error("Failed to fetch banners");
       return await res.json();
     } catch {
@@ -381,7 +443,7 @@ export const adminApi = {
     sortOrder?: number;
     isActive?: boolean;
   }) {
-    const res = await fetch(`${API_BASE}/banners`, {
+    const res = await apiFetch(`${API_BASE}/banners`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -390,7 +452,7 @@ export const adminApi = {
   },
 
   async updateBanner(id: string, payload: any) {
-    const res = await fetch(`${API_BASE}/banners/${id}`, {
+    const res = await apiFetch(`${API_BASE}/banners/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -399,14 +461,14 @@ export const adminApi = {
   },
 
   async deleteBanner(id: string) {
-    const res = await fetch(`${API_BASE}/banners/${id}`, {
+    const res = await apiFetch(`${API_BASE}/banners/${id}`, {
       method: "DELETE",
     });
     return await res.json();
   },
 
   async reorderBanners(orders: Array<{ id: string; sortOrder: number }>) {
-    const res = await fetch(`${API_BASE}/banners/reorder`, {
+    const res = await apiFetch(`${API_BASE}/banners/reorder`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ orders }),

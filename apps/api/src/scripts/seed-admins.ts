@@ -1,52 +1,83 @@
-import { pool, db, users } from "@solusation/database";
+import { pool } from "@solusation/database";
 import bcrypt from "bcryptjs";
 
-async function main() {
-  console.log("Checking user_role enum...");
-  const enumResult = await pool.query(
-    "SELECT enumlabel FROM pg_enum JOIN pg_type ON pg_enum.enumtypid = pg_type.oid WHERE pg_type.typname = 'user_role'"
-  );
-  console.log("Current user_role values:", enumResult.rows.map((r: any) => r.enumlabel));
+/**
+ * Creates the staff accounts from environment variables. Passwords are never
+ * stored in this repository.
+ *
+ *   SEED_ADMIN_PASSWORD=... SEED_SEO_PASSWORD=... pnpm --filter @solusation/api seed:admins
+ *
+ * An existing account keeps its password, so re-running this is safe. To replace
+ * a password, also set SEED_RESET_PASSWORDS=true.
+ */
+const MIN_PASSWORD_LENGTH = 12;
+const resetExisting = process.env.SEED_RESET_PASSWORDS === "true";
 
-  // Add SEO_MANAGER if not present
-  try {
-    await pool.query("ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'SEO_MANAGER'");
-    console.log("Ensured 'SEO_MANAGER' is present in user_role enum.");
-  } catch (err: any) {
-    console.log("Notice on ALTER TYPE:", err.message);
+const ACCOUNTS = [
+  {
+    envVar: "SEED_ADMIN_PASSWORD",
+    name: "Super Administrator",
+    email: "admin@thesolutionsbd.com",
+    phone: "01711319090",
+    role: "SUPER_ADMIN",
+  },
+  {
+    envVar: "SEED_SEO_PASSWORD",
+    name: "SEO & Growth Sub-Admin",
+    email: "seo@thesolutionsbd.com",
+    phone: "01922730343",
+    role: "SEO_MANAGER",
+  },
+] as const;
+
+async function main() {
+  // Checked first, so that a weak password changes nothing.
+  for (const account of ACCOUNTS) {
+    const password = process.env[account.envVar];
+    if (password && password.length < MIN_PASSWORD_LENGTH) {
+      throw new Error(`${account.envVar} must be at least ${MIN_PASSWORD_LENGTH} characters long.`);
+    }
   }
 
-  // Create or update Super Admin
-  const adminPasswordHash = await bcrypt.hash("admin123", 10);
-  await pool.query(
-    `INSERT INTO users (id, name, email, phone, password_hash, role, is_email_verified)
-     VALUES (gen_random_uuid(), 'Super Administrator', 'admin@thesolutionsbd.com', '01711319090', $1, 'SUPER_ADMIN', true)
-     ON CONFLICT (email) DO UPDATE SET password_hash = $1, role = 'SUPER_ADMIN', name = 'Super Administrator'`,
-    [adminPasswordHash]
-  );
-  console.log("Admin account synced: admin@thesolutionsbd.com / admin123");
+  await pool.query("ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'SEO_MANAGER'");
 
-  // Create or update SEO Manager (Sub Admin)
-  const seoPasswordHash = await bcrypt.hash("seo123", 10);
-  await pool.query(
-    `INSERT INTO users (id, name, email, phone, password_hash, role, is_email_verified)
-     VALUES (gen_random_uuid(), 'SEO & Growth Sub-Admin', 'seo@thesolutionsbd.com', '01922730343', $1, 'SEO_MANAGER', true)
-     ON CONFLICT (email) DO UPDATE SET password_hash = $1, role = 'SEO_MANAGER', name = 'SEO & Growth Sub-Admin'`,
-    [seoPasswordHash]
-  );
-  console.log("SEO Manager account synced: seo@thesolutionsbd.com / seo123");
+  for (const account of ACCOUNTS) {
+    const password = process.env[account.envVar];
 
-  // Also update admin@solusationbd.com with admin123 password just in case
-  await pool.query(
-    `UPDATE users SET password_hash = $1 WHERE email = 'admin@solusationbd.com'`,
-    [adminPasswordHash]
-  );
+    if (!password) {
+      console.log(`Skipping ${account.email}: ${account.envVar} is not set.`);
+      continue;
+    }
+
+    const passwordHash = await bcrypt.hash(password, 12);
+    const onConflict = resetExisting
+      ? "UPDATE SET password_hash = EXCLUDED.password_hash, role = EXCLUDED.role, name = EXCLUDED.name"
+      : "UPDATE SET role = EXCLUDED.role, name = EXCLUDED.name";
+
+    await pool.query(
+      `INSERT INTO users (id, name, email, phone, password_hash, role, is_email_verified)
+       VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, true)
+       ON CONFLICT (email) DO ${onConflict}`,
+      [account.name, account.email, account.phone, passwordHash, account.role]
+    );
+
+    console.log(`${account.email}: account synced${resetExisting ? " and password replaced" : ""}.`);
+  }
+
+  // Password changes must end any session opened with the old password.
+  if (resetExisting) {
+    const emails = ACCOUNTS.filter((a) => process.env[a.envVar]).map((a) => a.email);
+    await pool.query(
+      `DELETE FROM sessions WHERE user_id IN (SELECT id FROM users WHERE email = ANY($1))`,
+      [emails]
+    );
+  }
 
   console.log("Setup completed successfully.");
   process.exit(0);
 }
 
 main().catch((e) => {
-  console.error("Setup error:", e);
+  console.error("Setup error:", e.message);
   process.exit(1);
 });

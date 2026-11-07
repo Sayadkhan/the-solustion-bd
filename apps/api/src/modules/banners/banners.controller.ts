@@ -13,6 +13,8 @@ import {
 } from "@nestjs/common";
 import { ApiTags, ApiOperation, ApiQuery } from "@nestjs/swagger";
 import { BannersService } from "./banners.service";
+import { Public } from "../../common/decorators/public.decorator";
+import { Roles } from "../../common/decorators/roles.decorator";
 
 @ApiTags("Banners & Campaign Promotions")
 @Controller("banners")
@@ -21,6 +23,7 @@ export class BannersController {
 
   @ApiOperation({ summary: "Get active banners for storefront (optional type: HERO | PROMO_SIDE)" })
   @ApiQuery({ name: "type", required: false })
+  @Public()
   @Get()
   async getActiveBanners(@Query("type") type?: string) {
     const data = await this.bannersService.getActiveBanners(type);
@@ -29,6 +32,7 @@ export class BannersController {
 
   @ApiOperation({ summary: "Get all banners for admin panel (including inactive)" })
   @ApiQuery({ name: "type", required: false })
+  @Roles("ADMIN", "SEO_MANAGER")
   @Get("admin")
   async getAllBannersAdmin(@Query("type") type?: string) {
     const data = await this.bannersService.getAllBannersAdmin(type);
@@ -36,6 +40,7 @@ export class BannersController {
   }
 
   @ApiOperation({ summary: "Get single banner by id" })
+  @Public()
   @Get(":id")
   async getBannerById(@Param("id") id: string) {
     const data = await this.bannersService.getBannerById(id);
@@ -43,6 +48,7 @@ export class BannersController {
   }
 
   @ApiOperation({ summary: "Create a new banner" })
+  @Roles("ADMIN", "SEO_MANAGER")
   @Post()
   async createBanner(@Body() body: any) {
     if (!body.title || !body.image) {
@@ -53,6 +59,7 @@ export class BannersController {
   }
 
   @ApiOperation({ summary: "Update an existing banner" })
+  @Roles("ADMIN", "SEO_MANAGER")
   @Put(":id")
   async updateBanner(@Param("id") id: string, @Body() body: any) {
     const updated = await this.bannersService.updateBanner(id, body);
@@ -60,6 +67,7 @@ export class BannersController {
   }
 
   @ApiOperation({ summary: "Delete a banner" })
+  @Roles("ADMIN", "SEO_MANAGER")
   @Delete(":id")
   async deleteBanner(@Param("id") id: string) {
     const res = await this.bannersService.deleteBanner(id);
@@ -67,6 +75,7 @@ export class BannersController {
   }
 
   @ApiOperation({ summary: "Batch reorder banners" })
+  @Roles("ADMIN", "SEO_MANAGER")
   @Patch("reorder")
   async reorderBanners(@Body() body: { orders: Array<{ id: string; sortOrder: number }> }) {
     if (!body?.orders || !Array.isArray(body.orders)) {

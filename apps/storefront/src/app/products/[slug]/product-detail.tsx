@@ -1,0 +1,772 @@
+"use client";
+
+import React, { useState, useEffect } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import {
+  ShieldCheck,
+  Truck,
+  CreditCard,
+  Building2,
+  CheckCircle2,
+  ShoppingCart,
+  GitCompare,
+  ChevronRight,
+  HelpCircle,
+  ExternalLink,
+  Image as ImageIcon,
+  Play,
+  Maximize2,
+  X,
+} from "lucide-react";
+import { canOrder, normalizeProduct, Product, STOCK_LABELS } from "@/lib/product";
+import { formatBdt } from "@solusation/shared-types";
+import { useCartStore } from "@/stores/cart-store";
+import { useCompareStore } from "@/stores/compare-store";
+import { ProductCard } from "@/components/product-card";
+import { getYouTubeEmbedUrl, getYouTubeThumbnailUrl } from "@/lib/youtube";
+
+interface ProductDetailProps {
+  slug: string;
+  /** Fetched on the server, so the product is in the HTML that search engines read. */
+  initialProduct: any | null;
+  relatedProducts: any[];
+}
+
+export function ProductDetail({ initialProduct, relatedProducts: relatedRaw }: ProductDetailProps) {
+  const router = useRouter();
+
+  const product: Product | null = initialProduct ? normalizeProduct(initialProduct) : null;
+
+  const [selectedImageState, setSelectedImage] = useState<string>("");
+  const selectedImage = selectedImageState || product?.images[0] || product?.thumbnailUrl || "";
+  const [activeMedia, setActiveMedia] = useState<"video" | "image">(() =>
+    product?.videoUrl && getYouTubeEmbedUrl(product.videoUrl) ? "video" : "image"
+  );
+  const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
+  const [quantity, setQuantity] = useState<number>(1);
+  const [selectedPricingTier, setSelectedPricingTier] = useState<"CASH" | "REGULAR">("CASH");
+  const [activeTab, setActiveTab] = useState<"specs" | "branches" | "warranty" | "video">("specs");
+  const [addedToast, setAddedToast] = useState(false);
+
+  const addItem = useCartStore((s) => s.addItem);
+  const { addComponent, isSelected } = useCompareStore();
+
+  // Close video modal on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setIsVideoModalOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  if (!product) {
+    return (
+      <div className="container mx-auto px-4 py-20 text-center space-y-5">
+        <div className="w-16 h-16 bg-muted/60 rounded-full flex items-center justify-center mx-auto text-muted-foreground">
+          <HelpCircle className="w-8 h-8 stroke-1 text-primary" />
+        </div>
+        <h2 className="text-2xl font-bold text-foreground">Product Not Found</h2>
+        <p className="text-sm text-muted-foreground max-w-md mx-auto">
+          The product you are looking for is currently unavailable or the link may have been updated.
+          Browse our complete hardware catalog to find what you need.
+        </p>
+        <div className="flex items-center justify-center gap-3 pt-2">
+          <Link
+            href="/products"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold px-6 py-2.5 rounded-xl text-xs transition-all"
+          >
+            Browse All Products
+          </Link>
+          <Link
+            href="/"
+            className="bg-muted text-foreground border border-border font-bold px-6 py-2.5 rounded-xl text-xs hover:bg-muted/80 transition-all"
+          >
+            Back to Home
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const compared = isSelected(product.id);
+
+  const orderable = canOrder(product);
+
+  const handleAddToCart = () => {
+    if (!orderable) return;
+    addItem({
+      productId: product.id,
+      name: product.name,
+      sku: product.sku,
+      cashPriceBdt: product.cashPriceBdt,
+      regularPriceBdt: product.regularPriceBdt,
+      thumbnailUrl: product.thumbnailUrl,
+      pricingType: "CASH",
+    }, quantity);
+    setAddedToast(true);
+    setTimeout(() => setAddedToast(false), 2500);
+  };
+
+  const handleBuyNow = () => {
+    handleAddToCart();
+    router.push("/cart");
+  };
+
+  const handleCompare = () => {
+    addComponent({
+      id: product.id,
+      name: product.name,
+      slug: product.slug,
+      brand: product.brand,
+      sku: product.sku,
+      cashPriceBdt: product.cashPriceBdt,
+      regularPriceBdt: product.regularPriceBdt,
+      thumbnailUrl: product.thumbnailUrl,
+      categorySlug: product.categorySlug,
+      specs: product.compatibility as any,
+    });
+  };
+
+  // Related products from same category
+  const relatedProducts: Product[] = relatedRaw
+    .filter((raw) => raw.id !== product.id)
+    .slice(0, 4)
+    .map(normalizeProduct);
+
+  const BRANCH_NAMES: Record<string, string> = {
+    IDB: "IDB Bhaban Branch (Dhaka)",
+    MULTIPLAN: "Multiplan Center Branch (Elephant Road, Dhaka)",
+    UTTARA: "Uttara Branch (Sector 3, Dhaka)",
+    AGRABAD: "Agrabad Branch (Chattogram)",
+    ONLINE_WAREHOUSE: "Central Online Warehouse (Dhaka)",
+  };
+
+  return (
+    <div className="container mx-auto px-4 py-6 space-y-8">
+      {/* Breadcrumbs */}
+      <nav className="flex items-center space-x-2 text-xs text-muted-foreground">
+        <Link href="/" className="hover:text-primary transition-colors">
+          Home
+        </Link>
+        <ChevronRight className="w-3.5 h-3.5" />
+        <Link href="/products" className="hover:text-primary transition-colors">
+          Components
+        </Link>
+        <ChevronRight className="w-3.5 h-3.5" />
+        <Link
+          href={`/products?category=${product.categorySlug}`}
+          className="hover:text-primary transition-colors capitalize"
+        >
+          {product.categoryName}
+        </Link>
+        <ChevronRight className="w-3.5 h-3.5" />
+        <span className="font-semibold text-foreground truncate max-w-xs">{product.name}</span>
+      </nav>
+
+      {/* Main Product Showcase Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        {/* Left Gallery (5 cols) */}
+        <div className="lg:col-span-5 space-y-4">
+          <div className="bg-card rounded-2xl border border-border flex items-center justify-center h-80 sm:h-96 relative overflow-hidden shadow-sm">
+            {activeMedia === "video" && product.videoUrl && getYouTubeEmbedUrl(product.videoUrl) ? (
+              <div
+                id="btn-play-video-card"
+                onClick={() => setIsVideoModalOpen(true)}
+                className="w-full h-full bg-black relative flex items-center justify-center cursor-pointer group overflow-hidden"
+                title="Click to play full video"
+              >
+                {/* Background Video Poster Image */}
+                {getYouTubeThumbnailUrl(product.videoUrl) ? (
+                  <img
+                    src={getYouTubeThumbnailUrl(product.videoUrl)!}
+                    alt={product.name}
+                    className="absolute inset-0 w-full h-full object-cover opacity-85 group-hover:opacity-100 group-hover:scale-105 transition-all duration-300"
+                  />
+                ) : (
+                  <div className="absolute inset-0 w-full h-full bg-slate-900" />
+                )}
+
+                {/* Dark Vignette Overlay */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/60 group-hover:from-black/70 group-hover:via-black/20 transition-colors" />
+
+                {/* Centered Glowing Red YouTube Play Button */}
+                <div className="relative z-10 flex flex-col items-center gap-2.5">
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-red-600 group-hover:bg-red-500 text-white flex items-center justify-center shadow-2xl group-hover:scale-110 transition-all duration-200">
+                    <svg className="w-8 h-8 sm:w-10 sm:h-10 fill-current ml-1" viewBox="0 0 24 24">
+                      <path d="M8 5v14l11-7z" />
+                    </svg>
+                  </div>
+                  <span className="text-white text-xs sm:text-sm font-bold bg-black/60 px-3.5 py-1 rounded-full border border-white/20 backdrop-blur-sm group-hover:bg-red-600 group-hover:border-red-500 transition-colors flex items-center gap-1.5 shadow-lg">
+                    <Maximize2 className="w-3.5 h-3.5" />
+                    <span>Click to Play Full Video</span>
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="w-full h-full p-6 flex items-center justify-center">
+                <img
+                  src={selectedImage || product.thumbnailUrl}
+                  alt={product.name}
+                  className="max-h-full max-w-full object-contain transition-transform duration-300"
+                />
+              </div>
+            )}
+
+            {/* Stock status badge */}
+            <div className="absolute top-4 left-4 z-10 pointer-events-none">
+              <span className="px-2 py-1 rounded-md text-[11px] font-semibold bg-card text-foreground border border-border">
+                {STOCK_LABELS[product.stockStatus]}
+              </span>
+            </div>
+
+            {/* Quick Switch Button (Video <-> Image) on top right */}
+            {product.videoUrl && getYouTubeEmbedUrl(product.videoUrl) && (
+              <div className="absolute top-4 right-4 z-20">
+                {activeMedia === "video" ? (
+                  <button
+                    id="btn-switch-to-image"
+                    type="button"
+                    onClick={() => setActiveMedia("image")}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-900/90 hover:bg-slate-900 text-white text-xs font-bold shadow-lg backdrop-blur-sm border border-slate-700/80 transition-all cursor-pointer"
+                    title="Switch to Image view"
+                  >
+                    <ImageIcon className="w-3.5 h-3.5 text-primary" />
+                    <span>View Image</span>
+                  </button>
+                ) : (
+                  <button
+                    id="btn-switch-to-video"
+                    type="button"
+                    onClick={() => {
+                      setActiveMedia("video");
+                      setIsVideoModalOpen(true);
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-600 hover:bg-red-700 text-white text-xs font-bold shadow-lg transition-all cursor-pointer"
+                    title="Switch to Video view and play full screen"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+                    </svg>
+                    <span>Watch Video</span>
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Thumbnails Row (Video + Images) */}
+          <div className="flex items-center gap-3 overflow-x-auto pb-1">
+            {/* 1. Video Thumbnail (if product has video) */}
+            {product.videoUrl && getYouTubeEmbedUrl(product.videoUrl) && (
+              <button
+                id="thumb-video"
+                type="button"
+                onClick={() => {
+                  setActiveMedia("video");
+                  setIsVideoModalOpen(true);
+                }}
+                className={`relative w-16 h-16 rounded-xl border p-0.5 bg-black flex items-center justify-center shrink-0 overflow-hidden transition-all group cursor-pointer ${
+                  activeMedia === "video"
+                    ? "border-red-600 ring-2 ring-red-600/40 shadow-md scale-105"
+                    : "border-border hover:border-red-500 opacity-80 hover:opacity-100"
+                }`}
+                title="Play Full Video"
+              >
+                {getYouTubeThumbnailUrl(product.videoUrl) ? (
+                  <img
+                    src={getYouTubeThumbnailUrl(product.videoUrl)!}
+                    alt="Video thumbnail"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-slate-900" />
+                )}
+                {/* Play Badge Overlay */}
+                <div className="absolute inset-0 bg-black/40 flex items-center justify-center group-hover:bg-black/20 transition-colors">
+                  <div className="w-6 h-6 rounded-full bg-red-600 text-white flex items-center justify-center shadow-md">
+                    <svg className="w-3.5 h-3.5 fill-current ml-0.5" viewBox="0 0 24 24">
+                      <path d="M8 5v14l11-7z" />
+                    </svg>
+                  </div>
+                </div>
+                <span className="absolute bottom-0 left-0 right-0 bg-red-600 text-white text-[8px] font-bold uppercase text-center leading-tight py-0.5 tracking-wider">
+                  Video
+                </span>
+              </button>
+            )}
+
+            {/* 2. Image Thumbnails */}
+            {product.images.map((img, i) => (
+              <button
+                key={i}
+                id={`thumb-image-${i}`}
+                type="button"
+                onClick={() => {
+                  setSelectedImage(img);
+                  setActiveMedia("image");
+                }}
+                className={`w-16 h-16 rounded-xl border p-1 bg-card shrink-0 transition-all cursor-pointer ${
+                  activeMedia === "image" && selectedImage === img
+                    ? "border-primary ring-2 ring-primary/20 shadow-md scale-105"
+                    : "border-border hover:border-border/80 opacity-80 hover:opacity-100"
+                }`}
+                title={`View Image ${i + 1}`}
+              >
+                <img src={img} alt="" className="w-full h-full object-contain" />
+              </button>
+            ))}
+          </div>
+
+          {/* Value Badges */}
+          <div className="grid grid-cols-2 gap-3 pt-2 text-xs">
+            <div className="flex items-center gap-2.5 p-3 rounded-xl bg-muted/30 border border-border/60">
+              <ShieldCheck className="w-5 h-5 text-primary shrink-0" />
+              <div>
+                <div className="font-bold">Official Warranty</div>
+                <div className="text-[11px] text-muted-foreground">{product.warrantyNotice}</div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2.5 p-3 rounded-xl bg-muted/30 border border-border/60">
+              <Truck className="w-5 h-5 text-emerald-500 shrink-0" />
+              <div>
+                <div className="font-bold">Fast Delivery</div>
+                <div className="text-[11px] text-muted-foreground">Pathao & Steadfast Courier</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Info & Pricing Block (7 cols) */}
+        <div className="lg:col-span-7 space-y-6">
+          {/* Header */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground font-semibold">
+              <span className="text-primary uppercase tracking-wider">{product.brand}</span>
+              <span>•</span>
+              <span>SKU: {product.sku}</span>
+              <span>•</span>
+              <span className="text-emerald-500">{product.warrantyNotice}</span>
+            </div>
+
+            <h1 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight leading-tight">
+              {product.name}
+            </h1>
+          </div>
+
+          {/* Pricing */}
+          <div className="bg-slate-50 dark:bg-[#0d1620] p-5 rounded-2xl border border-border shadow-sm space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-2 pb-3 border-b border-slate-200/80 dark:border-slate-800">
+              <div className="space-y-1">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground block">
+                  Special Cash Price
+                </span>
+                <div className="flex items-baseline gap-3">
+                  <span className="text-3xl font-bold text-primary">
+                    {formatBdt(product.cashPriceBdt)}
+                  </span>
+                  {product.regularPriceBdt > product.cashPriceBdt && (
+                    <span className="text-base text-slate-400 dark:text-slate-500 line-through font-normal">
+                      Regular: {formatBdt(product.regularPriceBdt)}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {product.regularPriceBdt > product.cashPriceBdt && (
+                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#673ab7]/10 text-[#673ab7] dark:text-purple-400 font-bold text-xs border border-[#673ab7]/20 self-start sm:self-auto">
+                  <span>Save: {formatBdt(product.regularPriceBdt - product.cashPriceBdt)}</span>
+                  <span>({Math.round(((product.regularPriceBdt - product.cashPriceBdt) / product.regularPriceBdt) * 100)}% OFF)</span>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center gap-4 text-xs text-muted-foreground pt-1 flex-wrap">
+              <span className="flex items-center gap-1.5 font-medium text-emerald-600 dark:text-emerald-400">
+                <CheckCircle2 className="w-4 h-4 shrink-0" />
+                <span>Cash on Delivery & bKash Available</span>
+              </span>
+              <span className="hidden sm:inline">•</span>
+              <span>100% Genuine Box Pack with Warranty</span>
+            </div>
+          </div>
+
+          {/* Key Features Bullet List */}
+          {product.keyFeatures && product.keyFeatures.length > 0 && (
+            <div className="space-y-2">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                Key Highlights
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                {product.keyFeatures.map((feat, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center gap-2 p-2 bg-card rounded-lg border border-border/60"
+                  >
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                    <span className="text-foreground">{feat}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Action buttons */}
+          <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
+            {/* Quantity */}
+            <div className="flex items-center border border-border rounded-xl bg-card p-1">
+              <button
+                onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                className="w-8 h-8 rounded-lg hover:bg-muted font-bold text-sm"
+              >
+                -
+              </button>
+              <span className="w-10 text-center font-bold text-sm text-foreground">
+                {quantity}
+              </span>
+              <button
+                onClick={() => setQuantity(quantity + 1)}
+                className="w-8 h-8 rounded-lg hover:bg-muted font-bold text-sm"
+              >
+                +
+              </button>
+            </div>
+
+            <button
+              onClick={handleBuyNow}
+              className="flex-1 w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-3 px-6 rounded-xl text-sm flex items-center justify-center transition-all hover:scale-[1.02]"
+            >
+              <span>Buy Now</span>
+            </button>
+
+            <button
+              onClick={handleAddToCart}
+              disabled={!orderable}
+              className="flex-1 w-full sm:w-auto bg-card hover:bg-muted text-foreground border-2 border-border hover:border-primary/50 font-bold py-3 px-6 rounded-xl text-sm flex items-center justify-center gap-2 transition-all"
+            >
+              {addedToast ? (
+                <>
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                  <span className="text-emerald-500 font-bold">Added to Cart!</span>
+                </>
+              ) : (
+                <>
+                  <ShoppingCart className="w-4 h-4 text-primary" />
+                  <span>Add to Cart</span>
+                </>
+              )}
+            </button>
+
+            <button
+              onClick={handleCompare}
+              className={`p-3 rounded-xl border text-sm transition-colors ${
+                compared
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "border-border hover:bg-muted text-muted-foreground hover:text-foreground"
+              }`}
+              title="Add to Compare"
+            >
+              <GitCompare className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Detail Tabs (Specifications, Physical Branch Inventory, Warranty, YouTube Video) */}
+      <div id="product-tabs" className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden mt-10">
+        <div className="flex items-center border-b border-border bg-muted/20 px-2 sm:px-4 overflow-x-auto whitespace-nowrap scrollbar-none">
+          <button
+            onClick={() => setActiveTab("specs")}
+            className={`py-3 px-3.5 sm:px-5 font-bold text-xs sm:text-sm border-b-2 transition-colors shrink-0 ${
+              activeTab === "specs"
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Specification
+          </button>
+          <button
+            onClick={() => setActiveTab("branches")}
+            className={`py-3 px-3.5 sm:px-5 font-bold text-xs sm:text-sm border-b-2 transition-colors flex items-center gap-1.5 shrink-0 ${
+              activeTab === "branches"
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Building2 className="w-3.5 h-3.5" />
+            <span>Branch Availability</span>
+          </button>
+          <button
+            onClick={() => setActiveTab("warranty")}
+            className={`py-3 px-3.5 sm:px-5 font-bold text-xs sm:text-sm border-b-2 transition-colors shrink-0 ${
+              activeTab === "warranty"
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Warranty Policy
+          </button>
+          <button
+            onClick={() => setActiveTab("video")}
+            className={`py-3 px-3.5 sm:px-5 font-bold text-xs sm:text-sm border-b-2 transition-colors flex items-center gap-1.5 shrink-0 ${
+              activeTab === "video"
+                ? "border-red-600 text-red-600 dark:text-red-400"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <svg className="w-3.5 h-3.5 text-red-600" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+            </svg>
+            <span>Video Review</span>
+            {product.videoUrl && (
+              <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse ml-0.5" />
+            )}
+          </button>
+        </div>
+
+        <div className="p-6">
+          {activeTab === "specs" && (
+            <div className="space-y-4 max-w-4xl">
+              <table className="w-full text-xs text-left border-collapse">
+                <tbody>
+                  {product.specifications && product.specifications.length > 0 ? (
+                    product.specifications.map((spec, index) => (
+                      <tr
+                        key={index}
+                        className={index % 2 === 0 ? "bg-muted/30" : "bg-transparent"}
+                      >
+                        <td className="py-2.5 px-4 font-semibold text-muted-foreground w-1/3 border-b border-border/50">
+                          {spec.label}
+                        </td>
+                        <td className="py-2.5 px-4 font-bold text-foreground border-b border-border/50">
+                          {spec.value}
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={2} className="py-4 text-center text-muted-foreground">
+                        Standard manufacturer specifications apply for this product.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {activeTab === "branches" && (
+            <div className="space-y-4 max-w-3xl">
+              <p className="text-xs text-muted-foreground">
+                Current physical stock in our retail outlets across Dhaka and Chattogram. You can pick
+                up directly or order online.
+              </p>
+              <div className="divide-y divide-border border border-border rounded-xl overflow-hidden">
+                {product.branchStocks &&
+                  Object.entries(product.branchStocks).map(([code, stock]) => (
+                    <div
+                      key={code}
+                      className="p-3.5 flex items-center justify-between bg-card text-xs"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Building2 className="w-4 h-4 text-primary" />
+                        <span className="font-bold text-foreground">
+                          {BRANCH_NAMES[code] || code}
+                        </span>
+                      </div>
+                      <div>
+                        {stock > 0 ? (
+                          <span className="px-2 py-0.5 rounded font-semibold text-[11px] bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                            In Stock ({stock} Units)
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded font-semibold text-[11px] bg-rose-500/10 text-rose-500 border border-rose-500/20">
+                            Out of Stock
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
+
+          {activeTab === "warranty" && (
+            <div className="space-y-3 max-w-2xl text-xs text-muted-foreground leading-relaxed">
+              <h4 className="font-bold text-sm text-foreground">
+                Official Bangladesh Warranty Terms (Rule 4.4)
+              </h4>
+              <p>
+                This product includes <strong>{product.warrantyNotice}</strong> directly honored by
+                the official Bangladesh importer and The Solutions BD service center.
+              </p>
+              <ul className="list-disc pl-5 space-y-1">
+                <li>
+                  Every box carries a unique serial number sticker. Please retain the outer box
+                  packaging for warranty claims.
+                </li>
+                <li>
+                  Physical burns, liquid damage, cracked pins, or unauthorized tampering void the
+                  official warranty.
+                </li>
+                <li>
+                  To check or claim warranty, enter your box serial number on our Warranty Tracking
+                  portal.
+                </li>
+              </ul>
+            </div>
+          )}
+
+          {activeTab === "video" && (
+            <div className="space-y-4 max-w-4xl">
+              {product.videoUrl && getYouTubeEmbedUrl(product.videoUrl) ? (
+                <>
+                  <div className="relative aspect-video w-full rounded-2xl overflow-hidden border border-border shadow-xl bg-black">
+                    <iframe
+                      src={`${getYouTubeEmbedUrl(product.videoUrl)}?autoplay=0&rel=0`}
+                      title={product.name}
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      allowFullScreen
+                      className="w-full h-full border-0"
+                    />
+                  </div>
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-muted-foreground bg-muted/30 p-3.5 rounded-xl border border-border">
+                    <div className="flex items-center gap-2.5">
+                      <svg className="w-5 h-5 text-red-600 shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+                      </svg>
+                      <span className="font-bold text-foreground">Official Product Video, Unboxing & Benchmark</span>
+                    </div>
+                    <a
+                      href={product.videoUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-red-600 dark:text-red-400 font-bold hover:underline"
+                    >
+                      <span>Watch on YouTube</span>
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+                  </div>
+                </>
+              ) : (
+                <div className="p-12 text-center bg-card rounded-xl border border-dashed border-border space-y-3">
+                  <svg className="w-12 h-12 text-muted-foreground mx-auto opacity-40" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+                  </svg>
+                  <h3 className="text-sm font-bold text-foreground">No YouTube Video Linked Yet</h3>
+                  <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+                    An official unboxing or benchmark review video has not been added for this product yet.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Related Products Section */}
+      {relatedProducts.length > 0 && (
+        <div className="space-y-4 pt-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold text-foreground tracking-tight">
+              Related Hardware
+            </h2>
+            <Link
+              href={`/products?category=${product.categorySlug}`}
+              className="text-xs font-bold text-primary hover:underline flex items-center gap-1"
+            >
+              <span>View All</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {relatedProducts.map((p) => (
+              <ProductCard key={p.id} product={p} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Mobile Sticky Purchase Bar (Always within thumb reach) */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-card/95 backdrop-blur-md border-t border-border p-3 flex items-center justify-between gap-3 shadow-[0_-4px_20px_rgba(0,0,0,0.15)]">
+        <div className="flex flex-col min-w-0">
+          <span className="text-[11px] text-muted-foreground uppercase font-bold tracking-wider">
+            Special Cash Price
+          </span>
+          <span className="text-base font-bold text-primary truncate">
+            {formatBdt(product.cashPriceBdt)}
+          </span>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={handleAddToCart}
+              disabled={!orderable}
+            className="p-2.5 rounded-xl border border-border bg-muted/40 hover:bg-muted text-foreground transition-all"
+            title="Add to Cart"
+          >
+            {addedToast ? (
+              <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+            ) : (
+              <ShoppingCart className="w-5 h-5 text-primary" />
+            )}
+          </button>
+          <button
+            onClick={handleBuyNow}
+            className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-2.5 px-5 rounded-xl text-xs flex items-center justify-center shadow-md transition-all"
+          >
+            <span>Buy Now</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Large Video Lightbox Modal (Opens Big & Autoplays) */}
+      {isVideoModalOpen && product.videoUrl && getYouTubeEmbedUrl(product.videoUrl) && (
+        <div
+          id="video-modal-backdrop"
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/90 backdrop-blur-md animate-in fade-in duration-200"
+          onClick={() => setIsVideoModalOpen(false)}
+        >
+          <div
+            id="video-modal-container"
+            className="relative w-full max-w-5xl bg-slate-950 rounded-2xl overflow-hidden shadow-2xl border border-slate-800 animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Top Bar of Modal */}
+            <div className="flex items-center justify-between px-4 py-3 bg-slate-900 border-b border-slate-800 text-white">
+              <div className="flex items-center gap-2.5 text-xs font-bold truncate max-w-[80%]">
+                <svg className="w-4 h-4 text-red-600 shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+                </svg>
+                <span className="truncate">{product.name} — Official Video</span>
+              </div>
+              <button
+                id="btn-close-video-modal"
+                onClick={() => setIsVideoModalOpen(false)}
+                className="p-1.5 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer"
+                aria-label="Close Video"
+                title="Close (Esc)"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Video Container (16:9 Aspect Ratio) */}
+            <div className="relative aspect-video w-full bg-black">
+              <iframe
+                src={`${getYouTubeEmbedUrl(product.videoUrl)}?autoplay=1&rel=0`}
+                title={product.name}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+                className="w-full h-full border-0"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

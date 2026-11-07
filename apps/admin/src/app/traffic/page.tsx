@@ -48,14 +48,13 @@ export default function TrafficAnalyticsPage() {
   return (
     <AdminShell
       title="Traffic & Visitor Analytics"
-      subtitle="Real-time site visits, organic search volume, keywords & device breakdown"
+      subtitle="Sample figures only. No analytics source is connected yet."
       onRefresh={loadStats}
       isRefreshing={loading}
       actions={
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-mono font-semibold">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-            <span>42 Live Active Now</span>
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-500 text-xs font-semibold">
+            <span>Sample data</span>
           </div>
           <select
             value={timeRange}
@@ -74,9 +73,9 @@ export default function TrafficAnalyticsPage() {
         <div className="p-4 rounded-2xl border border-border bg-card shadow-sm space-y-2">
           <div className="flex items-center justify-between text-muted-foreground text-xs">
             <span>Total Monthly Visitors</span>
-            <Users className="w-4 h-4 text-blue-500" />
+            <Users className="w-4 h-4 text-primary" />
           </div>
-          <div className="text-2xl font-black tracking-tight text-foreground">
+          <div className="text-2xl font-bold tracking-tight text-foreground">
             {stats?.totalVisitors ? stats.totalVisitors.toLocaleString() : "84,920"}
           </div>
           <div className="flex items-center gap-1 text-[11px] text-emerald-500 font-medium">
@@ -90,7 +89,7 @@ export default function TrafficAnalyticsPage() {
             <span>Total Pageviews</span>
             <Eye className="w-4 h-4 text-purple-500" />
           </div>
-          <div className="text-2xl font-black tracking-tight text-foreground">
+          <div className="text-2xl font-bold tracking-tight text-foreground">
             {stats?.pageViewsMonthly ? stats.pageViewsMonthly.toLocaleString() : "312,540"}
           </div>
           <div className="flex items-center gap-1 text-[11px] text-emerald-500 font-medium">
@@ -104,7 +103,7 @@ export default function TrafficAnalyticsPage() {
             <span>Daily Unique Visitors</span>
             <Zap className="w-4 h-4 text-amber-500" />
           </div>
-          <div className="text-2xl font-black tracking-tight text-foreground">
+          <div className="text-2xl font-bold tracking-tight text-foreground">
             {stats?.uniqueVisitorsToday ? stats.uniqueVisitorsToday.toLocaleString() : "3,410"}
           </div>
           <div className="text-[11px] text-muted-foreground">
@@ -117,7 +116,7 @@ export default function TrafficAnalyticsPage() {
             <span>Avg Session & Bounce</span>
             <Clock className="w-4 h-4 text-emerald-500" />
           </div>
-          <div className="text-2xl font-black tracking-tight text-foreground">
+          <div className="text-2xl font-bold tracking-tight text-foreground">
             {stats?.avgSessionDuration || "4m 32s"}
           </div>
           <div className="text-[11px] text-muted-foreground">
@@ -142,10 +141,10 @@ export default function TrafficAnalyticsPage() {
             <div>
               <div className="flex justify-between text-xs font-semibold mb-1.5">
                 <span className="flex items-center gap-1.5 text-foreground">
-                  <Smartphone className="w-3.5 h-3.5 text-blue-500" />
+                  <Smartphone className="w-3.5 h-3.5 text-primary" />
                   Mobile Phones (Smartphones)
                 </span>
-                <span className="font-mono text-blue-500">68% (57,745 visits)</span>
+                <span className="font-mono text-primary">68% (57,745 visits)</span>
               </div>
               <div className="w-full h-2.5 rounded-full bg-muted overflow-hidden">
                 <div className="h-full bg-blue-500 rounded-full" style={{ width: "68%" }} />

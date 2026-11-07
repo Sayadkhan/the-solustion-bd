@@ -3,11 +3,13 @@ import { ApiTags, ApiOperation } from "@nestjs/swagger";
 import { pool } from "@solusation/database";
 import { redis } from "../../config/redis";
 import { checkTypesenseHealth } from "../../config/typesense";
+import { Public } from "../../common/decorators/public.decorator";
 
 @ApiTags("Health")
 @Controller()
 export class HealthController {
   @ApiOperation({ summary: "Service health check and database connectivity" })
+  @Public()
   @Get("health")
   async getHealth() {
     let dbStatus = "DISCONNECTED";

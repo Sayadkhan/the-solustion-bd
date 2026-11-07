@@ -19,11 +19,10 @@ import {
 } from "lucide-react";
 import { useCartStore } from "@/stores/cart-store";
 import { formatBdt } from "@solusation/shared-types";
-import { CATALOG_PRODUCTS, Product } from "@/lib/catalog";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { storefrontApi, ApiCategory, ApiSiteSettings, normalizeImageUrl } from "@/lib/api";
 
-// Default Star Tech Categories (Fallback if database is empty or loading)
+// Fallback menu while the database categories load
 const DEFAULT_MEGA_CATEGORIES = [
   {
     name: "Desktop",
@@ -328,7 +327,7 @@ export function MainNavbar() {
               !c.slug.toLowerCase().includes("subcategory-1")
           );
 
-          // Sort by Star Tech PC hardware priority
+          // Sort by PC hardware priority
           const sortedMain = [...validMain].sort((a, b) => {
             const pA = CATEGORY_PRIORITY[a.slug.toLowerCase()] ?? (a.sortOrder || 90);
             const pB = CATEGORY_PRIORITY[b.slug.toLowerCase()] ?? (b.sortOrder || 90);
@@ -398,22 +397,9 @@ export function MainNavbar() {
           }
         }
 
-        // Fallback to local catalog
-        const fallback = CATALOG_PRODUCTS.filter(
-          (p) =>
-            p.name.toLowerCase().includes(q) ||
-            p.sku.toLowerCase().includes(q) ||
-            p.brand.toLowerCase().includes(q) ||
-            p.categoryName.toLowerCase().includes(q)
-        ).slice(0, 8);
-        setLiveSearchResults(fallback);
+        setLiveSearchResults([]);
       } catch {
-        const fallback = CATALOG_PRODUCTS.filter((p) =>
-          p.name.toLowerCase().includes(q) ||
-          p.sku.toLowerCase().includes(q) ||
-          p.brand.toLowerCase().includes(q)
-        ).slice(0, 8);
-        setLiveSearchResults(fallback);
+        setLiveSearchResults([]);
       }
     }, 200);
 
@@ -442,362 +428,173 @@ export function MainNavbar() {
     }
   };
 
-  return (
-    <header className="w-full z-40 sticky top-0 shadow-md">
-      {/* 1. Mobile Top Header Bar (With Always-Visible Search) */}
-      <div className="lg:hidden bg-white text-slate-900 px-3 py-2 border-b border-slate-200 shadow-sm space-y-2">
-        <div className="flex items-center justify-between">
-          {/* Left: Hamburger menu toggle */}
+  const searchField = (ref: React.RefObject<HTMLDivElement | null>, id: string) => (
+    <div ref={ref} className="relative w-full">
+      <form onSubmit={handleSearchSubmit} role="search" className="relative flex items-center">
+        <Search className="absolute left-3 w-4 h-4 text-muted-foreground pointer-events-none" />
+        <input
+          id={id}
+          type="search"
+          value={searchQuery}
+          onChange={(e) => {
+            setSearchQuery(e.target.value);
+            setSearchOpen(true);
+          }}
+          onFocus={() => {
+            if (searchQuery.trim().length >= 2) setSearchOpen(true);
+          }}
+          placeholder="Search processors, graphics cards, brands…"
+          aria-label="Search products"
+          className="w-full bg-muted/70 hover:bg-muted focus:bg-card text-foreground placeholder:text-muted-foreground pl-9 pr-9 py-2 text-sm rounded-lg border border-transparent focus:border-primary outline-none focus:ring-2 focus:ring-primary/15 transition-colors [&::-webkit-search-cancel-button]:hidden"
+        />
+        {searchQuery && (
           <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="p-1.5 text-slate-800 hover:text-blue-600 transition-colors focus:outline-none"
-            aria-label="Toggle Menu"
+            type="button"
+            onClick={() => {
+              setSearchQuery("");
+              setLiveSearchResults([]);
+              setSearchOpen(false);
+            }}
+            className="absolute right-2 p-1 text-muted-foreground hover:text-foreground"
+            aria-label="Clear search"
           >
-            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            <X className="w-4 h-4" />
           </button>
+        )}
+      </form>
 
-          {/* Center: Logo */}
-          <Link href="/" className="flex items-center">
-            <img
-              src="/logo.png"
-              alt="The Solutions BD"
-              className="h-7 w-auto object-contain"
-              style={{ maxHeight: "28px", maxWidth: "160px", width: "auto" }}
-            />
-          </Link>
-
-          {/* Right: PC Builder CTA & Cart */}
-          <div className="flex items-center gap-2">
-            <Link
-              href="/pc-builder"
-              className="bg-[#1340b8] text-white text-[11px] font-bold px-2.5 py-1.5 rounded flex items-center gap-1 shadow-sm"
-            >
-              <Cpu className="w-3.5 h-3.5" />
-              <span>Builder</span>
-            </Link>
-
-            <Link
-              href="/cart"
-              className="p-1.5 text-slate-800 hover:text-blue-600 relative transition-colors"
-              title="Cart"
-            >
-              <ShoppingCart className="w-5 h-5" />
-              {cartCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center shadow">
-                  {cartCount}
-                </span>
-              )}
-            </Link>
-          </div>
-        </div>
-
-        {/* Mobile Search Bar: Always prominent and working */}
-        <div ref={mobileSearchRef} className="relative w-full">
-          <form onSubmit={handleSearchSubmit} className="relative flex items-center">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setSearchOpen(true);
-              }}
-              onFocus={() => {
-                if (searchQuery.trim().length >= 2) setSearchOpen(true);
-              }}
-              placeholder="Search components, laptops, gaming rigs..."
-              className="w-full bg-slate-50 text-slate-900 placeholder-slate-400 pl-3.5 pr-16 py-2 text-xs rounded-md border border-slate-300 focus:border-blue-600 focus:ring-1 focus:ring-blue-600 outline-none"
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => {
-                  setSearchQuery("");
-                  setLiveSearchResults([]);
-                  setSearchOpen(false);
-                }}
-                className="absolute right-8 top-0 bottom-0 px-1.5 flex items-center justify-center text-slate-400 hover:text-slate-600"
-                title="Clear search"
+      {searchOpen && liveSearchResults.length > 0 && (
+        <div className="absolute top-full inset-x-0 mt-1.5 bg-popover text-foreground rounded-xl border border-border overflow-hidden z-50 divide-y divide-border max-h-[70vh] overflow-y-auto [box-shadow:var(--shadow-raised)]">
+          {liveSearchResults.map((item) => {
+            const brandName = typeof item.brand === "object" && item.brand !== null ? item.brand.name : item.brand || "";
+            const thumb = normalizeImageUrl(item.thumbnailUrl || (Array.isArray(item.images) && item.images[0]));
+            return (
+              <Link
+                key={item.id}
+                href={`/products/${item.slug}`}
+                onClick={() => setSearchOpen(false)}
+                className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted transition-colors"
               >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
-            <button
-              type="submit"
-              className="absolute right-0 top-0 bottom-0 px-2.5 flex items-center justify-center text-slate-500 hover:text-blue-600"
-              title="Search"
-            >
-              <Search className="w-4 h-4" />
-            </button>
-          </form>
-
-          {/* Mobile Live Search Dropdown */}
-          {searchOpen && liveSearchResults.length > 0 && (
-            <div className="absolute top-full left-0 right-0 mt-1 bg-white text-slate-900 rounded-lg shadow-2xl border border-slate-200 overflow-hidden z-50 divide-y divide-slate-100 max-h-72 overflow-y-auto">
-              {liveSearchResults.map((item) => {
-                const brandName =
-                  typeof item.brand === "object" && item.brand !== null
-                    ? item.brand.name
-                    : item.brand || "Authentic";
-                const thumb = normalizeImageUrl(
-                  item.thumbnailUrl || (Array.isArray(item.images) && item.images[0])
-                );
-                const price = item.cashPriceBdt || item.regularPriceBdt || 0;
-
-                return (
-                  <Link
-                    key={item.id}
-                    href={`/products/${item.slug}`}
-                    onClick={() => setSearchOpen(false)}
-                    className="flex items-center justify-between p-2.5 hover:bg-slate-50 transition-colors"
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <img
-                        src={thumb}
-                        alt={item.name}
-                        className="w-9 h-9 object-contain rounded bg-slate-100 p-0.5 shrink-0"
-                      />
-                      <div className="text-left min-w-0">
-                        <span className="text-xs font-bold text-slate-900 line-clamp-1">
-                          {item.name}
-                        </span>
-                        <span className="text-[10px] text-slate-500 block truncate">
-                          {brandName} • SKU: {item.sku}
-                        </span>
-                      </div>
-                    </div>
-                    <span className="text-xs font-black text-rose-600 shrink-0 ml-2">
-                      {formatBdt(price)}
-                    </span>
-                  </Link>
-                );
-              })}
-              <div className="p-2 text-center bg-slate-50">
-                <button
-                  onClick={handleSearchSubmit}
-                  className="text-xs font-bold text-blue-600 hover:underline flex items-center justify-center gap-1 mx-auto"
-                >
-                  <span>View all matching results</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* 2. Desktop Main Header Bar (Responsive on Laptops & Desktops) */}
-      <div className="hidden lg:block bg-white text-slate-900 py-3 px-3 xl:px-6 border-b border-slate-200/80 shadow-sm transition-colors">
-        <div className="max-w-[1600px] mx-auto flex items-center justify-between gap-3 xl:gap-6">
-          {/* Logo */}
-          <Link href="/" className="flex items-center shrink-0 group py-0.5">
-            <img
-              src="/logo.png"
-              alt="The Solutions BD - An Incomparable IT Solution Provider"
-              className="h-8 xl:h-10 w-auto object-contain transition-transform group-hover:scale-105"
-              style={{ maxHeight: "40px", maxWidth: "220px", width: "auto" }}
-            />
-          </Link>
-
-          {/* Search Bar (Star Tech Style) */}
-          <div ref={searchRef} className="flex-1 max-w-2xl mx-1 xl:mx-4 relative min-w-0">
-            <form onSubmit={handleSearchSubmit} className="relative flex items-center">
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setSearchOpen(true);
-                }}
-                onFocus={() => {
-                  if (searchQuery.trim().length >= 2) setSearchOpen(true);
-                }}
-                placeholder="Search components, laptops, gaming rigs..."
-                className="w-full bg-slate-50 hover:bg-slate-100/60 focus:bg-white text-slate-900 placeholder-slate-400 pl-4 pr-16 py-2.5 text-sm rounded-md border border-slate-300 focus:border-blue-600 outline-none focus:ring-2 focus:ring-blue-100 transition-all shadow-sm"
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSearchQuery("");
-                    setLiveSearchResults([]);
-                    setSearchOpen(false);
-                  }}
-                  className="absolute right-9 top-0 bottom-0 px-1.5 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors"
-                  title="Clear search"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              )}
-              <button
-                type="submit"
-                className="absolute right-0 top-0 bottom-0 px-3 flex items-center justify-center text-slate-600 hover:text-blue-600 transition-colors"
-                title="Search"
-              >
-                <Search className="w-4 h-4" />
-              </button>
-            </form>
-
-            {/* Live Autocomplete Results */}
-            {searchOpen && liveSearchResults.length > 0 && (
-              <div className="absolute top-full left-0 right-0 mt-1.5 bg-white text-slate-900 rounded-lg shadow-2xl border border-slate-200 overflow-hidden z-50 divide-y divide-slate-100 animate-in fade-in duration-150">
-                <div className="px-4 py-2 bg-slate-50 text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center justify-between">
-                  <span>Products ({liveSearchResults.length})</span>
-                  <span className="text-[10px] text-slate-400 font-normal">Press Enter to view all</span>
-                </div>
-                {liveSearchResults.map((item) => {
-                  const brandName =
-                    typeof item.brand === "object" && item.brand !== null
-                      ? item.brand.name
-                      : item.brand || "Authentic";
-                  const thumb = normalizeImageUrl(
-                    item.thumbnailUrl || (Array.isArray(item.images) && item.images[0])
-                  );
-                  const price = item.cashPriceBdt || item.regularPriceBdt || 0;
-
-                  return (
-                    <Link
-                      key={item.id}
-                      href={`/products/${item.slug}`}
-                      onClick={() => setSearchOpen(false)}
-                      className="flex items-center justify-between px-4 py-2.5 hover:bg-slate-50 transition-colors group"
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <img
-                          src={thumb}
-                          alt={item.name}
-                          className="w-10 h-10 object-contain rounded bg-slate-100 p-1 shrink-0"
-                        />
-                        <div className="text-left min-w-0">
-                          <div className="text-xs font-semibold text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-1">
-                            {item.name}
-                          </div>
-                          <div className="text-[10px] text-slate-500 truncate">
-                            {brandName} • SKU: {item.sku}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="text-right shrink-0 ml-3">
-                        <div className="text-xs font-bold text-rose-600">
-                          {formatBdt(price)}
-                        </div>
-                        <span className="text-[9px] text-emerald-600 font-medium">In Stock</span>
-                      </div>
-                    </Link>
-                  );
-                })}
-                <div className="p-2 text-center bg-slate-50">
-                  <button
-                    onClick={handleSearchSubmit}
-                    className="text-xs font-bold text-blue-600 hover:underline flex items-center justify-center gap-1 mx-auto"
-                  >
-                    <span>View all matching items</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Right Header Navigation Icons (Responsive collapsing on laptops) */}
-          <div className="flex items-center gap-2.5 xl:gap-5 shrink-0">
-            {/* Offers */}
-            <Link
-              href="/products?deals=true"
-              className="flex items-center gap-2 hover:text-blue-600 transition-colors group text-left"
-              title="Offers"
-            >
-              <div className="p-2 rounded-full bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                <Gift className="w-4 h-4" />
-              </div>
-              <div className="hidden xl:flex flex-col leading-tight">
-                <span className="font-bold text-slate-900 text-sm">Offers</span>
-                <span className="text-[11px] text-slate-500">Latest Deals</span>
-              </div>
-            </Link>
-
-            {/* Account */}
-            <Link
-              href="/cart"
-              className="flex items-center gap-2 hover:text-blue-600 transition-colors group text-left"
-              title="Account"
-            >
-              <div className="p-2 rounded-full bg-slate-100 text-slate-700 group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                <User className="w-4 h-4" />
-              </div>
-              <div className="hidden xl:flex flex-col leading-tight">
-                <span className="font-bold text-slate-900 text-sm">Account</span>
-                <span className="text-[11px] text-slate-500">Register / Login</span>
-              </div>
-            </Link>
-
-            {/* Star Tech Signature Royal Blue PC Builder Button */}
-            <Link
-              href="/pc-builder"
-              className="bg-[#1340b8] hover:bg-blue-800 text-white font-bold px-3 xl:px-4 py-2.5 rounded text-xs xl:text-sm flex items-center gap-1.5 shadow-sm hover:shadow transition-all shrink-0"
-            >
-              <Cpu className="w-4 h-4" />
-              <span>PC Builder</span>
-            </Link>
-
-            {/* Cart Header Button */}
-            <Link
-              href="/cart"
-              className="relative p-2.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 transition-colors flex items-center justify-center border border-slate-200"
-              title="View Cart"
-            >
-              <ShoppingCart className="w-5 h-5" />
-              {cartCount > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 bg-blue-600 text-white text-[10px] font-black rounded-full h-4 w-4 flex items-center justify-center shadow">
-                  {cartCount}
+                <span className="w-10 h-10 rounded-md bg-white p-1 shrink-0 flex items-center justify-center">
+                  <img src={thumb} alt="" className="max-w-full max-h-full object-contain" />
                 </span>
-              )}
-            </Link>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-medium line-clamp-1">{item.name}</span>
+                  <span className="block text-xs text-muted-foreground truncate">{brandName}</span>
+                </span>
+                <span className="text-sm font-semibold tabular-nums shrink-0">
+                  {formatBdt(item.cashPriceBdt || item.regularPriceBdt || 0)}
+                </span>
+              </Link>
+            );
+          })}
+          <button
+            type="button"
+            onClick={handleSearchSubmit}
+            className="w-full p-2.5 text-sm font-medium text-primary hover:bg-muted flex items-center justify-center gap-1"
+          >
+            View all results
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+    </div>
+  );
 
+  const logo = (
+    <Link href="/" className="inline-flex shrink-0 rounded-md dark:bg-white dark:px-1.5 dark:py-0.5" aria-label="The Solutions BD home">
+      <img src="/logo.png" alt="" className="h-8 lg:h-10 w-auto" />
+    </Link>
+  );
+
+  const cartLink = (
+    <Link
+      href="/cart"
+      aria-label={`Cart, ${cartCount} ${cartCount === 1 ? "item" : "items"}`}
+      className="relative p-2 rounded-lg text-foreground hover:bg-muted transition-colors"
+    >
+      <ShoppingCart className="w-5 h-5" />
+      {cartCount > 0 && (
+        <span className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-semibold flex items-center justify-center tabular-nums">
+          {cartCount}
+        </span>
+      )}
+    </Link>
+  );
+
+  return (
+    <header className="w-full z-40 sticky top-0 bg-card/95 backdrop-blur print:hidden">
+      {/* Mobile */}
+      <div className="lg:hidden px-3 py-2 space-y-2 h-[6.5rem]">
+        <div className="flex items-center justify-between gap-2">
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            aria-expanded={mobileMenuOpen}
+            aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
+            className="p-2 -ml-1 rounded-lg text-foreground hover:bg-muted"
+          >
+            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+          {logo}
+          <div className="flex items-center">
             <ThemeToggle />
+            {cartLink}
           </div>
         </div>
+        {searchField(mobileSearchRef, "mobile-search")}
       </div>
 
-      {/* 3. Horizontal Category Mega Menu Bar (Clean & Non-Overflowing on Laptops) */}
-      <nav className="bg-[#081621] text-white border-b border-slate-900 hidden lg:block font-semibold text-sm relative shadow-md">
-        <div className="max-w-[1600px] mx-auto px-2 xl:px-4 flex items-center justify-center">
-          <ul className="flex items-center justify-center gap-0.5 xl:gap-1.5 2xl:gap-2">
-            {/* Primary categories (Items 0 to 6 always visible on lg+; Items 7 & 8 visible on xl+) */}
+      {/* Desktop */}
+      <div className="hidden lg:block">
+        <div className="max-w-[1600px] mx-auto px-4 h-16 flex items-center gap-5">
+          {logo}
+          <div className="flex-1 max-w-2xl">{searchField(searchRef, "desktop-search")}</div>
+
+          <nav aria-label="Tools" className="ml-auto flex items-center gap-1 text-sm">
+            <Link href="/products?deals=true" className="px-3 py-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+              Offers
+            </Link>
+            <Link href="/track-order" className="px-3 py-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+              Track order
+            </Link>
+            <Link href="/pc-builder" className="btn-primary px-3.5 py-2 mx-1">
+              <Cpu className="w-4 h-4" />
+              PC Builder
+            </Link>
+            {cartLink}
+            <ThemeToggle />
+          </nav>
+        </div>
+
+        <nav aria-label="Categories" className="border-t border-border">
+          <ul className="max-w-[1600px] mx-auto px-2.5 h-10 flex items-center gap-0.5 text-[13px]">
             {navCategories.slice(0, 9).map((cat, idx) => (
               <li
                 key={cat.name}
                 onMouseEnter={() => setActiveDropdown(cat.name)}
                 onMouseLeave={() => setActiveDropdown(null)}
-                className={`relative py-2 xl:py-2.5 shrink-0 ${idx >= 7 ? "hidden xl:block" : "block"}`}
+                className={`relative ${idx >= 7 ? "hidden xl:block" : ""}`}
               >
                 <Link
                   href={cat.href}
-                  className="px-2 xl:px-2.5 2xl:px-3 py-1.5 rounded text-slate-200 hover:text-white hover:bg-slate-800 transition-colors flex items-center gap-1 whitespace-nowrap text-[12px] xl:text-[13px] 2xl:text-sm font-semibold"
+                  className="px-2.5 py-1.5 rounded-md font-medium text-foreground/80 hover:text-foreground hover:bg-muted transition-colors flex items-center gap-1 whitespace-nowrap"
                 >
-                  <span>{cat.name}</span>
-                  {cat.badge && (
-                    <span className="bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase leading-none shadow-sm">
-                      {cat.badge}
-                    </span>
-                  )}
+                  {cat.name}
                   {cat.subcategories && cat.subcategories.length > 0 && (
-                    <ChevronDown className="w-3 h-3 text-slate-400 group-hover:text-white transition-transform" />
+                    <ChevronDown className="w-3 h-3 text-muted-foreground" />
                   )}
                 </Link>
 
-                {/* Subcategory Dropdown Panel */}
                 {activeDropdown === cat.name && cat.subcategories && cat.subcategories.length > 0 && (
-                  <div className="absolute top-full left-0 min-w-[240px] bg-[#0c1926] border border-slate-700 shadow-2xl rounded-b-md z-50 py-2 divide-y divide-slate-800 animate-in fade-in slide-in-from-top-1 duration-150">
-                    <div className="px-4 py-2 text-xs font-bold text-slate-400 uppercase tracking-wider">
-                      {cat.name}
-                    </div>
-                    <div className="py-1">
+                  <div className="absolute top-full left-0 pt-1 z-50">
+                    <div className="min-w-[230px] bg-popover border border-border rounded-xl py-1.5 [box-shadow:var(--shadow-raised)]">
                       {cat.subcategories.map((sub) => (
                         <Link
                           key={sub.name}
                           href={sub.href}
                           onClick={() => setActiveDropdown(null)}
-                          className="block px-4 py-2 text-sm font-normal text-slate-200 hover:bg-slate-800 hover:text-blue-400 transition-colors"
+                          className="block px-3.5 py-1.5 text-sm text-foreground/85 hover:bg-muted hover:text-foreground transition-colors"
                         >
                           {sub.name}
                         </Link>
@@ -808,60 +605,37 @@ export function MainNavbar() {
               </li>
             ))}
 
-            {/* "More ▾" Dropdown for remaining categories */}
             {navCategories.length > 7 && (
               <li
                 onMouseEnter={() => setActiveDropdown("__MORE__")}
                 onMouseLeave={() => setActiveDropdown(null)}
-                className="relative py-2 xl:py-2.5 shrink-0"
+                className="relative"
               >
-                <button
-                  type="button"
-                  className="px-2 xl:px-2.5 2xl:px-3 py-1.5 rounded text-slate-300 hover:text-white hover:bg-slate-800 transition-colors flex items-center gap-1 whitespace-nowrap text-[12px] xl:text-[13px] 2xl:text-sm font-semibold"
-                >
-                  <span>More</span>
-                  <ChevronDown className="w-3 h-3 text-slate-400 group-hover:text-white transition-transform" />
+                <button type="button" className="px-2.5 py-1.5 rounded-md font-medium text-foreground/80 hover:text-foreground hover:bg-muted transition-colors flex items-center gap-1">
+                  More
+                  <ChevronDown className="w-3 h-3 text-muted-foreground" />
                 </button>
-
-                {/* More Dropdown Menu */}
                 {activeDropdown === "__MORE__" && (
-                  <div className="absolute top-full right-0 w-[260px] bg-[#0c1926] border border-slate-700 shadow-2xl rounded-b-md z-50 py-2 divide-y divide-slate-800 animate-in fade-in slide-in-from-top-1 duration-150">
-                    <div className="px-4 py-2 text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
-                      <span>More Categories</span>
-                      <span className="text-[10px] text-blue-400 font-normal">All Categories</span>
-                    </div>
-                    <div className="py-1 max-h-[380px] overflow-y-auto">
-                      {/* On lg screens: items 7 and 8 (Cooler, Monitor) are shown in More */}
+                  <div className="absolute top-full right-0 xl:right-auto xl:left-0 pt-1 z-50">
+                    <div className="w-[240px] max-h-[380px] overflow-y-auto bg-popover border border-border rounded-xl py-1.5 [box-shadow:var(--shadow-raised)]">
                       {navCategories.slice(7, 9).map((cat) => (
                         <Link
-                          key={`lg-more-${cat.name}`}
+                          key={`more-${cat.name}`}
                           href={cat.href}
                           onClick={() => setActiveDropdown(null)}
-                          className="xl:hidden flex items-center justify-between px-4 py-2 text-sm text-slate-200 hover:bg-slate-800 hover:text-blue-400 transition-colors"
+                          className="xl:hidden block px-3.5 py-1.5 text-sm text-foreground/85 hover:bg-muted hover:text-foreground"
                         >
-                          <span>{cat.name}</span>
-                          {cat.badge && (
-                            <span className="bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase leading-none">
-                              {cat.badge}
-                            </span>
-                          )}
+                          {cat.name}
                         </Link>
                       ))}
-
-                      {/* Items 9+ always shown in More dropdown */}
                       {navCategories.slice(9).map((cat) => (
                         <Link
-                          key={`all-more-${cat.name}`}
+                          key={`more-${cat.name}`}
                           href={cat.href}
                           onClick={() => setActiveDropdown(null)}
-                          className="flex items-center justify-between px-4 py-2 text-sm text-slate-200 hover:bg-slate-800 hover:text-blue-400 transition-colors"
+                          className="block px-3.5 py-1.5 text-sm text-foreground/85 hover:bg-muted hover:text-foreground"
                         >
-                          <span>{cat.name}</span>
-                          {cat.badge && (
-                            <span className="bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase leading-none">
-                              {cat.badge}
-                            </span>
-                          )}
+                          {cat.name}
                         </Link>
                       ))}
                     </div>
@@ -870,94 +644,62 @@ export function MainNavbar() {
               </li>
             )}
           </ul>
-        </div>
-      </nav>
+        </nav>
+      </div>
 
+      <div className="spectrum-line h-[2px]" />
 
-      {/* 4. Mobile Navigation Drawer (Clean White) */}
+      {/* Mobile menu */}
       {mobileMenuOpen && (
-        <div className="lg:hidden bg-white text-slate-900 border-b border-slate-200 p-4 max-h-[85vh] overflow-y-auto space-y-4 animate-in slide-in-from-top-2 duration-200 shadow-xl">
-          {/* Top Quick Actions */}
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-            <span className="font-bold text-xs uppercase tracking-wider text-slate-500">Navigation Menu</span>
-            <Link
-              href="/pc-builder"
-              onClick={() => setMobileMenuOpen(false)}
-              className="bg-[#1340b8] hover:bg-blue-800 text-white text-xs font-bold px-3 py-1.5 rounded flex items-center gap-1.5 shadow"
-            >
-              <Cpu className="w-3.5 h-3.5" />
-              <span>PC Builder</span>
+        <div className="lg:hidden bg-card border-b border-border p-3 max-h-[75vh] overflow-y-auto">
+          <div className="grid grid-cols-2 gap-2 pb-3">
+            <Link href="/products?deals=true" onClick={() => setMobileMenuOpen(false)} className="btn-secondary py-2 text-sm">
+              Offers
+            </Link>
+            <Link href="/track-order" onClick={() => setMobileMenuOpen(false)} className="btn-secondary py-2 text-sm">
+              Track order
             </Link>
           </div>
-
-          {/* Quick links: Offers */}
-          <div className="pb-3 border-b border-slate-100 text-xs">
-            <Link
-              href="/products?deals=true"
-              onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center justify-center gap-2 p-2.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-800 border border-slate-200/80 font-medium"
-            >
-              <Gift className="w-4 h-4 text-blue-600" />
-              <span>Exclusive Offers & Deals</span>
-            </Link>
-          </div>
-
-          {/* Category Tree with Expandable Subcategories */}
-          <div className="space-y-1">
-            <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 px-1 pb-1">
-              All Categories
-            </div>
+          <div className="eyebrow px-1 pb-1">Categories</div>
+          <ul className="divide-y divide-border">
             {navCategories.map((cat) => {
               const isExpanded = expandedCat === cat.name;
               return (
-                <div key={cat.name} className="border-b border-slate-100 pb-1">
-                  <div className="flex items-center justify-between py-2 px-1">
-                    <Link
-                      href={cat.href}
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="text-sm font-semibold text-slate-800 hover:text-blue-600 flex items-center gap-2"
-                    >
-                      <span>{cat.name}</span>
-                      {cat.badge && (
-                        <span className="bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase">
-                          {cat.badge}
-                        </span>
-                      )}
+                <li key={cat.name}>
+                  <div className="flex items-center justify-between">
+                    <Link href={cat.href} onClick={() => setMobileMenuOpen(false)} className="flex-1 py-2.5 px-1 text-sm font-medium text-foreground">
+                      {cat.name}
                     </Link>
                     {cat.subcategories && cat.subcategories.length > 0 && (
                       <button
+                        type="button"
                         onClick={() => setExpandedCat(isExpanded ? null : cat.name)}
-                        className="p-1 text-slate-400 hover:text-slate-700"
-                        aria-label="Toggle subcategories"
+                        aria-expanded={isExpanded}
+                        aria-label={`Show ${cat.name} subcategories`}
+                        className="p-2 text-muted-foreground"
                       >
-                        <ChevronDown className={`w-4 h-4 transition-transform ${isExpanded ? "rotate-180 text-blue-600" : ""}`} />
+                        <ChevronDown className={`w-4 h-4 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
                       </button>
                     )}
                   </div>
                   {isExpanded && cat.subcategories && (
-                    <div className="pl-4 pb-2 space-y-1 text-xs text-slate-600 bg-slate-50 rounded-lg p-2.5 mt-1 border border-slate-100">
+                    <div className="pb-2 pl-3 space-y-0.5">
                       {cat.subcategories.map((sub) => (
                         <Link
                           key={sub.name}
                           href={sub.href}
                           onClick={() => setMobileMenuOpen(false)}
-                          className="block py-1 hover:text-blue-600 text-slate-700"
+                          className="block py-1.5 text-sm text-muted-foreground hover:text-foreground"
                         >
-                          • {sub.name}
+                          {sub.name}
                         </Link>
                       ))}
                     </div>
                   )}
-                </div>
+                </li>
               );
             })}
-          </div>
-
-          {/* Theme Switcher in Drawer */}
-          <div className="pt-2 flex items-center justify-between border-t border-slate-100 text-xs text-slate-500">
-            <span>Color Theme</span>
-            <ThemeToggle />
-          </div>
+          </ul>
         </div>
       )}
     </header>

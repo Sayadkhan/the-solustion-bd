@@ -80,7 +80,7 @@ export default function DashboardPage() {
       } else {
         const [p, o, sers, bRes, sRes] = await Promise.all([
           adminApi.getProducts({ limit: 100 }),
-          adminApi.getOrders({ limit: 50 }),
+          adminApi.getOrders({ limit: 200 }),
           adminApi.getSerials(),
           adminApi.getBlogs(),
           adminApi.getSettings(),
@@ -120,21 +120,45 @@ export default function DashboardPage() {
     });
   }, [ordersList]);
 
+  // Revenue per day for the past 7 days, including days with no sales
+  const weeklyRevenue = useMemo(() => {
+    const days = Array.from({ length: 7 }, (_, index) => {
+      const date = new Date();
+      date.setHours(0, 0, 0, 0);
+      date.setDate(date.getDate() - (6 - index));
+      return {
+        key: date.toDateString(),
+        label: date.toLocaleDateString("en-GB", { weekday: "short" }),
+        total: 0,
+        orders: 0,
+      };
+    });
+    for (const order of ordersList) {
+      if ((order.orderStatus || order.status) === "CANCELLED" || !order.createdAt) continue;
+      const day = days.find((d) => d.key === new Date(order.createdAt).toDateString());
+      if (day) {
+        day.total += order.totalPayableBdt ?? 0;
+        day.orders += 1;
+      }
+    }
+    return days;
+  }, [ordersList]);
+  const weeklyPeak = Math.max(...weeklyRevenue.map((day) => day.total), 1);
+
   // Low stock products count
   const lowStockCount = useMemo(() => {
     return productsList.filter((p) => {
-      const stock = p.stock ?? p.inventory?.stock ?? 0;
-      return stock <= 5;
+      return (p.totalStock ?? 0) <= 5;
     }).length;
   }, [productsList]);
 
   // Verify Outside-Dhaka COD Advance Deposit
   const handleVerifyCodDeposit = async (orderNumber: string) => {
-    const trxId = prompt("Enter bKash/Nagad Deposit TrxID (Min. ৳1,000):", "TRX-" + Math.floor(100000 + Math.random() * 900000));
-    if (!trxId) return;
+    const trxId = prompt("Check the payment in your bKash account, then enter its TrxID:", "");
+    if (!trxId?.trim()) return;
 
     try {
-      const res = await adminApi.verifyOrderDeposit(orderNumber, trxId, 1000);
+      const res = await adminApi.verifyOrderDeposit(orderNumber, trxId.trim());
       if (res?.success) {
         showToast(`Order #${orderNumber} advance deposit verified successfully!`);
         await loadData();
@@ -214,11 +238,11 @@ export default function DashboardPage() {
           <div className="p-5 rounded-2xl bg-card border border-border shadow-sm space-y-2 hover:border-primary/40 transition-all">
             <div className="flex items-center justify-between text-muted-foreground">
               <span className="text-xs font-bold uppercase tracking-wider">Monthly Traffic</span>
-              <div className="p-2 rounded-xl bg-blue-500/10 text-blue-500">
+              <div className="p-2 rounded-xl bg-primary/10 text-primary">
                 <Users className="w-4 h-4" />
               </div>
             </div>
-            <div className="text-2xl font-black text-foreground tracking-tight">84,920</div>
+            <div className="text-2xl font-bold text-foreground tracking-tight">84,920</div>
             <div className="flex items-center gap-1.5 text-xs text-emerald-500 font-semibold">
               <TrendingUp className="w-3.5 h-3.5" />
               <span>+18.4% organic growth</span>
@@ -233,7 +257,7 @@ export default function DashboardPage() {
                 <Globe className="w-4 h-4" />
               </div>
             </div>
-            <div className="text-2xl font-black text-foreground tracking-tight">58%</div>
+            <div className="text-2xl font-bold text-foreground tracking-tight">58%</div>
             <div className="text-xs text-muted-foreground font-medium">49,250 direct Google visits</div>
           </div>
 
@@ -245,7 +269,7 @@ export default function DashboardPage() {
                 <Tag className="w-4 h-4" />
               </div>
             </div>
-            <div className="text-xl font-black font-mono text-foreground tracking-tight truncate">
+            <div className="text-xl font-bold font-mono text-foreground tracking-tight truncate">
               {seoSettings?.gtmId || "Not Connected"}
             </div>
             <div className="flex items-center gap-1.5 text-xs font-medium">
@@ -264,7 +288,7 @@ export default function DashboardPage() {
                 <FileText className="w-4 h-4" />
               </div>
             </div>
-            <div className="text-2xl font-black text-foreground tracking-tight">
+            <div className="text-2xl font-bold text-foreground tracking-tight">
               {blogsList.length} Articles
             </div>
             <div className="flex items-center gap-1.5 text-xs font-medium">
@@ -283,7 +307,7 @@ export default function DashboardPage() {
             className="p-4 rounded-xl border border-border bg-card hover:border-primary/50 transition-all group flex items-center justify-between"
           >
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-blue-500/10 text-blue-500 group-hover:scale-110 transition-transform">
+              <div className="p-2 rounded-lg bg-primary/10 text-primary group-hover:scale-110 transition-transform">
                 <FileText className="w-5 h-5" />
               </div>
               <div>
@@ -377,7 +401,7 @@ export default function DashboardPage() {
                     </div>
                     <div className="text-right shrink-0">
                       <span
-                        className={`text-[9px] font-mono px-2 py-0.5 rounded-full font-semibold ${
+                        className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-semibold ${
                           blog.status === "PUBLISHED"
                             ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20"
                             : "bg-amber-500/10 text-amber-500 border border-amber-500/20"
@@ -436,8 +460,8 @@ export default function DashboardPage() {
 
   return (
     <AdminShell
-      title="Admin & POS Control Center"
-      subtitle="Real-time Multi-branch Sales, Inventory & Analytics Dashboard"
+      title="Dashboard"
+      subtitle="Sales, stock and orders at a glance"
       onRefresh={loadData}
       isRefreshing={loading}
     >
@@ -459,7 +483,7 @@ export default function DashboardPage() {
               <DollarSign className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-2xl font-black text-foreground tracking-tight">
+          <div className="text-2xl font-bold text-foreground tracking-tight">
             {formatBdt(totalRevenue)}
           </div>
           <div className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-semibold mt-2">
@@ -476,7 +500,7 @@ export default function DashboardPage() {
               <ShoppingCart className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-2xl font-black text-foreground tracking-tight">
+          <div className="text-2xl font-bold text-foreground tracking-tight">
             {ordersList.length} Orders
           </div>
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium mt-2">
@@ -492,7 +516,7 @@ export default function DashboardPage() {
               <AlertTriangle className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-2xl font-black text-amber-500 tracking-tight">
+          <div className="text-2xl font-bold text-amber-500 tracking-tight">
             {lowStockCount} Items
           </div>
           <Link
@@ -505,19 +529,19 @@ export default function DashboardPage() {
         </div>
 
         {/* Serial Warranty Tracker */}
-        <div className="p-5 rounded-2xl bg-card border border-border/80 shadow-sm relative overflow-hidden group hover:border-blue-500/40 transition-all">
+        <div className="p-5 rounded-2xl bg-card border border-border/80 shadow-sm relative overflow-hidden group hover:border-primary/40 transition-all">
           <div className="flex items-center justify-between text-muted-foreground mb-3">
             <span className="text-xs font-bold uppercase tracking-wider">Tracked Serials</span>
-            <div className="p-2 rounded-xl bg-blue-500/10 text-blue-500">
+            <div className="p-2 rounded-xl bg-primary/10 text-primary">
               <ShieldCheck className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-2xl font-black text-foreground tracking-tight">
+          <div className="text-2xl font-bold text-foreground tracking-tight">
             {serialsList.length} Units
           </div>
           <Link
             href="/serials"
-            className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 font-semibold mt-2 hover:underline"
+            className="flex items-center gap-1 text-xs text-primary dark:text-primary font-semibold mt-2 hover:underline"
           >
             <span>Serial Warranty Center</span>
             <ChevronRight className="w-3.5 h-3.5" />
@@ -531,61 +555,58 @@ export default function DashboardPage() {
           <div>
             <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
               <TrendingUp className="w-4 h-4 text-primary" />
-              Weekly Sales & Revenue Trend (BDT)
+              Revenue, past 7 days
             </h3>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Live revenue trajectory for the past 7 days
+              {formatBdt(weeklyRevenue.reduce((sum, day) => sum + day.total, 0))} from orders, excluding cancelled
             </p>
-          </div>
-          <div className="flex items-center gap-3 text-xs font-mono">
-            <span className="flex items-center gap-1.5 text-emerald-500">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-              Cash Sales
-            </span>
           </div>
         </div>
 
-        {/* SVG Curve Graphic */}
-        <div className="h-44 w-full relative pt-4">
-          <svg className="w-full h-full overflow-visible" viewBox="0 0 700 130" preserveAspectRatio="none">
-            <defs>
-              <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.4" />
-                <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0.0" />
-              </linearGradient>
-            </defs>
-            {/* Area Fill */}
-            <path
-              d="M 0,110 Q 116,40 233,70 T 466,25 T 700,10 L 700,130 L 0,130 Z"
-              fill="url(#chartGradient)"
-            />
-            {/* Line Path */}
-            <path
-              d="M 0,110 Q 116,40 233,70 T 466,25 T 700,10"
-              fill="none"
-              stroke="hsl(var(--primary))"
-              strokeWidth="3.5"
-              strokeLinecap="round"
-            />
-            {/* Data Dots */}
-            <circle cx="0" cy="110" r="5" className="fill-primary" />
-            <circle cx="116" cy="65" r="5" className="fill-primary" />
-            <circle cx="233" cy="70" r="5" className="fill-primary" />
-            <circle cx="350" cy="45" r="5" className="fill-primary" />
-            <circle cx="466" cy="25" r="5" className="fill-primary" />
-            <circle cx="583" cy="20" r="5" className="fill-primary" />
-            <circle cx="700" cy="10" r="5" className="fill-primary" />
-          </svg>
-          <div className="flex justify-between text-[11px] font-mono text-muted-foreground pt-3 border-t border-border">
-            <span>Sat</span>
-            <span>Sun</span>
-            <span>Mon</span>
-            <span>Tue</span>
-            <span>Wed</span>
-            <span>Thu</span>
-            <span>Fri</span>
-          </div>
-        </div>
+        {weeklyRevenue.every((day) => day.total === 0) ? (
+          <p className="py-10 text-center text-sm text-muted-foreground">No sales in the past 7 days.</p>
+        ) : (
+          <>
+            <div className="h-40 flex items-end gap-[2px] border-b border-border">
+              {weeklyRevenue.map((day) => (
+                <div
+                  key={day.key}
+                  tabIndex={0}
+                  aria-label={`${day.label}: ${formatBdt(day.total)}, ${day.orders} orders`}
+                  className="group relative flex-1 h-full flex items-end justify-center outline-none"
+                >
+                  <div
+                    className="w-full max-w-14 rounded-t bg-primary transition-opacity group-hover:opacity-80"
+                    style={{ height: day.total > 0 ? `${Math.max((day.total / weeklyPeak) * 100, 2)}%` : "0" }}
+                  />
+                  <div className="pointer-events-none absolute bottom-full mb-1 hidden group-hover:block group-focus:block z-10 whitespace-nowrap rounded-md border border-border bg-card px-2 py-1 text-xs text-foreground shadow-md">
+                    <span className="font-semibold tabular-nums">{formatBdt(day.total)}</span>
+                    <span className="text-muted-foreground"> · {day.orders} {day.orders === 1 ? "order" : "orders"}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-[2px] text-[11px] font-mono text-muted-foreground">
+              {weeklyRevenue.map((day) => (
+                <span key={day.key} className="flex-1 text-center">
+                  {day.label}
+                </span>
+              ))}
+            </div>
+            <table className="sr-only">
+              <caption>Revenue for the past 7 days</caption>
+              <tbody>
+                {weeklyRevenue.map((day) => (
+                  <tr key={day.key}>
+                    <th scope="row">{day.label}</th>
+                    <td>{formatBdt(day.total)}</td>
+                    <td>{day.orders} orders</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </>
+        )}
       </div>
 
       {/* Outside Dhaka COD Verification Table with Pagination */}
@@ -689,7 +710,7 @@ export default function DashboardPage() {
           <div className="flex items-center gap-2">
             <ShoppingCart className="w-4 h-4 text-primary" />
             <h3 className="text-sm font-bold text-foreground">
-              Recent POS & Online Orders
+              Recent orders
             </h3>
           </div>
 
@@ -719,8 +740,7 @@ export default function DashboardPage() {
               <option value="ALL">All Status</option>
               <option value="PENDING">PENDING</option>
               <option value="CONFIRMED">CONFIRMED</option>
-              <option value="PROCESSING">PROCESSING</option>
-              <option value="SHIPPED">SHIPPED</option>
+              <option value="DISPATCHED">DISPATCHED</option>
               <option value="DELIVERED">DELIVERED</option>
               <option value="CANCELLED">CANCELLED</option>
             </select>
@@ -777,8 +797,7 @@ export default function DashboardPage() {
                           >
                             <option value="PENDING">PENDING</option>
                             <option value="CONFIRMED">CONFIRMED</option>
-                            <option value="PROCESSING">PROCESSING</option>
-                            <option value="SHIPPED">SHIPPED</option>
+                            <option value="DISPATCHED">DISPATCHED</option>
                             <option value="DELIVERED">DELIVERED</option>
                             <option value="CANCELLED">CANCELLED</option>
                           </select>

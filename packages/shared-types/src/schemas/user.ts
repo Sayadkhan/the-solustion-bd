@@ -19,14 +19,14 @@ export const RegisterInputSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().email("Invalid email address"),
   phone: z.string().regex(BD_PHONE_REGEX, "Invalid Bangladeshi phone number").optional().or(z.literal("")),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  password: z.string().min(8, "Password must be at least 8 characters").max(72),
 });
 export type RegisterInput = z.infer<typeof RegisterInputSchema>;
 
 export const LoginInputSchema = z.object({
   email: z.string().email("Invalid email address").optional(),
   phone: z.string().regex(BD_PHONE_REGEX, "Invalid Bangladeshi phone number").optional(),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  password: z.string().min(1, "Password is required").max(72),
 }).refine((data) => data.email || data.phone, {
   message: "Either email or phone is required for login",
   path: ["email"],
@@ -57,13 +57,13 @@ export type ForgotPasswordInput = z.infer<typeof ForgotPasswordInputSchema>;
 
 export const ResetPasswordInputSchema = z.object({
   token: z.string().min(10, "Invalid reset token"),
-  newPassword: z.string().min(6, "Password must be at least 6 characters"),
+  newPassword: z.string().min(8, "Password must be at least 8 characters").max(72),
 });
 export type ResetPasswordInput = z.infer<typeof ResetPasswordInputSchema>;
 
 export const ChangePasswordInputSchema = z.object({
-  oldPassword: z.string().min(6, "Old password is required"),
-  newPassword: z.string().min(6, "New password must be at least 6 characters"),
+  oldPassword: z.string().min(1, "Old password is required").max(72),
+  newPassword: z.string().min(8, "New password must be at least 8 characters").max(72),
 });
 export type ChangePasswordInput = z.infer<typeof ChangePasswordInputSchema>;
 

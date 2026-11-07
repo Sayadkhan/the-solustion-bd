@@ -6,6 +6,9 @@ import {
   ORDER_STATUSES,
   OUTSIDE_DHAKA_DEPOSIT_THRESHOLD_BDT,
   OUTSIDE_DHAKA_STANDARD_DEPOSIT_BDT,
+  INSIDE_DHAKA_DELIVERY_FEE_BDT,
+  OUTSIDE_DHAKA_DELIVERY_FEE_BDT,
+  CHECKOUT_PAYMENT_METHODS,
 } from "../constants";
 import { BD_PHONE_REGEX } from "../phone";
 
@@ -45,27 +48,48 @@ export const OrderSchema = z.object({
 
 export type OrderDTO = z.infer<typeof OrderSchema>;
 
+/**
+ * Public checkout payload. Prices, totals, payment state and order status are
+ * deliberately absent: the server derives all of them from the database.
+ */
 export const CreateOrderSchema = z.object({
-  invoiceNo: z.string().optional(),
-  customerName: z.string().min(2, "Customer name is required"),
+  customerName: z.string().trim().min(2, "Customer name is required").max(120),
   customerPhone: z.string().regex(BD_PHONE_REGEX, "Invalid Bangladeshi mobile number"),
   customerEmail: z.string().email().nullable().optional(),
-  district: z.string().min(2, "District is required"),
-  area: z.string().min(2, "Area is required"),
-  address: z.string().min(5, "Street address is required"),
-  paymentMethod: z.enum(PAYMENT_METHODS),
+  district: z.string().trim().min(2, "District is required").max(100),
+  area: z.string().trim().min(2, "Area is required").max(100),
+  address: z.string().trim().min(5, "Street address is required").max(500),
+  paymentMethod: z.enum(CHECKOUT_PAYMENT_METHODS),
   pricingTierUsed: z.enum(PRICING_TIERS).default("CASH"),
-  emiTenureMonths: z.number().int().nonnegative().default(0),
-  totalPayableBdt: z.number().int().positive().optional(),
-  paidAmountBdt: z.number().int().nonnegative().default(0),
-  dueAmountBdt: z.number().int().nonnegative().optional(),
-  trxId: z.string().nullable().optional(),
-  courierProvider: z.enum(COURIER_PROVIDERS).default("STEADFAST"),
-  consignmentId: z.string().nullable().optional(),
-  orderStatus: z.enum(ORDER_STATUSES).default("PENDING"),
-  items: z.array(OrderItemSchema).min(1, "Order must have at least one item"),
+  /** A customer-submitted bKash TrxID. It stays unverified until staff confirm it. */
+  trxId: z
+    .string()
+    .trim()
+    .toUpperCase()
+    .regex(/^[A-Z0-9]{8,14}$/, "Invalid bKash TrxID. It should be 8-14 letters and numbers.")
+    .nullable()
+    .optional(),
+  /** The total the customer saw. The order is refused if the real total differs. */
+  expectedTotalBdt: z.number().int().positive().optional(),
+  items: z
+    .array(
+      z.object({
+        productId: z.string().min(1).max(100),
+        sku: z.string().max(100).optional(),
+        qty: z.number().int().positive().max(50, "Maximum 50 units per product").default(1),
+      })
+    )
+    .min(1, "Order must have at least one item")
+    .max(50, "Too many items in one order"),
 });
 export type CreateOrderDTO = z.infer<typeof CreateOrderSchema>;
+
+/** Delivery charge for a district. Everything except Dhaka district is outside Dhaka. */
+export function calculateDeliveryFee(district: string): number {
+  return district.trim().toLowerCase() === "dhaka"
+    ? INSIDE_DHAKA_DELIVERY_FEE_BDT
+    : OUTSIDE_DHAKA_DELIVERY_FEE_BDT;
+}
 
 /**
  * Checks if an order requires advance delivery deposit according to Rule 4.5:

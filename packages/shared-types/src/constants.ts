@@ -1,5 +1,5 @@
 /**
- * Core System Constants for The Solusation BD
+ * Core System Constants for The Solutions BD
  */
 
 export const BRANCH_CODES = [
@@ -63,6 +63,9 @@ export const PAYMENT_METHODS = [
 ] as const;
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 
+/** Methods a customer can actually pay with at checkout today. */
+export const CHECKOUT_PAYMENT_METHODS = ["COD", "BKASH"] as const;
+
 export const PRICING_TIERS = ["CASH", "REGULAR"] as const;
 export type PricingTier = (typeof PRICING_TIERS)[number];
 
@@ -105,6 +108,8 @@ export type DeliveryZone = (typeof DELIVERY_ZONES)[number];
 export const OUTSIDE_DHAKA_DEPOSIT_THRESHOLD_BDT = 10000;
 export const OUTSIDE_DHAKA_STANDARD_DEPOSIT_BDT = 1000;
 export const OUTSIDE_DHAKA_MIN_DEPOSIT_BDT = 500;
+export const INSIDE_DHAKA_DELIVERY_FEE_BDT = 70;
+export const OUTSIDE_DHAKA_DELIVERY_FEE_BDT = 140;
 
 export const BLOG_STATUSES = ["DRAFT", "PUBLISHED", "ARCHIVED"] as const;
 export type BlogStatus = (typeof BLOG_STATUSES)[number];

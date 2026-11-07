@@ -4,14 +4,13 @@ import {
   Post,
   Param,
   Body,
-  UseGuards,
   BadRequestException,
   Inject,
 } from "@nestjs/common";
 import { ApiTags, ApiOperation } from "@nestjs/swagger";
 import { SerialsService } from "./serials.service";
-import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
-import { RolesGuard } from "../../common/guards/roles.guard";
+import { Public } from "../../common/decorators/public.decorator";
+import { RateLimit } from "../../common/decorators/rate-limit.decorator";
 import { Roles } from "../../common/decorators/roles.decorator";
 
 @ApiTags("Serials & Warranty")
@@ -20,6 +19,8 @@ export class SerialsController {
   constructor(@Inject(SerialsService) private readonly serialsService: SerialsService) {}
 
   @ApiOperation({ summary: "Rule 4.4 Hardware Serial Warranty Lookup" })
+  @Public()
+  @RateLimit(60, 15 * 60)
   @Get("warranty/:serialNumber")
   async lookupWarranty(@Param("serialNumber") serialNumber: string) {
     if (!serialNumber) {
@@ -30,6 +31,7 @@ export class SerialsController {
   }
 
   @ApiOperation({ summary: "List all registered hardware serials (Admin only)" })
+  @Roles("ADMIN", "BRANCH_MANAGER", "BRANCH_STAFF")
   @Get()
   async getSerials() {
     const list = await this.serialsService.getAllSerials();
@@ -37,6 +39,7 @@ export class SerialsController {
   }
 
   @ApiOperation({ summary: "Register new hardware box serial (Admin only)" })
+  @Roles("ADMIN", "BRANCH_MANAGER", "BRANCH_STAFF")
   @Post()
   async registerSerial(@Body() body: any) {
     const record = await this.serialsService.registerSerial(body);

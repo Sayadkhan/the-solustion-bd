@@ -153,7 +153,7 @@ export default function SerialsWarrantyPage() {
         {/* Fast Warranty Lookup Box */}
         <div className="bg-card border border-border rounded-xl p-5 shadow-sm space-y-4">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-lg bg-blue-500/10 text-blue-500">
+            <div className="p-2 rounded-lg bg-primary/10 text-primary">
               <Search className="w-4 h-4" />
             </div>
             <div>

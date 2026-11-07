@@ -32,7 +32,7 @@ export function InvoiceModal({ order, onClose }: InvoiceModalProps) {
           <div className="flex items-center gap-2">
             <button
               onClick={handlePrint}
-              className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg bg-primary text-white hover:bg-primary/90 transition shadow-sm"
+              className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition shadow-sm"
             >
               <Printer className="w-4 h-4" />
               Print / Save PDF
@@ -54,7 +54,7 @@ export function InvoiceModal({ order, onClose }: InvoiceModalProps) {
               <div className="flex items-center gap-2 mb-1">
                 <img src="/logo.png" alt="The Solutions BD" className="h-9 w-auto object-contain" />
               </div>
-              <h1 className="text-xl font-black tracking-tight text-primary">THE SOLUTIONS BD</h1>
+              <h1 className="text-xl font-bold tracking-tight text-primary">THE SOLUTIONS BD</h1>
               <p className="text-xs text-muted-foreground mt-0.5 font-medium">
                 An Incomparable IT Solution Provider & Official Warranty Center
               </p>

@@ -14,48 +14,11 @@ import {
   Search,
   X,
 } from "lucide-react";
-import { CATALOG_PRODUCTS, CATEGORIES, Product } from "@/lib/catalog";
+import { normalizeProduct, Product, canOrder } from "@/lib/product";
 import { ProductCard } from "@/components/product-card";
 import { ProductCardSkeleton } from "@/components/product-card-skeleton";
 import { formatBdt } from "@solusation/shared-types";
-import { storefrontApi, normalizeImageUrl } from "@/lib/api";
-
-function formatRawProduct(p: any): Product {
-  const rawThumb = p.thumbnailUrl || (Array.isArray(p.images) && p.images[0]) || null;
-  const normalizedThumb = normalizeImageUrl(rawThumb);
-  const normalizedImages = Array.isArray(p.images) && p.images.length > 0
-    ? p.images.map((img: string) => normalizeImageUrl(img))
-    : [normalizedThumb];
-
-  return {
-    id: p.id,
-    name: p.name,
-    slug: p.slug,
-    sku: p.sku || `SKU-${p.id.slice(0, 6)}`,
-    brand: p.brand?.name || p.brand || "Authentic",
-    categorySlug: p.category?.slug || p.categorySlug || "processor",
-    categoryName: p.category?.name || p.categoryName || "Hardware",
-    cashPriceBdt: Number(p.cashPriceBdt) || 0,
-    regularPriceBdt: Number(p.regularPriceBdt) || Number(p.cashPriceBdt) || 0,
-    costPriceBdt: Number(p.costPriceBdt) || 0,
-    isEmiAvailable: Boolean(p.isEmiAvailable),
-    totalStock: Number(p.totalStock) || 10,
-    stockStatus: p.stockStatus || "IN_STOCK",
-    thumbnailUrl: normalizedThumb,
-    images: normalizedImages,
-    keyFeatures: p.keyFeatures || [
-      "Official Distributor Warranty",
-      "Box Serial Number Tracking",
-      "100% Genuine Box Pack",
-    ],
-    warrantyDurationMonths: p.warrantyDurationMonths || 36,
-    warrantyNotice: p.warrantyNotice || "3 Years Official Warranty",
-    videoUrl: p.videoUrl || p.video_url || null,
-    branchStocks: p.branchStocks || {},
-    specifications: p.specifications || [],
-    compatibility: p.compatibility || { componentType: "OTHER" },
-  };
-}
+import { ApiCategory, storefrontApi } from "@/lib/api";
 
 function ProductsContent() {
   const searchParams = useSearchParams();
@@ -65,98 +28,34 @@ function ProductsContent() {
   const selectedBrand = searchParams.get("brand") || "all";
   const searchQuery = searchParams.get("q") || "";
 
-  // Progressive products state: instant catalog fallback + live backend hydration
-  const [productsList, setProductsList] = useState<Product[]>(() => {
-    let list = CATALOG_PRODUCTS;
-    if (selectedCategory !== "all") {
-      const matched = list.filter(
-        (p) =>
-          p.categorySlug === selectedCategory ||
-          p.categorySlug.toLowerCase().includes(selectedCategory.toLowerCase()) ||
-          selectedCategory.toLowerCase().includes(p.categorySlug.toLowerCase())
-      );
-      if (matched.length > 0) list = matched;
-    }
-    if (searchQuery.trim()) {
-      const q = searchQuery.trim().toLowerCase();
-      const matched = list.filter(
-        (p) =>
-          p.name.toLowerCase().includes(q) ||
-          p.sku.toLowerCase().includes(q) ||
-          p.brand.toLowerCase().includes(q) ||
-          p.categoryName.toLowerCase().includes(q)
-      );
-      if (matched.length > 0) list = matched;
-    }
-    return list;
-  });
-  const [isInitialLoading, setIsInitialLoading] = useState(false);
-  const [isStreamingMore, setIsStreamingMore] = useState(false);
+  const showDealsOnly = searchParams.get("deals") === "true";
+  const [productsList, setProductsList] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<ApiCategory[]>([]);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [isStreamingMore] = useState(false);
 
-  // Progressive live products fetch from backend
+  useEffect(() => {
+    storefrontApi.getCategories().then((result) => setCategories(result.main));
+  }, []);
+
   useEffect(() => {
     let isCancelled = false;
+    setIsInitialLoading(true);
 
-    async function loadProgressiveProducts() {
-      try {
-        const qTrimmed = searchQuery.trim();
-        // Step 1: Fast initial batch from backend
-        const initialBatch = await storefrontApi.getProducts({
-          category: selectedCategory !== "all" ? selectedCategory : undefined,
-          search: qTrimmed || undefined,
-          limit: 24,
-          page: 1,
-        });
-
+    storefrontApi
+      .getProducts({ category: selectedCategory !== "all" ? selectedCategory : undefined, limit: 200 })
+      .then((products) => {
         if (isCancelled) return;
-
-        if (initialBatch && initialBatch.length > 0) {
-          setProductsList(initialBatch.map(formatRawProduct));
-          setIsStreamingMore(true);
-        } else if (qTrimmed) {
-          // Fallback to local catalog when search returns 0 results
-          const q = qTrimmed.toLowerCase();
-          const fallback = CATALOG_PRODUCTS.filter(
-            (p) =>
-              p.name.toLowerCase().includes(q) ||
-              p.sku.toLowerCase().includes(q) ||
-              p.brand.toLowerCase().includes(q) ||
-              p.categoryName.toLowerCase().includes(q)
-          );
-          if (fallback.length > 0) {
-            setProductsList(fallback);
-          }
-        }
-
-        // Step 2: Background Full Batch (Stream up to 100 products to smoothly hydrate remaining catalog)
-        const fullBatch = await storefrontApi.getProducts({
-          category: selectedCategory !== "all" ? selectedCategory : undefined,
-          search: qTrimmed || undefined,
-          limit: 100,
-          page: 1,
-        });
-
-        if (isCancelled) return;
-
-        if (fullBatch && fullBatch.length > 0) {
-          setProductsList(fullBatch.map(formatRawProduct));
-        }
-      } catch (err) {
-        console.warn("Progressive products catalog fetch fallback:", err);
-      } finally {
-        if (!isCancelled) {
-          setIsInitialLoading(false);
-          setIsStreamingMore(false);
-        }
-      }
-    }
-
-    loadProgressiveProducts();
+        setProductsList(products.map(normalizeProduct));
+        setIsInitialLoading(false);
+      });
 
     return () => {
       isCancelled = true;
     };
-  }, [selectedCategory, searchQuery]);
+  }, [selectedCategory]);
+
+  const categoryName = categories.find((category) => category.slug === selectedCategory)?.name;
 
   // Local filter states
   const [minPrice, setMinPrice] = useState<number>(0);
@@ -205,7 +104,12 @@ function ProductsContent() {
       }
 
       // Stock filter
-      if (inStockOnly && prod.stockStatus !== "IN_STOCK") {
+      if (inStockOnly && !canOrder(prod)) {
+        return false;
+      }
+
+      // Offers: only products with a real discount
+      if (showDealsOnly && prod.regularPriceBdt <= prod.cashPriceBdt) {
         return false;
       }
 
@@ -227,6 +131,8 @@ function ProductsContent() {
       return 0;
     });
   }, [
+    productsList,
+    showDealsOnly,
     selectedCategory,
     searchQuery,
     minPrice,
@@ -268,7 +174,7 @@ function ProductsContent() {
           <>
             <ChevronRight className="w-3.5 h-3.5" />
             <span className="font-semibold text-foreground capitalize">
-              {CATEGORIES.find((c) => c.slug === selectedCategory)?.name || selectedCategory}
+              {categoryName || selectedCategory}
             </span>
           </>
         )}
@@ -277,19 +183,23 @@ function ProductsContent() {
       {/* Page Title & Mobile Filter Trigger */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-border">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground">
             {selectedCategory === "all"
-              ? "All PC Hardware & Components"
-              : CATEGORIES.find((c) => c.slug === selectedCategory)?.name || "Components"}
+              ? showDealsOnly
+                ? "Offers"
+                : "All products"
+              : categoryName || "Products"}
           </h1>
           <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-            Browse genuine Bangladeshi hardware with official warranty and instant cash discount.
+            {isInitialLoading
+              ? "Loading products…"
+              : `${filteredProducts.length} ${filteredProducts.length === 1 ? "product" : "products"}, with official warranty.`}
           </p>
         </div>
 
         <button
           onClick={() => setMobileFilterOpen(true)}
-          className="lg:hidden flex items-center space-x-2 bg-primary/10 text-primary border border-primary/20 px-4 py-2.5 rounded-xl font-bold text-xs shadow-sm active:scale-95 transition-transform"
+          className="lg:hidden flex items-center space-x-2 bg-primary/10 text-primary border border-primary/20 px-4 py-2.5 rounded-xl font-bold text-xs shadow-sm transition-transform"
         >
           <SlidersHorizontal className="w-4 h-4" />
           <span>Filters ({filteredProducts.length})</span>
@@ -298,7 +208,7 @@ function ProductsContent() {
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 items-start">
         {/* Left Filter Sidebar (Desktop) */}
-        <aside className="hidden lg:block space-y-6 bg-card p-5 rounded-xl border border-border/70 sticky top-20">
+        <aside className="hidden lg:block space-y-6 bg-card p-5 rounded-xl border border-border/70 sticky top-[calc(var(--header-height)+1rem)]">
           <div className="flex items-center justify-between pb-3 border-b border-border">
             <span className="font-bold text-sm text-foreground flex items-center gap-2">
               <Filter className="w-4 h-4 text-primary" />
@@ -323,27 +233,23 @@ function ProductsContent() {
                 href="/products"
                 className={`flex items-center justify-between text-xs px-2.5 py-1.5 rounded-lg transition-colors ${
                   selectedCategory === "all"
-                    ? "bg-primary text-white font-bold"
+                    ? "bg-primary text-primary-foreground font-bold"
                     : "hover:bg-muted text-foreground"
                 }`}
               >
-                <span>All Categories</span>
-                <span>{CATALOG_PRODUCTS.length}</span>
+                <span>All categories</span>
               </Link>
-              {CATEGORIES.map((cat) => (
+              {categories.map((cat) => (
                 <Link
                   key={cat.slug}
                   href={`/products?category=${cat.slug}`}
                   className={`flex items-center justify-between text-xs px-2.5 py-1.5 rounded-lg transition-colors ${
                     selectedCategory === cat.slug
-                      ? "bg-primary text-white font-bold"
+                      ? "bg-primary text-primary-foreground font-bold"
                       : "hover:bg-muted text-foreground"
                   }`}
                 >
                   <span>{cat.name}</span>
-                  <span className="opacity-70 text-[10px]">
-                    {CATALOG_PRODUCTS.filter((p) => p.categorySlug === cat.slug).length}
-                  </span>
                 </Link>
               ))}
             </div>
@@ -384,7 +290,7 @@ function ProductsContent() {
                 className="w-4 h-4 rounded border-border text-primary focus:ring-primary accent-primary"
               />
               <span className="text-xs font-semibold text-foreground">
-                In Stock Only (Physical Branches)
+                In stock only
               </span>
             </label>
           </div>
@@ -427,7 +333,7 @@ function ProductsContent() {
                   onClick={() => setSelectedSocket(s)}
                   className={`py-1 px-2 rounded border text-center font-medium transition-colors ${
                     selectedSocket === s
-                      ? "bg-primary text-white border-primary"
+                      ? "bg-primary text-primary-foreground border-primary"
                       : "border-border hover:bg-muted text-foreground"
                   }`}
                 >
@@ -482,20 +388,20 @@ function ProductsContent() {
                       onClick={() => setMobileFilterOpen(false)}
                       className={`flex items-center justify-between text-xs px-2.5 py-2 rounded-lg transition-colors ${
                         selectedCategory === "all"
-                          ? "bg-primary text-white font-bold"
+                          ? "bg-primary text-primary-foreground font-bold"
                           : "bg-muted/30 text-foreground"
                       }`}
                     >
                       <span>All Categories</span>
                     </Link>
-                    {CATEGORIES.map((cat) => (
+                    {categories.map((cat) => (
                       <Link
                         key={cat.slug}
                         href={`/products?category=${cat.slug}`}
                         onClick={() => setMobileFilterOpen(false)}
                         className={`flex items-center justify-between text-xs px-2.5 py-2 rounded-lg transition-colors ${
                           selectedCategory === cat.slug
-                            ? "bg-primary text-white font-bold"
+                            ? "bg-primary text-primary-foreground font-bold"
                             : "bg-muted/30 text-foreground"
                         }`}
                       >
@@ -572,7 +478,7 @@ function ProductsContent() {
               <div className="p-4 border-t border-border bg-card">
                 <button
                   onClick={() => setMobileFilterOpen(false)}
-                  className="w-full bg-primary hover:bg-primary/90 text-white font-bold py-3 rounded-xl text-xs shadow-lg shadow-primary/25 transition-all active:scale-95"
+                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-3 rounded-xl text-xs transition-all"
                 >
                   Apply Filters ({filteredProducts.length} Results)
                 </button>
@@ -587,7 +493,7 @@ function ProductsContent() {
           {searchQuery && (
             <div className="flex items-center justify-between bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900 rounded-xl px-4 py-2.5 text-xs text-blue-900 dark:text-blue-200">
               <div className="flex items-center gap-2 min-w-0">
-                <Search className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
+                <Search className="w-4 h-4 text-primary shrink-0" />
                 <span className="truncate">
                   Search results for: <strong className="font-bold underline">{searchQuery}</strong> ({filteredProducts.length} items found)
                 </span>
@@ -596,7 +502,7 @@ function ProductsContent() {
                 onClick={() => {
                   router.push(selectedCategory !== "all" ? `/products?category=${selectedCategory}` : "/products");
                 }}
-                className="flex items-center gap-1 font-bold text-blue-600 hover:text-blue-800 dark:text-blue-400 hover:underline shrink-0 ml-2"
+                className="flex items-center gap-1 font-bold text-primary hover:text-blue-800 dark:text-primary hover:underline shrink-0 ml-2"
               >
                 <X className="w-3.5 h-3.5" />
                 <span>Clear</span>
@@ -649,7 +555,7 @@ function ProductsContent() {
                 <button
                   onClick={() => setViewMode("grid")}
                   className={`p-1.5 transition-colors ${
-                    viewMode === "grid" ? "bg-primary text-white" : "hover:bg-muted text-muted-foreground"
+                    viewMode === "grid" ? "bg-primary text-primary-foreground" : "hover:bg-muted text-muted-foreground"
                   }`}
                   title="Grid view"
                 >
@@ -658,7 +564,7 @@ function ProductsContent() {
                 <button
                   onClick={() => setViewMode("list")}
                   className={`p-1.5 transition-colors ${
-                    viewMode === "list" ? "bg-primary text-white" : "hover:bg-muted text-muted-foreground"
+                    viewMode === "list" ? "bg-primary text-primary-foreground" : "hover:bg-muted text-muted-foreground"
                   }`}
                   title="List view"
                 >
@@ -673,7 +579,7 @@ function ProductsContent() {
             <div
               className={
                 viewMode === "grid"
-                  ? "grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-3 gap-2.5 sm:gap-5"
+                  ? "grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5 sm:gap-4"
                   : "space-y-4"
               }
             >
@@ -694,14 +600,14 @@ function ProductsContent() {
               </p>
               <button
                 onClick={resetFilters}
-                className="inline-block bg-primary text-white font-bold px-4 py-2 rounded-lg text-xs hover:bg-primary/90"
+                className="inline-block bg-primary text-primary-foreground font-bold px-4 py-2 rounded-lg text-xs hover:bg-primary/90"
               >
                 Clear All Filters
               </button>
             </div>
 
           ) : viewMode === "grid" ? (
-            <div className="grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-3 gap-2.5 sm:gap-5">
+            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5 sm:gap-4">
               {filteredProducts.map((p) => (
                 <ProductCard key={p.id} product={p} viewMode="grid" />
               ))}
@@ -709,12 +615,12 @@ function ProductsContent() {
               {/* Progressive Streaming Skeletons */}
               {isStreamingMore && (
                 <>
-                  <div className="col-span-full py-2.5 px-4 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-between text-xs text-blue-600 dark:text-blue-400">
+                  <div className="col-span-full py-2.5 px-4 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-between text-xs text-primary">
                     <div className="flex items-center gap-2 font-medium">
-                      <span className="w-2 h-2 rounded-full bg-blue-600 animate-ping" />
+                      <span className="w-2 h-2 rounded-full bg-primary animate-ping" />
                       <span>Loaded first {productsList.length} products. Streaming remaining catalog...</span>
                     </div>
-                    <span className="text-[10px] uppercase font-mono tracking-wider opacity-75 font-bold">
+                    <span className="text-[11px] uppercase font-mono tracking-wider opacity-75 font-bold">
                       Progressive Loading
                     </span>
                   </div>
@@ -733,12 +639,12 @@ function ProductsContent() {
               {/* Progressive Streaming Skeletons in List View */}
               {isStreamingMore && (
                 <>
-                  <div className="py-2.5 px-4 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-between text-xs text-blue-600 dark:text-blue-400">
+                  <div className="py-2.5 px-4 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-between text-xs text-primary">
                     <div className="flex items-center gap-2 font-medium">
-                      <span className="w-2 h-2 rounded-full bg-blue-600 animate-ping" />
+                      <span className="w-2 h-2 rounded-full bg-primary animate-ping" />
                       <span>Loaded first {productsList.length} products. Streaming remaining catalog...</span>
                     </div>
-                    <span className="text-[10px] uppercase font-mono tracking-wider opacity-75 font-bold">
+                    <span className="text-[11px] uppercase font-mono tracking-wider opacity-75 font-bold">
                       Progressive Loading
                     </span>
                   </div>

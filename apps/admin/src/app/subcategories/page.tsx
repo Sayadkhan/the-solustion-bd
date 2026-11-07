@@ -179,7 +179,7 @@ export default function SubCategoriesPage() {
       {/* Info Card Banner */}
       <div className="p-4 rounded-xl border border-border bg-card flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-500">
+          <div className="p-2.5 rounded-xl bg-primary/10 text-primary">
             <FolderTree className="w-5 h-5" />
           </div>
           <div>
@@ -337,7 +337,7 @@ export default function SubCategoriesPage() {
                       {/* Name */}
                       <td className="px-5 py-3.5">
                         <div className="flex items-center gap-3">
-                          <div className="w-7 h-7 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-500 font-bold">
+                          <div className="w-7 h-7 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-bold">
                             <CornerDownRight className="w-3.5 h-3.5" />
                           </div>
                           <div>
@@ -366,7 +366,7 @@ export default function SubCategoriesPage() {
 
                       {/* Type */}
                       <td className="px-5 py-3.5">
-                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 uppercase tracking-wider">
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-primary/10 text-primary dark:text-primary border border-primary/20 uppercase tracking-wider">
                           Sub-Category
                         </span>
                       </td>

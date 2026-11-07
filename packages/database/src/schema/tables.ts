@@ -391,7 +391,7 @@ export const blogs = pgTable(
     content: text("content").notNull(),
     featuredImage: text("featured_image"),
     authorId: uuid("author_id").references(() => users.id),
-    authorName: text("author_name").notNull().default("The Solusation BD Editorial"),
+    authorName: text("author_name").notNull().default("The Solutions BD Editorial"),
     category: varchar("category", { length: 100 }).notNull().default("Tech Guide"),
     tags: jsonb("tags").$type<string[]>().default([]),
     status: blogStatusEnum("status").notNull().default("DRAFT"),

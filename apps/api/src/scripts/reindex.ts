@@ -1,12 +1,12 @@
-import { productSyncService } from "../services/productSyncService";
+import { SearchService } from "../modules/search/search.service";
 import { pool } from "@solusation/database";
 
 async function main() {
-  console.log("🔄 Starting Typesense Re-indexing for The Solusation BD...");
+  console.log("🔄 Starting Typesense Re-indexing for The Solutions BD...");
   const startTime = Date.now();
 
   try {
-    const result = await productSyncService.syncAllProducts();
+    const result = await new SearchService().syncAllProducts();
     const duration = Date.now() - startTime;
     if (result.success) {
       console.log(`✅ Successfully synced ${result.count} products into Typesense in ${duration}ms!`);

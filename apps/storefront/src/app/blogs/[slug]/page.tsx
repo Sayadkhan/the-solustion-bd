@@ -63,7 +63,7 @@ export default async function BlogPostPage({ params }: Props) {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground antialiased selection:bg-blue-600/20 selection:text-blue-500 font-sans pb-20">
+    <div className="min-h-screen bg-background text-foreground antialiased selection:bg-primary/20 selection:text-primary font-sans pb-20">
       {/* Top Breadcrumb & Article Header */}
       <div className="border-b border-border bg-card/40 backdrop-blur-md py-8 px-4 sm:px-6">
         <div className="max-w-4xl mx-auto space-y-4">
@@ -105,7 +105,7 @@ export default async function BlogPostPage({ params }: Props) {
           </div>
 
           {/* Main Headline */}
-          <h1 className="text-2xl sm:text-4xl font-black tracking-tight text-foreground leading-tight">
+          <h1 className="text-2xl sm:text-4xl font-bold tracking-tight text-foreground leading-tight">
             {blog.title}
           </h1>
 
@@ -152,12 +152,12 @@ export default async function BlogPostPage({ params }: Props) {
         <div
           dangerouslySetInnerHTML={{ __html: blog.content }}
           className="text-foreground text-sm sm:text-base leading-relaxed space-y-4
-            [&_h1]:text-2xl sm:[&_h1]:text-3xl [&_h1]:font-black [&_h1]:tracking-tight [&_h1]:mt-8 [&_h1]:mb-4 [&_h1]:text-foreground
+            [&_h1]:text-2xl sm:[&_h1]:text-3xl [&_h1]:font-bold [&_h1]:tracking-tight [&_h1]:mt-8 [&_h1]:mb-4 [&_h1]:text-foreground
             [&_h2]:text-xl sm:[&_h2]:text-2xl [&_h2]:font-bold [&_h2]:tracking-tight [&_h2]:mt-8 [&_h2]:mb-3 [&_h2]:pb-2 [&_h2]:border-b [&_h2]:border-border [&_h2]:text-foreground
             [&_h3]:text-lg sm:[&_h3]:text-xl [&_h3]:font-bold [&_h3]:mt-6 [&_h3]:mb-2 [&_h3]:text-foreground
             [&_h4]:text-base [&_h4]:font-bold [&_h4]:mt-5 [&_h4]:mb-2 [&_h4]:text-foreground
             [&_p]:mb-4 [&_p]:leading-relaxed [&_p]:text-foreground/90
-            [&_a]:text-primary [&_a]:font-bold [&_a]:underline [&_a]:underline-offset-4 hover:[&_a]:text-blue-400 [&_a]:transition-colors
+            [&_a]:text-primary [&_a]:font-bold [&_a]:underline [&_a]:underline-offset-4 hover:[&_a]:text-primary [&_a]:transition-colors
             [&_blockquote]:border-l-4 [&_blockquote]:border-primary [&_blockquote]:bg-primary/5 [&_blockquote]:px-5 [&_blockquote]:py-3 [&_blockquote]:my-6 [&_blockquote]:rounded-r-2xl [&_blockquote]:italic [&_blockquote]:text-foreground
             [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:mb-4 [&_ul]:space-y-1.5
             [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:mb-4 [&_ol]:space-y-1.5
@@ -202,7 +202,7 @@ export default async function BlogPostPage({ params }: Props) {
               <ShieldCheck className="w-3.5 h-3.5" />
               <span>100% Official Box Warranty in Bangladesh</span>
             </div>
-            <h3 className="text-xl font-black tracking-tight">
+            <h3 className="text-xl font-bold tracking-tight">
               Ready to Build Your AMD Ryzen Battle-Station?
             </h3>
             <p className="text-xs text-white/80 max-w-lg">

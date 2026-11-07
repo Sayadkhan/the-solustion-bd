@@ -27,13 +27,13 @@ export default function ComparePage() {
         <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto text-muted-foreground">
           <GitCompare className="w-8 h-8 stroke-1" />
         </div>
-        <h2 className="text-2xl font-black text-foreground">No Products in Comparison</h2>
+        <h2 className="text-2xl font-bold text-foreground">No Products in Comparison</h2>
         <p className="text-sm text-muted-foreground max-w-md mx-auto">
           Compare up to 4 hardware products side-by-side to review technical specifications, sockets, TDP, and dual pricing.
         </p>
         <Link
           href="/products"
-          className="inline-block bg-primary text-white font-bold px-6 py-2.5 rounded-xl text-xs hover:bg-primary/90 shadow-md shadow-primary/20"
+          className="inline-block bg-primary text-primary-foreground font-bold px-6 py-2.5 rounded-xl text-xs hover:bg-primary/90"
         >
           Browse Hardware Catalog
         </Link>
@@ -45,7 +45,7 @@ export default function ComparePage() {
     <div className="container mx-auto px-4 py-8 space-y-8">
       <div className="flex items-center justify-between pb-4 border-b border-border">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight flex items-center gap-2">
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight flex items-center gap-2">
             <GitCompare className="w-7 h-7 text-primary" />
             <span>Product Comparison ({items.length} of 4)</span>
           </h1>
@@ -91,7 +91,7 @@ export default function ComparePage() {
                   <h4 className="font-bold text-xs text-foreground line-clamp-2 h-8 leading-tight">
                     {item.name}
                   </h4>
-                  <div className="text-[10px] text-muted-foreground mt-1">
+                  <div className="text-[11px] text-muted-foreground mt-1">
                     SKU: {item.sku}
                   </div>
                 </th>
@@ -105,7 +105,7 @@ export default function ComparePage() {
                 Special Cash Price
               </td>
               {items.map((item: CompareProduct) => (
-                <td key={item.id} className="p-4 text-center font-black text-base text-primary">
+                <td key={item.id} className="p-4 text-center font-bold text-base text-primary">
                   {formatBdt(item.cashPriceBdt)}
                 </td>
               ))}
@@ -165,7 +165,7 @@ export default function ComparePage() {
                 Hardware Benchmark
               </td>
               {items.map((item: CompareProduct) => (
-                <td key={item.id} className="p-4 text-center font-extrabold text-amber-500">
+                <td key={item.id} className="p-4 text-center font-semibold text-amber-500">
                   {item.specs?.benchmarkScore ? `${item.specs.benchmarkScore} Pts` : "Standard"}
                 </td>
               ))}
@@ -189,7 +189,7 @@ export default function ComparePage() {
                         pricingType: "CASH",
                       })
                     }
-                    className="w-full bg-primary hover:bg-primary/90 text-white font-bold py-2 px-3 rounded-lg text-xs flex items-center justify-center gap-1.5 shadow-md shadow-primary/20"
+                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-2 px-3 rounded-lg text-xs flex items-center justify-center gap-1.5"
                   >
                     <ShoppingCart className="w-3.5 h-3.5" />
                     <span>Add to Cart</span>

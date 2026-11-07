@@ -111,7 +111,7 @@ export default function SeoSettingsPage() {
         <button
           onClick={handleSave}
           disabled={saving || loading}
-          className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold shadow-sm shadow-primary/25 disabled:opacity-50 transition-all"
+          className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold disabled:opacity-50 transition-all"
         >
           {saving ? (
             <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -123,7 +123,7 @@ export default function SeoSettingsPage() {
       }
     >
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-4 py-3 rounded-xl bg-emerald-600 text-white text-xs font-medium shadow-2xl shadow-emerald-500/30 animate-in fade-in slide-in-from-bottom-5">
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-4 py-3 rounded-xl bg-emerald-600 text-white text-xs font-medium animate-in fade-in slide-in-from-bottom-5">
           <CheckCircle2 className="w-4 h-4 shrink-0" />
           <span>{toastMessage}</span>
         </div>
@@ -135,7 +135,7 @@ export default function SeoSettingsPage() {
           href="/blogs"
           className="p-4 rounded-xl border border-border bg-card hover:border-primary/50 transition-all group flex items-start gap-3"
         >
-          <div className="p-2.5 rounded-lg bg-blue-500/10 text-blue-500 group-hover:scale-110 transition-transform">
+          <div className="p-2.5 rounded-lg bg-primary/10 text-primary group-hover:scale-110 transition-transform">
             <FileText className="w-5 h-5" />
           </div>
           <div>
@@ -249,7 +249,7 @@ export default function SeoSettingsPage() {
             <div className="p-5 rounded-2xl border border-border bg-card shadow-sm space-y-4">
               <div className="flex items-center justify-between border-b border-border pb-3">
                 <div className="flex items-center gap-2.5">
-                  <div className="p-2 rounded-lg bg-blue-500/10 text-blue-500">
+                  <div className="p-2 rounded-lg bg-primary/10 text-primary">
                     <Tag className="w-4 h-4" />
                   </div>
                   <div>
@@ -290,7 +290,7 @@ export default function SeoSettingsPage() {
 
                 <div className="p-3.5 rounded-xl bg-muted/40 border border-border flex flex-col justify-center text-xs space-y-1.5">
                   <div className="font-semibold text-foreground flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-blue-500" />
+                    <Sparkles className="w-3.5 h-3.5 text-primary" />
                     How GTM Container Works:
                   </div>
                   <p className="text-[11px] text-muted-foreground leading-relaxed">
@@ -394,7 +394,7 @@ export default function SeoSettingsPage() {
                   Google Search Snippet Preview
                 </div>
                 <div className="text-xs text-slate-400 font-mono">https://thesolutionsbd.com</div>
-                <div className="text-sm font-semibold text-blue-400 hover:underline cursor-pointer">
+                <div className="text-sm font-semibold text-primary hover:underline cursor-pointer">
                   {seoData.defaultMetaTitle || "The Solutions BD | High-Performance PC & Tech Store in Bangladesh"}
                 </div>
                 <div className="text-xs text-slate-300 leading-relaxed line-clamp-2">
@@ -584,7 +584,7 @@ export default function SeoSettingsPage() {
           <button
             type="submit"
             disabled={saving || loading}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-bold shadow-md shadow-primary/25 disabled:opacity-50 transition-all"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-bold disabled:opacity-50 transition-all"
           >
             {saving ? (
               <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />

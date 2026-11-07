@@ -1,83 +1,48 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Param,
-  Body,
-  Inject,
-  BadRequestException,
-} from "@nestjs/common";
+import { Controller, Get, Post, Param, Body, Inject, BadRequestException } from "@nestjs/common";
 import { ApiTags, ApiOperation } from "@nestjs/swagger";
 import { BkashService } from "./bkash.service";
+import { Public } from "../../common/decorators/public.decorator";
+import { RateLimit } from "../../common/decorators/rate-limit.decorator";
+import { Roles } from "../../common/decorators/roles.decorator";
 
 @ApiTags("bKash Payment Gateway")
 @Controller("bkash")
 export class BkashController {
   constructor(@Inject(BkashService) private readonly bkashService: BkashService) {}
 
-  @ApiOperation({ summary: "Get public bKash configuration and merchant details" })
+  @ApiOperation({ summary: "Get public bKash merchant details and whether the gateway is enabled" })
+  @Public()
   @Get("config")
   getConfig() {
-    return {
-      success: true,
-      data: this.bkashService.getConfig(),
-    };
+    return { success: true, data: this.bkashService.getConfig() };
   }
 
-  @ApiOperation({ summary: "Create a new bKash Tokenized Checkout session" })
+  @ApiOperation({ summary: "Start a bKash checkout for an existing order. The server sets the amount." })
+  @Public()
+  @RateLimit(20, 15 * 60)
   @Post("create")
-  async createPayment(@Body() body: any) {
-    if (!body?.amount) {
-      throw new BadRequestException("Amount is required");
+  async createPayment(@Body("invoiceNo") invoiceNo: unknown) {
+    if (!invoiceNo || typeof invoiceNo !== "string") {
+      throw new BadRequestException("invoiceNo is required");
     }
-    const payment = await this.bkashService.createPayment({
-      amount: Number(body.amount),
-      invoiceNo: body.invoiceNo || `SOL-INV-${Date.now()}`,
-      customerPhone: body.customerPhone,
-      callbackUrl: body.callbackUrl,
-    });
-
-    return {
-      success: true,
-      data: payment,
-    };
+    return { success: true, data: await this.bkashService.createPayment(invoiceNo) };
   }
 
-  @ApiOperation({ summary: "Execute bKash Payment upon PIN/OTP confirmation" })
+  @ApiOperation({ summary: "Complete a bKash payment after the customer returns from bKash" })
+  @Public()
+  @RateLimit(30, 15 * 60)
   @Post("execute")
-  async executePayment(@Body() body: any) {
-    if (!body?.paymentID) {
+  async executePayment(@Body("paymentID") paymentID: unknown) {
+    if (!paymentID || typeof paymentID !== "string") {
       throw new BadRequestException("paymentID is required");
     }
-
-    const receipt = await this.bkashService.executePayment({
-      paymentID: body.paymentID,
-      invoiceNo: body.invoiceNo,
-    });
-
-    return {
-      success: true,
-      data: receipt,
-    };
+    return { success: true, data: await this.bkashService.executePayment(paymentID) };
   }
 
-  @ApiOperation({ summary: "Query bKash payment transaction status" })
+  @ApiOperation({ summary: "Ask bKash for the status of a payment (Admin only)" })
+  @Roles("ADMIN")
   @Get("query/:paymentId")
   async queryPayment(@Param("paymentId") paymentId: string) {
-    const status = await this.bkashService.queryPayment(paymentId);
-    return {
-      success: true,
-      data: status,
-    };
-  }
-
-  @ApiOperation({ summary: "Verify a customer-provided bKash TrxID" })
-  @Post("verify-trx")
-  verifyTrx(@Body("trxId") trxId: string) {
-    const verified = this.bkashService.verifyTrx(trxId);
-    return {
-      success: true,
-      data: verified,
-    };
+    return { success: true, data: await this.bkashService.queryPayment(paymentId) };
   }
 }

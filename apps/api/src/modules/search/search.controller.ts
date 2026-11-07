@@ -1,9 +1,8 @@
-import { Controller, Get, Post, Query, UseGuards, Inject } from "@nestjs/common";
+import { Controller, Get, Post, Query, Inject } from "@nestjs/common";
 import { ApiTags, ApiOperation } from "@nestjs/swagger";
 import { SearchService } from "./search.service";
 import { ProductSearchQuerySchema } from "@solusation/shared-types";
-import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
-import { RolesGuard } from "../../common/guards/roles.guard";
+import { Public } from "../../common/decorators/public.decorator";
 import { Roles } from "../../common/decorators/roles.decorator";
 
 @ApiTags("Search")
@@ -12,6 +11,7 @@ export class SearchController {
   constructor(@Inject(SearchService) private readonly searchService: SearchService) {}
 
   @ApiOperation({ summary: "Instant multi-faceted product search (sub-15ms)" })
+  @Public()
   @Get()
   async searchRoot(@Query() query: any) {
     const parsed = ProductSearchQuerySchema.parse(query);
@@ -20,6 +20,7 @@ export class SearchController {
   }
 
   @ApiOperation({ summary: "Search products alias route" })
+  @Public()
   @Get("products")
   async searchProducts(@Query() query: any) {
     const parsed = ProductSearchQuerySchema.parse(query);
@@ -28,8 +29,7 @@ export class SearchController {
   }
 
   @ApiOperation({ summary: "Reindex all products into Typesense (Admin only)" })
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles("ADMIN", "SUPER_ADMIN")
+  @Roles("ADMIN")
   @Post("reindex")
   async reindex() {
     const result = await this.searchService.syncAllProducts();

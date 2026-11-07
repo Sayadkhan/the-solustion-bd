@@ -1,143 +1,243 @@
-import { Injectable, NotFoundException, BadRequestException } from "@nestjs/common";
-import { db, orders, orderItems, products, eq, desc } from "@solusation/database";
 import {
-  calculateAdvanceDepositRequirement,
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ConflictException,
+} from "@nestjs/common";
+import {
+  db,
+  orders,
+  orderItems,
+  products,
+  branchInventory,
+  eq,
+  and,
+  or,
+  gte,
+  ne,
+  desc,
+  inArray,
+  sql,
+} from "@solusation/database";
+import {
   normalizeBdPhone,
+  formatBdt,
   CreateOrderDTO,
+  ORDER_STATUSES,
+  OrderStatus,
+  OUTSIDE_DHAKA_STANDARD_DEPOSIT_BDT,
 } from "@solusation/shared-types";
 import crypto from "crypto";
+import { applyPayment, calculateOrderTotals } from "./order-pricing";
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 @Injectable()
 export class OrdersService {
   async createOrder(input: CreateOrderDTO) {
-    if (!input.items || input.items.length === 0) {
-      throw new BadRequestException("Order must contain at least one item.");
+    const customerPhone = normalizeBdPhone(input.customerPhone);
+    if (!customerPhone) {
+      throw new BadRequestException("Invalid Bangladeshi mobile number");
     }
 
-    // 1. Calculate pricing
-    const totalPayableBdt = input.items.reduce(
-      (acc, item) => acc + item.unitPriceBdt * item.qty,
-      0
-    );
+    const invoiceNo = `SOL-${new Date().getFullYear()}-${crypto.randomBytes(4).toString("hex").toUpperCase()}`;
+    const trxId = input.paymentMethod === "BKASH" ? input.trxId || null : null;
 
-    // 2. Evaluate Rule 4.5: Outside Dhaka Advance Deposit Rule
-    const depositCheck = calculateAdvanceDepositRequirement({
-      district: input.district,
-      totalBdt: totalPayableBdt,
-      paymentMethod: input.paymentMethod,
-    });
+    return db.transaction(async (tx) => {
+      if (trxId) {
+        await this.assertTrxIdUnused(tx, trxId);
+      }
 
-    // 3. Generate Invoice No (e.g. SOL-2026-A1B2C3)
-    const randomSuffix = crypto.randomBytes(3).toString("hex").toUpperCase();
-    const invoiceNo = input.invoiceNo || `SOL-${new Date().getFullYear()}-${randomSuffix}`;
+      const lines = await this.resolveLines(tx, input.items);
+      const totals = calculateOrderTotals({
+        lines,
+        district: input.district,
+        paymentMethod: input.paymentMethod,
+        pricingTier: input.pricingTierUsed,
+      });
 
-    // 4. Normalize Bangladeshi Phone Number
-    const normalizedPhone = normalizeBdPhone(input.customerPhone) || input.customerPhone;
+      if (input.expectedTotalBdt !== undefined && input.expectedTotalBdt !== totals.totalPayableBdt) {
+        throw new ConflictException(
+          `Prices have changed since you added these items. The current total is ${formatBdt(
+            totals.totalPayableBdt
+          )}. Please remove the items from your cart and add them again.`
+        );
+      }
 
-    // 5. Atomic transaction creating order and order items
-    const isBkash = input.paymentMethod === "BKASH";
-    const initialPaidAmount =
-      input.paidAmountBdt && input.paidAmountBdt > 0
-        ? input.paidAmountBdt
-        : isBkash && input.trxId
-        ? totalPayableBdt
-        : depositCheck.requiresDeposit
-        ? depositCheck.depositAmountBdt
-        : 0;
+      await this.reserveStock(tx, lines);
 
-    const initialDueAmount =
-      input.dueAmountBdt !== undefined
-        ? input.dueAmountBdt
-        : Math.max(0, totalPayableBdt - initialPaidAmount);
-
-    const initialStatus =
-      input.orderStatus && input.orderStatus !== "PENDING"
-        ? input.orderStatus
-        : isBkash && input.trxId
-        ? "CONFIRMED"
-        : depositCheck.requiresDeposit
-        ? "PENDING"
-        : "CONFIRMED";
-
-    const createdOrder = await db.transaction(async (tx) => {
       const [newOrder] = await tx
         .insert(orders)
         .values({
           invoiceNo,
           customerName: input.customerName,
-          customerPhone: normalizedPhone,
+          customerPhone,
           customerEmail: input.customerEmail,
           district: input.district,
           area: input.area,
           address: input.address,
           paymentMethod: input.paymentMethod,
-          pricingTierUsed: input.pricingTierUsed || "CASH",
-          emiTenureMonths: input.emiTenureMonths || 0,
-          totalPayableBdt,
-          paidAmountBdt: initialPaidAmount,
-          dueAmountBdt: initialDueAmount,
-          trxId: input.trxId,
-          courierProvider: input.courierProvider || "STEADFAST",
-          consignmentId: input.consignmentId,
-          orderStatus: initialStatus,
+          pricingTierUsed: input.pricingTierUsed,
+          totalPayableBdt: totals.totalPayableBdt,
+          paidAmountBdt: 0,
+          dueAmountBdt: totals.totalPayableBdt,
+          trxId,
+          orderStatus: totals.orderStatus,
         })
         .returning();
 
-      if (input.items && input.items.length > 0) {
-        // Resolve valid product IDs to satisfy UUID & foreign key constraints
-        const existingProducts = await tx
-          .select({ id: products.id, name: products.name, sku: products.sku })
-          .from(products);
-        const fallbackProductId = existingProducts[0]?.id;
-        const isUuid = (val: string) =>
-          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
+      await tx.insert(orderItems).values(
+        lines.map(({ product, qty }) => ({
+          orderId: newOrder.id,
+          productId: product.id,
+          productName: product.name.slice(0, 255),
+          qty,
+          unitPriceBdt: totals.unitPrice(product),
+        }))
+      );
 
-        const itemsToInsert = input.items.map((i) => {
-          let resolvedProductId = i.productId;
-          const matchByUuid =
-            isUuid(i.productId) && existingProducts.find((p) => p.id === i.productId);
-          if (!matchByUuid) {
-            const matchBySkuOrName = existingProducts.find(
-              (p) =>
-                (p.sku && i.productName && p.sku.toLowerCase() === i.productName.toLowerCase()) ||
-                (p.name && i.productName && p.name.toLowerCase().includes(i.productName.toLowerCase())) ||
-                (p.name && i.productName && i.productName.toLowerCase().includes(p.name.toLowerCase()))
-            );
-            resolvedProductId = matchBySkuOrName?.id || fallbackProductId || i.productId;
-          }
+      return {
+        ...newOrder,
+        subtotalBdt: totals.subtotalBdt,
+        deliveryFeeBdt: totals.deliveryFeeBdt,
+        depositRequirement: totals.depositRequirement,
+      };
+    });
+  }
 
-          return {
-            orderId: newOrder.id,
-            productId: resolvedProductId,
-            productName: i.productName,
-            qty: i.qty,
-            unitPriceBdt: i.unitPriceBdt,
-            assignedSerials: i.assignedSerials || [],
-          };
-        });
+  /** Finds each product by id or exact SKU. An unknown product is never substituted. */
+  private async resolveLines(tx: DbTransaction, items: CreateOrderDTO["items"]) {
+    const ids = items.map((i) => i.productId).filter((id) => UUID_REGEX.test(id));
+    const skus = items.map((i) => i.sku).filter((sku): sku is string => Boolean(sku));
 
-        await tx.insert(orderItems).values(itemsToInsert);
+    const lookups = [
+      ...(ids.length > 0 ? [inArray(products.id, ids)] : []),
+      ...(skus.length > 0 ? [inArray(products.sku, skus)] : []),
+    ];
+    const found = lookups.length > 0 ? await tx.select().from(products).where(or(...lookups)) : [];
+
+    const quantities = new Map<string, { product: (typeof found)[number]; qty: number }>();
+
+    for (const item of items) {
+      const product =
+        found.find((p) => p.id === item.productId) ||
+        (item.sku ? found.find((p) => p.sku === item.sku) : undefined);
+
+      if (!product) {
+        throw new BadRequestException(
+          "An item in your cart is no longer available. Please remove it and try again."
+        );
+      }
+      if (product.stockStatus !== "IN_STOCK" && product.stockStatus !== "PRE_ORDER") {
+        throw new BadRequestException(`"${product.name}" cannot be ordered online right now.`);
       }
 
-      return newOrder;
-    });
+      const existing = quantities.get(product.id);
+      if (existing) existing.qty += item.qty;
+      else quantities.set(product.id, { product, qty: item.qty });
+    }
 
-    return {
-      ...createdOrder,
-      depositRequirement: depositCheck,
-    };
+    return [...quantities.values()];
+  }
+
+  /**
+   * The stock check and decrement are one conditional UPDATE, so two customers
+   * cannot both buy the last unit. Sorted ids keep lock order consistent.
+   */
+  private async reserveStock(tx: DbTransaction, lines: Awaited<ReturnType<OrdersService["resolveLines"]>>) {
+    const sorted = [...lines].sort((a, b) => a.product.id.localeCompare(b.product.id));
+
+    for (const { product, qty } of sorted) {
+      if (product.stockStatus === "PRE_ORDER") continue;
+
+      const [updated] = await tx
+        .update(products)
+        .set({
+          totalStock: sql`${products.totalStock} - ${qty}`,
+          stockStatus: sql`CASE WHEN ${products.totalStock} - ${qty} <= 0 THEN 'OUT_OF_STOCK'::stock_status ELSE ${products.stockStatus} END`,
+          updatedAt: new Date(),
+        })
+        .where(and(eq(products.id, product.id), gte(products.totalStock, qty)))
+        .returning({ id: products.id });
+
+      if (!updated) {
+        throw new BadRequestException(`Not enough stock for "${product.name}". Please reduce the quantity.`);
+      }
+
+      await tx
+        .update(branchInventory)
+        .set({ stock: sql`GREATEST(${branchInventory.stock} - ${qty}, 0)` })
+        .where(
+          and(eq(branchInventory.productId, product.id), eq(branchInventory.branchCode, "ONLINE_WAREHOUSE"))
+        );
+    }
+  }
+
+  private async restoreStock(tx: DbTransaction, orderId: string) {
+    const items = await tx.select().from(orderItems).where(eq(orderItems.orderId, orderId));
+
+    for (const item of items) {
+      // Pre-order items never reduced stock when the order was placed.
+      await tx
+        .update(products)
+        .set({
+          totalStock: sql`${products.totalStock} + ${item.qty}`,
+          stockStatus: sql`CASE WHEN ${products.stockStatus} = 'OUT_OF_STOCK' THEN 'IN_STOCK'::stock_status ELSE ${products.stockStatus} END`,
+          updatedAt: new Date(),
+        })
+        .where(and(eq(products.id, item.productId), ne(products.stockStatus, "PRE_ORDER")));
+
+      await tx
+        .update(branchInventory)
+        .set({ stock: sql`${branchInventory.stock} + ${item.qty}` })
+        .where(
+          and(eq(branchInventory.productId, item.productId), eq(branchInventory.branchCode, "ONLINE_WAREHOUSE"))
+        );
+    }
+  }
+
+  private async assertTrxIdUnused(tx: DbTransaction, trxId: string, exceptOrderId?: string) {
+    const [existing] = await tx
+      .select({ id: orders.id })
+      .from(orders)
+      .where(
+        exceptOrderId ? and(eq(orders.trxId, trxId), ne(orders.id, exceptOrderId)) : eq(orders.trxId, trxId)
+      )
+      .limit(1);
+
+    if (existing) {
+      throw new ConflictException("This bKash TrxID has already been used on another order.");
+    }
   }
 
   async getOrderByNumber(orderNumber: string) {
     const order = await db.query.orders.findFirst({
       where: eq(orders.invoiceNo, orderNumber),
-      with: {
-        items: true,
-      },
+      with: { items: true },
     });
 
     if (!order) {
       throw new NotFoundException(`Order #${orderNumber} not found`);
+    }
+
+    return order;
+  }
+
+  /** Customer tracking: the invoice number alone must not reveal someone's address. */
+  async trackOrder(orderNumber: string, phone: string) {
+    const normalizedPhone = normalizeBdPhone(phone);
+    const order = normalizedPhone
+      ? await db.query.orders.findFirst({
+          where: eq(orders.invoiceNo, orderNumber),
+          with: { items: true },
+        })
+      : undefined;
+
+    // The same response for a wrong invoice or a wrong phone.
+    if (!order || normalizeBdPhone(order.customerPhone) !== normalizedPhone) {
+      throw new NotFoundException("No order matches this invoice number and mobile number.");
     }
 
     return order;
@@ -155,44 +255,85 @@ export class OrdersService {
     });
   }
 
-  async updateOrderStatus(orderNumber: string, status: any) {
-    const [updated] = await db
-      .update(orders)
-      .set({ orderStatus: status, updatedAt: new Date() })
-      .where(eq(orders.invoiceNo, orderNumber))
-      .returning();
-
-    if (!updated) {
-      throw new NotFoundException(`Order #${orderNumber} not found`);
+  async updateOrderStatus(orderNumber: string, status: string) {
+    if (!ORDER_STATUSES.includes(status as OrderStatus)) {
+      throw new BadRequestException(`Invalid order status. Allowed: ${ORDER_STATUSES.join(", ")}.`);
     }
 
-    return updated;
+    return db.transaction(async (tx) => {
+      const [order] = await tx
+        .select()
+        .from(orders)
+        .where(eq(orders.invoiceNo, orderNumber))
+        .for("update");
+
+      if (!order) {
+        throw new NotFoundException(`Order #${orderNumber} not found`);
+      }
+
+      if (order.orderStatus === "CANCELLED" && status !== "CANCELLED") {
+        throw new BadRequestException(
+          "A cancelled order cannot be reopened because its stock has been returned. Please place a new order."
+        );
+      }
+
+      if (status === "CANCELLED" && order.orderStatus !== "CANCELLED") {
+        await this.restoreStock(tx, order.id);
+      }
+
+      const [updated] = await tx
+        .update(orders)
+        .set({ orderStatus: status as OrderStatus, updatedAt: new Date() })
+        .where(eq(orders.id, order.id))
+        .returning();
+
+      return updated;
+    });
   }
 
-  async verifyDeposit(orderNumber: string, trxId: string, amount: number) {
-    const order = await db.query.orders.findFirst({
-      where: eq(orders.invoiceNo, orderNumber),
+  /**
+   * Staff confirm a bKash payment they have checked themselves. With no amount
+   * given: a bKash order is paid in full, and a COD order pays the standard deposit.
+   */
+  async verifyDeposit(orderNumber: string, rawTrxId: string, amount?: number) {
+    const trxId = rawTrxId.trim().toUpperCase();
+
+    return db.transaction(async (tx) => {
+      const [order] = await tx
+        .select()
+        .from(orders)
+        .where(eq(orders.invoiceNo, orderNumber))
+        .for("update");
+
+      if (!order) {
+        throw new NotFoundException(`Order #${orderNumber} not found`);
+      }
+      if (order.orderStatus === "CANCELLED") {
+        throw new BadRequestException("This order has been cancelled.");
+      }
+      if (order.paidAmountBdt > 0 && order.trxId === trxId) {
+        throw new ConflictException("This TrxID has already been recorded on this order.");
+      }
+
+      await this.assertTrxIdUnused(tx, trxId, order.id);
+
+      const amountBdt =
+        amount ?? (order.paymentMethod === "BKASH" ? order.dueAmountBdt : OUTSIDE_DHAKA_STANDARD_DEPOSIT_BDT);
+
+      const payment = applyPayment(order, amountBdt);
+      if (!payment) {
+        throw new BadRequestException(
+          `Invalid amount. This order has ${formatBdt(order.dueAmountBdt)} due.`
+        );
+      }
+
+      const [updated] = await tx
+        .update(orders)
+        .set({ ...payment, trxId, orderStatus: "CONFIRMED", updatedAt: new Date() })
+        .where(eq(orders.id, order.id))
+        .returning();
+
+      return updated;
     });
-
-    if (!order) {
-      throw new NotFoundException(`Order #${orderNumber} not found`);
-    }
-
-    const newPaid = (order.paidAmountBdt || 0) + amount;
-    const newDue = Math.max(0, order.totalPayableBdt - newPaid);
-
-    const [updated] = await db
-      .update(orders)
-      .set({
-        paidAmountBdt: newPaid,
-        dueAmountBdt: newDue,
-        trxId,
-        orderStatus: "CONFIRMED",
-        updatedAt: new Date(),
-      })
-      .where(eq(orders.invoiceNo, orderNumber))
-      .returning();
-
-    return updated;
   }
 }

@@ -3,74 +3,51 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Gift, Cpu, GitCompare, User } from "lucide-react";
+import { Cpu, GitCompare, Home, ShoppingCart } from "lucide-react";
+import { useCartStore } from "@/stores/cart-store";
 import { useCompareStore } from "@/stores/compare-store";
 
 export function MobileBottomNav() {
   const pathname = usePathname();
   const compareCount = useCompareStore((s) => s.items.length);
+  const cartCount = useCartStore((s) => s.getItemCount());
 
-  // Hide the global bottom nav on product detail pages so the dedicated sticky buy bar has full focus
-  const isProductDetailPage =
-    pathname.startsWith("/products/") &&
-    pathname !== "/products" &&
-    !pathname.includes("category");
-
-  if (isProductDetailPage) {
-    return null;
-  }
+  // Product pages have their own sticky buy bar in this position.
+  if (pathname.startsWith("/products/")) return null;
 
   const navItems = [
-    {
-      label: "Offers",
-      href: "/products?deals=true",
-      icon: Gift,
-      isActive: pathname.includes("deals=true"),
-    },
-    {
-      label: "PC Builder",
-      href: "/pc-builder",
-      icon: Cpu,
-      isSpecial: true,
-      isActive: pathname === "/pc-builder",
-    },
-    {
-      label: `Compare (${compareCount})`,
-      href: "/compare",
-      icon: GitCompare,
-      isActive: pathname === "/compare",
-    },
-    {
-      label: "Account",
-      href: "/cart",
-      icon: User,
-      isActive: pathname === "/cart",
-    },
+    { label: "Home", href: "/", icon: Home, count: 0 },
+    { label: "PC Builder", href: "/pc-builder", icon: Cpu, count: 0 },
+    { label: "Compare", href: "/compare", icon: GitCompare, count: compareCount },
+    { label: "Cart", href: "/cart", icon: ShoppingCart, count: cartCount },
   ];
 
   return (
     <nav
-      aria-label="Mobile Bottom Navigation"
-      className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white text-slate-700 border-t border-slate-200 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] px-1 py-1"
+      aria-label="Main"
+      className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-card/95 backdrop-blur border-t border-border pb-[env(safe-area-inset-bottom)] print:hidden"
     >
-      <div className="flex items-center justify-around max-w-md mx-auto">
-        {navItems.map((item) => {
-          const Icon = item.icon;
-
+      <div className="grid grid-cols-4 max-w-md mx-auto">
+        {navItems.map(({ label, href, icon: Icon, count }) => {
+          const isActive = pathname === href;
           return (
             <Link
-              key={item.label}
-              href={item.href}
-              className={`flex flex-col items-center justify-center py-1.5 px-2 rounded transition-colors relative min-w-[62px] ${
-                item.isActive
-                  ? "text-blue-600 font-bold"
-                  : "text-slate-600 hover:text-slate-900"
+              key={href}
+              href={href}
+              aria-current={isActive ? "page" : undefined}
+              className={`relative flex flex-col items-center justify-center gap-1 py-2 text-[11px] font-medium transition-colors ${
+                isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              <Icon className="w-5 h-5 mb-1" />
-              <span className="text-[10px] tracking-tight whitespace-nowrap font-medium">
-                {item.label}
+              <span className="relative">
+                <Icon className="w-5 h-5" />
+                {count > 0 && (
+                  <span className="absolute -top-1.5 -right-2 min-w-4 h-4 px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-semibold flex items-center justify-center tabular-nums">
+                    {count}
+                  </span>
+                )}
               </span>
+              {label}
             </Link>
           );
         })}

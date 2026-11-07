@@ -21,8 +21,11 @@ export function GtmAnalytics() {
           const json = await res.json();
           if (json?.data) {
             setSettings({
-              gtmId: json.data.gtmId,
-              gaMeasurementId: json.data.gaMeasurementId,
+              // These go inside inline scripts, so a malformed value is dropped.
+              gtmId: /^GTM-[A-Z0-9]+$/.test(json.data.gtmId || "") ? json.data.gtmId : undefined,
+              gaMeasurementId: /^(G|UA)-[A-Z0-9-]+$/.test(json.data.gaMeasurementId || "")
+                ? json.data.gaMeasurementId
+                : undefined,
               googleSearchConsoleCode: json.data.googleSearchConsoleCode,
               facebookPixelId: json.data.facebookPixelId,
               customHeadScript: json.data.customHeadScript,

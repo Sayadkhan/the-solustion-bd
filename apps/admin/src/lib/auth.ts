@@ -17,13 +17,7 @@ export interface AdminUser {
   isEmailVerified?: boolean;
 }
 
-const TOKEN_KEY = "solusation_admin_token";
 const USER_KEY = "solusation_admin_user";
-
-export const getAdminToken = (): string | null => {
-  if (typeof window === "undefined") return null;
-  return localStorage.getItem(TOKEN_KEY) || null;
-};
 
 export const getAdminUser = (): AdminUser | null => {
   if (typeof window === "undefined") return null;
@@ -36,24 +30,26 @@ export const getAdminUser = (): AdminUser | null => {
   }
 };
 
-export const setAdminSession = (token: string, user: AdminUser): void => {
+/**
+ * Keeps only the profile used to draw the UI. The tokens stay in HttpOnly cookies,
+ * and the API checks the real role on every request, so editing this cannot grant access.
+ */
+export const setAdminSession = (user: AdminUser): void => {
   if (typeof window === "undefined") return;
-  localStorage.setItem(TOKEN_KEY, token);
   localStorage.setItem(USER_KEY, JSON.stringify(user));
-  document.cookie = `${TOKEN_KEY}=${encodeURIComponent(token)}; path=/; max-age=604800; SameSite=Lax`;
-  document.cookie = `solusation_admin_role=${encodeURIComponent(user.role)}; path=/; max-age=604800; SameSite=Lax`;
 };
 
 export const clearAdminSession = (): void => {
   if (typeof window === "undefined") return;
-  localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
-  document.cookie = `${TOKEN_KEY}=; path=/; max-age=0`;
-  document.cookie = `solusation_admin_role=; path=/; max-age=0`;
+  // Clears what older versions of this panel stored.
+  localStorage.removeItem("solusation_admin_token");
+  document.cookie = "solusation_admin_token=; path=/; max-age=0";
+  document.cookie = "solusation_admin_role=; path=/; max-age=0";
 };
 
 export const isAuthenticated = (): boolean => {
-  return !!getAdminToken();
+  return !!getAdminUser();
 };
 
 export const isSuperAdmin = (user?: AdminUser | null): boolean => {

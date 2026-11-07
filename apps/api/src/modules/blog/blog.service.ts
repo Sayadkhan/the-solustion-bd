@@ -6,6 +6,9 @@ import {
   BlogStatus,
 } from "@solusation/shared-types";
 import { redis } from "../../config/redis";
+import { sanitizeBlogHtml } from "../../common/utils/sanitize-blog-html";
+
+const SITE_URL = "https://thesolutionsbd.com";
 
 @Injectable()
 export class BlogService {
@@ -44,7 +47,7 @@ export class BlogService {
     const metaDescription =
       input.metaDescription || (input.excerpt ? input.excerpt.slice(0, 160) : input.title);
     const canonicalUrl =
-      input.canonicalUrl || `https://thesolutionsbd.com/blog/${slug}`;
+      input.canonicalUrl || `${SITE_URL}/blogs/${slug}`;
 
     const [newPost] = await db
       .insert(blogs)
@@ -52,7 +55,7 @@ export class BlogService {
         title: input.title.trim(),
         slug,
         excerpt: input.excerpt || null,
-        content: input.content,
+        content: sanitizeBlogHtml(input.content),
         featuredImage: input.featuredImage || null,
         authorId: authorId || null,
         authorName: input.authorName || "The Solutions BD Editorial",
@@ -107,6 +110,7 @@ export class BlogService {
       .update(blogs)
       .set({
         ...input,
+        ...(input.content !== undefined ? { content: sanitizeBlogHtml(input.content) } : {}),
         slug,
         readingTimeMinutes,
         updatedAt: new Date(),
@@ -180,7 +184,7 @@ export class BlogService {
 
   async getBlogBySlug(slug: string) {
     const post = await db.query.blogs.findFirst({
-      where: eq(blogs.slug, slug),
+      where: and(eq(blogs.slug, slug), eq(blogs.status, "PUBLISHED")),
     });
 
     if (!post) {
@@ -192,6 +196,13 @@ export class BlogService {
       .set({ viewCount: sql`${blogs.viewCount} + 1` })
       .where(eq(blogs.id, post.id))
       .catch((err) => console.warn(`[BLOG VIEW COUNT ERROR]:`, err.message));
+
+    // Older rows point at /blog/ (a 404) or at the old domain.
+    const canonicalUrl = post.canonicalUrl
+      ? post.canonicalUrl
+          .replace("thesolusationbd.com", "thesolutionsbd.com")
+          .replace("thesolutionsbd.com/blog/", "thesolutionsbd.com/blogs/")
+      : `${SITE_URL}/blogs/${post.slug}`;
 
     // Generate Schema.org JSON-LD Article metadata for Google Search Engine indexing
     const schemaOrgJsonLd = {
@@ -206,27 +217,30 @@ export class BlogService {
       },
       publisher: {
         "@type": "Organization",
-        name: "The Solusation BD",
+        name: "The Solutions BD",
         logo: {
           "@type": "ImageObject",
-          url: "https://thesolusationbd.com/images/logo-light.png",
+          url: `${SITE_URL}/logo.png`,
         },
       },
       datePublished: post.publishedAt || post.createdAt,
       dateModified: post.updatedAt,
       mainEntityOfPage: {
         "@type": "WebPage",
-        "@id": post.canonicalUrl || `https://thesolusationbd.com/blog/${post.slug}`,
+        "@id": canonicalUrl,
       },
     };
 
     return {
       ...post,
+      // Also cleans articles saved before content was sanitized on write.
+      content: sanitizeBlogHtml(post.content),
+      canonicalUrl,
       seo: {
-        metaTitle: post.metaTitle || `${post.title} | The Solusation BD`,
+        metaTitle: post.metaTitle || `${post.title} | The Solutions BD`,
         metaDescription: post.metaDescription || post.excerpt,
         metaKeywords: post.metaKeywords,
-        canonicalUrl: post.canonicalUrl || `https://thesolusationbd.com/blog/${post.slug}`,
+        canonicalUrl,
         ogImage: post.ogImage || post.featuredImage,
         schemaOrgJsonLd,
       },

@@ -153,7 +153,7 @@ export function AddBrandModal({ isOpen, onClose, onSuccess }: AddBrandModalProps
             <button
               type="submit"
               disabled={loading}
-              className="px-5 py-2 rounded-xl bg-primary text-white hover:bg-primary/90 font-bold transition shadow-sm"
+              className="px-5 py-2 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 font-bold transition shadow-sm"
             >
               {loading ? "Saving..." : "Add Brand"}
             </button>

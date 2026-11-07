@@ -206,7 +206,7 @@ export function AddBlogModal({
             <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
               <FileText className="w-5 h-5 text-primary" />
               <span>{isEditing ? "Edit SEO Blog Post" : "Write & Publish SEO Blog Post"}</span>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-500 border border-blue-500/20 font-semibold font-mono">
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 font-semibold font-mono">
                 WordPress WYSIWYG
               </span>
             </h2>
@@ -404,7 +404,7 @@ export function AddBlogModal({
                   <button
                     type="button"
                     onClick={handleAddBacklink}
-                    className="px-3 py-1.5 bg-primary text-white rounded-lg text-xs font-bold hover:bg-primary/90 flex items-center gap-1"
+                    className="px-3 py-1.5 bg-primary text-primary-foreground rounded-lg text-xs font-bold hover:bg-primary/90 flex items-center gap-1"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     <span>Add</span>
@@ -429,7 +429,7 @@ export function AddBlogModal({
                           <span className="text-muted-foreground font-mono text-[10px]">
                             -&gt; {b.url}
                           </span>
-                          <span className="px-1.5 py-0.2 rounded bg-muted text-[9px] font-mono border border-border">
+                          <span className="px-1.5 py-0.2 rounded bg-muted text-[10px] font-mono border border-border">
                             rel=&quot;{b.rel}&quot;
                           </span>
                         </div>

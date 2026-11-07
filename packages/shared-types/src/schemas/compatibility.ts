@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { COMPONENT_TYPES } from "../constants";
+import { COMPONENT_TYPES, type ComponentType } from "../constants";
 
 export const CompatibilitySchema = z.object({
   componentType: z.enum(COMPONENT_TYPES),
@@ -20,6 +20,8 @@ export interface CompatibilityCheckResult {
   recommendedPsuWattage: number;
   errors: string[];
   warnings: string[];
+  /** The parts behind each error, so a UI can point at them. */
+  conflicts: ComponentType[];
 }
 
 export interface SelectedBuildComponents {
@@ -34,17 +36,33 @@ export interface SelectedBuildComponents {
   MONITOR?: { name: string; specs: HardwareCompatibility };
 }
 
+type BoardSize = "ITX" | "MATX" | "ATX";
+
+const BOARD_SIZE_ORDER: BoardSize[] = ["ITX", "MATX", "ATX"];
+
+/** Reads a form factor such as "Micro-ATX" or "E-ATX". Unknown text returns null. */
+export function normalizeFormFactor(formFactor?: string | null): BoardSize | null {
+  const value = formFactor?.toLowerCase().replace(/[\s_-]/g, "");
+  if (!value) return null;
+  if (value.includes("itx")) return "ITX";
+  if (value.includes("micro") || value.includes("matx") || value.includes("uatx")) return "MATX";
+  if (value.includes("atx") || value.includes("tower")) return "ATX";
+  return null;
+}
+
 /**
  * Enforces Bangladeshi Tech PC Compatibility Rules (Rule 4.3):
  * 1. CPU.socket === MOBO.socket
  * 2. MOBO.supportedRam === RAM.supportedRam
  * 3. PSU.wattage >= (Total System TDP * 1.25)
+ * 4. The motherboard fits inside the case
  */
 export function validatePcBuildCompatibility(
   build: SelectedBuildComponents
 ): CompatibilityCheckResult {
   const errors: string[] = [];
   const warnings: string[] = [];
+  const conflicts = new Set<ComponentType>();
 
   let totalTdp = 50; // Base system motherboard & peripheral overhead
 
@@ -74,6 +92,7 @@ export function validatePcBuildCompatibility(
       errors.push(
         `Socket mismatch: Processor (${build.CPU.name}) uses ${build.CPU.specs.socket}, but Motherboard (${build.MOBO.name}) has ${build.MOBO.specs.socket} socket.`
       );
+      conflicts.add("CPU").add("MOBO");
     }
   }
 
@@ -85,6 +104,7 @@ export function validatePcBuildCompatibility(
       errors.push(
         `Memory mismatch: Motherboard (${build.MOBO.name}) requires ${moboRam}, but selected RAM is ${ramGen}.`
       );
+      conflicts.add("MOBO").add("RAM");
     }
   }
 
@@ -95,11 +115,24 @@ export function validatePcBuildCompatibility(
       errors.push(
         `Insufficient Power Supply: Selected PSU is ${psuWatts}W, but the system needs at least ${recommendedPsuWattage}W (Total TDP ${totalTdp}W + 25% safety headroom).`
       );
+      conflicts.add("PSU");
     }
   } else {
     warnings.push(
       `No Power Supply selected yet. Recommended minimum PSU: ${recommendedPsuWattage}W.`
     );
+  }
+
+  // Rule 4: Motherboard fits the case
+  if (build.MOBO && build.CASE) {
+    const board = normalizeFormFactor(build.MOBO.specs.formFactor);
+    const chassis = normalizeFormFactor(build.CASE.specs.formFactor);
+    if (board && chassis && BOARD_SIZE_ORDER.indexOf(board) > BOARD_SIZE_ORDER.indexOf(chassis)) {
+      errors.push(
+        `Size mismatch: Motherboard (${build.MOBO.name}) is ${build.MOBO.specs.formFactor}, which does not fit the ${build.CASE.specs.formFactor} case (${build.CASE.name}).`
+      );
+      conflicts.add("MOBO").add("CASE");
+    }
   }
 
   return {
@@ -108,5 +141,6 @@ export function validatePcBuildCompatibility(
     recommendedPsuWattage,
     errors,
     warnings,
+    conflicts: [...conflicts],
   };
 }

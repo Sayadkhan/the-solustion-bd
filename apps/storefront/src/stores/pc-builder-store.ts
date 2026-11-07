@@ -1,99 +1,84 @@
 import { create } from "zustand";
+import { createJSONStorage, persist } from "zustand/middleware";
 import {
-  ComponentType,
-  CompatibilitySpecs,
-  validatePcBuildCompatibility,
   CompatibilityCheckResult,
+  CompatibilitySpecs,
+  SelectedBuildComponents,
+  validatePcBuildCompatibility,
 } from "@solusation/shared-types";
+
+export const BUILDER_SLOTS = [
+  "CASE",
+  "MOBO",
+  "CPU",
+  "COOLER",
+  "RAM",
+  "GPU",
+  "STORAGE",
+  "PSU",
+  "MONITOR",
+] as const;
+
+export type BuilderSlot = (typeof BUILDER_SLOTS)[number];
 
 export interface SelectedComponent {
   id: string;
   name: string;
+  slug: string;
   sku: string;
+  brand: string | null;
   cashPriceBdt: number;
   regularPriceBdt: number;
   thumbnailUrl: string;
   specs: CompatibilitySpecs;
 }
 
-interface PcBuilderState {
-  selected: Partial<Record<ComponentType, SelectedComponent>>;
-  compatibilityResult: CompatibilityCheckResult;
-  selectComponent: (type: ComponentType, item: SelectedComponent) => void;
-  removeComponent: (type: ComponentType) => void;
-  clearBuild: () => void;
-  getTotalCashPriceBdt: () => number;
-  getTotalRegularPriceBdt: () => number;
+export type BuildSelection = Partial<Record<BuilderSlot, SelectedComponent>>;
+
+/** Runs the shared compatibility rules on any selection, chosen or hypothetical. */
+export function checkBuild(selected: BuildSelection): CompatibilityCheckResult {
+  const toBuildPart = (part: SelectedComponent) => ({ name: part.name, specs: part.specs });
+  const build: SelectedBuildComponents = {};
+
+  for (const slot of BUILDER_SLOTS) {
+    const part = selected[slot];
+    if (!part) continue;
+    if (slot === "STORAGE") build.STORAGE = [toBuildPart(part)];
+    else build[slot] = toBuildPart(part);
+  }
+
+  return validatePcBuildCompatibility(build);
 }
 
-export const usePcBuilderStore = create<PcBuilderState>((set, get) => ({
-  selected: {},
-  compatibilityResult: {
-    isCompatible: true,
-    totalEstimatedTdpWatts: 50,
-    recommendedPsuWattage: 450,
-    errors: [],
-    warnings: ["Start picking components to simulate your dream build."],
-  },
-  selectComponent: (type, item) => {
-    set((state) => {
-      const nextSelected = { ...state.selected, [type]: item };
-      const compResult = validatePcBuildCompatibility({
-        CPU: nextSelected.CPU ? { name: nextSelected.CPU.name, specs: nextSelected.CPU.specs } : undefined,
-        MOBO: nextSelected.MOBO ? { name: nextSelected.MOBO.name, specs: nextSelected.MOBO.specs } : undefined,
-        RAM: nextSelected.RAM ? { name: nextSelected.RAM.name, specs: nextSelected.RAM.specs } : undefined,
-        GPU: nextSelected.GPU ? { name: nextSelected.GPU.name, specs: nextSelected.GPU.specs } : undefined,
-        PSU: nextSelected.PSU ? { name: nextSelected.PSU.name, specs: nextSelected.PSU.specs } : undefined,
-        CASE: nextSelected.CASE ? { name: nextSelected.CASE.name, specs: nextSelected.CASE.specs } : undefined,
-      });
+interface PcBuilderState {
+  selected: BuildSelection;
+  selectComponent: (slot: BuilderSlot, part: SelectedComponent) => void;
+  removeComponent: (slot: BuilderSlot) => void;
+  setBuild: (selected: BuildSelection) => void;
+  clearBuild: () => void;
+}
 
-      return {
-        selected: nextSelected,
-        compatibilityResult: compResult,
-      };
-    });
-  },
-  removeComponent: (type) => {
-    set((state) => {
-      const nextSelected = { ...state.selected };
-      delete nextSelected[type];
-      const compResult = validatePcBuildCompatibility({
-        CPU: nextSelected.CPU ? { name: nextSelected.CPU.name, specs: nextSelected.CPU.specs } : undefined,
-        MOBO: nextSelected.MOBO ? { name: nextSelected.MOBO.name, specs: nextSelected.MOBO.specs } : undefined,
-        RAM: nextSelected.RAM ? { name: nextSelected.RAM.name, specs: nextSelected.RAM.specs } : undefined,
-        GPU: nextSelected.GPU ? { name: nextSelected.GPU.name, specs: nextSelected.GPU.specs } : undefined,
-        PSU: nextSelected.PSU ? { name: nextSelected.PSU.name, specs: nextSelected.PSU.specs } : undefined,
-        CASE: nextSelected.CASE ? { name: nextSelected.CASE.name, specs: nextSelected.CASE.specs } : undefined,
-      });
-
-      return {
-        selected: nextSelected,
-        compatibilityResult: compResult,
-      };
-    });
-  },
-  clearBuild: () => {
-    set({
+export const usePcBuilderStore = create<PcBuilderState>()(
+  persist(
+    (set) => ({
       selected: {},
-      compatibilityResult: {
-        isCompatible: true,
-        totalEstimatedTdpWatts: 50,
-        recommendedPsuWattage: 450,
-        errors: [],
-        warnings: ["Start picking components to simulate your dream build."],
-      },
-    });
-  },
-  getTotalCashPriceBdt: () => {
-    return Object.values(get().selected).reduce(
-      (acc, item) => acc + (item?.cashPriceBdt || 0),
-      0
-    );
-  },
-  getTotalRegularPriceBdt: () => {
-    return Object.values(get().selected).reduce(
-      (acc, item) => acc + (item?.regularPriceBdt || 0),
-      0
-    );
-  },
-}));
+      selectComponent: (slot, part) =>
+        set((state) => ({ selected: { ...state.selected, [slot]: part } })),
+      removeComponent: (slot) =>
+        set((state) => {
+          const selected = { ...state.selected };
+          delete selected[slot];
+          return { selected };
+        }),
+      setBuild: (selected) => set({ selected }),
+      clearBuild: () => set({ selected: {} }),
+    }),
+    {
+      name: "solutions-pc-build",
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({ selected: state.selected }),
+      // Rehydrated from an effect, so the server and first client render match.
+      skipHydration: true,
+    }
+  )
+);

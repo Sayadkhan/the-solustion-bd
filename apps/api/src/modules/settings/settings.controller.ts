@@ -7,15 +7,17 @@ import {
   Param,
   Body,
   Query,
-  UseGuards,
   BadRequestException,
   Inject,
 } from "@nestjs/common";
 import { ApiTags, ApiOperation } from "@nestjs/swagger";
 import { SettingsService } from "./settings.service";
-import { JwtAuthGuard } from "../../common/guards/jwt-auth.guard";
-import { RolesGuard } from "../../common/guards/roles.guard";
+import { Public } from "../../common/decorators/public.decorator";
+import { RateLimit } from "../../common/decorators/rate-limit.decorator";
 import { Roles } from "../../common/decorators/roles.decorator";
+import { CurrentUser } from "../../common/decorators/current-user.decorator";
+import type { AuthUserPayload } from "../../common/types/auth-user";
+import { parsePagination } from "../../common/utils/pagination";
 
 @ApiTags("Settings & Inquiries")
 @Controller("settings")
@@ -23,6 +25,7 @@ export class SettingsController {
   constructor(@Inject(SettingsService) private readonly settingsService: SettingsService) {}
 
   @ApiOperation({ summary: "Get global site settings" })
+  @Public()
   @Get()
   async getSettings() {
     const settings = await this.settingsService.getSiteSettings();
@@ -30,13 +33,16 @@ export class SettingsController {
   }
 
   @ApiOperation({ summary: "Update global site settings (Admin only)" })
+  @Roles("ADMIN", "SEO_MANAGER")
   @Put()
-  async updateSettings(@Body() body: any) {
-    const updated = await this.settingsService.updateSiteSettings(body);
+  async updateSettings(@Body() body: any, @CurrentUser() user: AuthUserPayload) {
+    const updated = await this.settingsService.updateSiteSettings(body, user.role);
     return { success: true, message: "Settings updated successfully", data: updated };
   }
 
   @ApiOperation({ summary: "Submit customer or B2B corporate quotation inquiry" })
+  @Public()
+  @RateLimit(5, 15 * 60)
   @Post("inquiry")
   async submitInquiry(@Body() body: any) {
     const { name, email, phone, subject, message } = body;
@@ -52,15 +58,16 @@ export class SettingsController {
   }
 
   @ApiOperation({ summary: "Get customer and B2B inquiries (Admin only)" })
+  @Roles("ADMIN")
   @Get("inquiries")
   async getInquiries(@Query("limit") limit?: string, @Query("page") page?: string) {
-    const l = limit ? parseInt(limit, 10) : 20;
-    const p = page ? parseInt(page, 10) : 1;
+    const { limit: l, page: p } = parsePagination(limit, page, { limit: 20 });
     const inquiries = await this.settingsService.getContactInquiries(l, p);
     return { success: true, count: inquiries.length, data: inquiries };
   }
 
   @ApiOperation({ summary: "Update inquiry status (Admin only)" })
+  @Roles("ADMIN")
   @Patch("inquiries/:id/status")
   async updateInquiryStatus(
     @Param("id") id: string,

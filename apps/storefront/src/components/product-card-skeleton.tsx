@@ -9,7 +9,7 @@ interface ProductCardSkeletonProps {
 export function ProductCardSkeleton({ viewMode = "grid" }: ProductCardSkeletonProps) {
   if (viewMode === "list") {
     return (
-      <div className="bg-white dark:bg-[#0d1620] rounded-xl border border-slate-200 dark:border-slate-800 p-4 flex flex-col md:flex-row items-center gap-5 animate-pulse">
+      <div className="bg-card rounded-xl border border-border p-4 flex flex-col md:flex-row items-center gap-5 animate-pulse">
         {/* Thumbnail shimmer */}
         <div className="w-full md:w-48 h-40 shrink-0 bg-slate-200 dark:bg-slate-800/80 rounded-lg relative overflow-hidden">
           <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/20 dark:via-white/5 to-transparent" />
@@ -39,7 +39,7 @@ export function ProductCardSkeleton({ viewMode = "grid" }: ProductCardSkeletonPr
   }
 
   return (
-    <div className="bg-white dark:bg-[#0d1620] rounded-xl border border-slate-200 dark:border-slate-800 p-2.5 sm:p-3.5 flex flex-col justify-between relative overflow-hidden animate-pulse">
+    <div className="bg-card rounded-xl border border-border p-2.5 sm:p-3.5 flex flex-col justify-between relative overflow-hidden animate-pulse">
       {/* Top Tag & Compare icon placeholder */}
       <div className="flex items-center justify-between mb-1">
         <div className="h-3.5 sm:h-4 w-16 sm:w-20 rounded bg-slate-200 dark:bg-slate-800" />
@@ -59,7 +59,7 @@ export function ProductCardSkeleton({ viewMode = "grid" }: ProductCardSkeletonPr
       </div>
 
       {/* Key features bullets skeleton (Desktop only) */}
-      <div className="hidden sm:block space-y-1.5 mb-3 pt-2 border-t border-slate-100 dark:border-slate-800">
+      <div className="hidden sm:block space-y-1.5 mb-3 pt-2 border-t border-border">
         <div className="flex items-center gap-1.5">
           <div className="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-700 shrink-0" />
           <div className="h-3 w-4/5 bg-slate-100 dark:bg-slate-800/60 rounded" />
@@ -71,7 +71,7 @@ export function ProductCardSkeleton({ viewMode = "grid" }: ProductCardSkeletonPr
       </div>
 
       {/* Pricing block skeleton */}
-      <div className="pt-1.5 sm:pt-2 border-t border-slate-100 dark:border-slate-800 space-y-2">
+      <div className="pt-1.5 sm:pt-2 border-t border-border space-y-2">
         <div className="flex items-baseline gap-2">
           <div className="h-4 sm:h-6 w-20 sm:w-24 bg-slate-200 dark:bg-slate-800 rounded" />
           <div className="h-3 w-12 sm:w-14 bg-slate-100 dark:bg-slate-800/60 rounded" />

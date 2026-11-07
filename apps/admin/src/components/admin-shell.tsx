@@ -12,6 +12,7 @@ import {
   clearAdminSession,
   AdminUser,
 } from "@/lib/auth";
+import { adminApi } from "@/lib/api-client";
 import {
   LayoutDashboard,
   Package,
@@ -82,7 +83,8 @@ export function AdminShell({
     setAuthChecked(true);
   }, [pathname, router]);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await adminApi.logout();
     clearAdminSession();
     router.push("/login");
   };
@@ -239,23 +241,16 @@ export function AdminShell({
 
       {/* Sidebar Navigation */}
       <aside
-        className={`fixed md:sticky top-0 left-0 h-screen w-64 bg-card border-r border-border flex flex-col z-40 transition-transform duration-200 ${
+        className={`fixed md:sticky top-0 left-0 h-screen w-60 shrink-0 bg-card border-r border-border flex flex-col z-40 transition-transform duration-200 ${
           mobileMenuOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         }`}
       >
+        <div className="spectrum-line h-[2px] shrink-0" />
         {/* Brand Logo & Header */}
         <div className="p-4 border-b border-border flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="p-1.5 rounded-lg bg-white shadow-sm border border-border shrink-0 flex items-center justify-center">
-              <img src="/logo.png" alt="The Solutions BD" className="h-7 w-auto object-contain" />
-            </div>
-            <div>
-              <div className="font-extrabold text-sm tracking-tight text-foreground flex items-center gap-1.5">
-                The Solutions BD
-              </div>
-              <div className="text-[10px] text-muted-foreground uppercase tracking-widest font-mono">
-                {isSeoSubAdmin ? "SEO & Content Portal" : "Admin & POS Center"}
-              </div>
+            <div className="p-1 rounded-md bg-white border border-border shrink-0 flex items-center justify-center">
+              <img src="/logo.png" alt="The Solutions BD" className="h-8 w-auto object-contain" />
             </div>
           </Link>
           <span
@@ -265,7 +260,7 @@ export function AdminShell({
                 : "bg-primary/10 text-primary border-primary/20"
             }`}
           >
-            {isSeoSubAdmin ? "SEO" : "v2.0"}
+            {isSeoSubAdmin ? "SEO" : "Admin"}
           </span>
         </div>
 
@@ -275,7 +270,7 @@ export function AdminShell({
             className={`p-2 rounded-xl border flex items-center justify-between text-xs ${
               isSeoSubAdmin
                 ? "bg-emerald-500/5 border-emerald-500/20 text-emerald-400"
-                : "bg-blue-500/5 border-blue-500/20 text-blue-400"
+                : "bg-primary/5 border-primary/20 text-primary"
             }`}
           >
             <div className="flex items-center gap-1.5 min-w-0">
@@ -289,10 +284,10 @@ export function AdminShell({
               </span>
             </div>
             <span
-              className={`text-[9px] font-mono px-1.5 py-0.5 rounded uppercase font-semibold shrink-0 ${
+              className={`text-[10px] font-mono px-1.5 py-0.5 rounded uppercase font-semibold shrink-0 ${
                 isSeoSubAdmin
                   ? "bg-emerald-500/20 text-emerald-400"
-                  : "bg-blue-500/20 text-blue-400"
+                  : "bg-primary/20 text-primary"
               }`}
             >
               {isSeoSubAdmin ? "SEO Sub-Admin" : "Super Admin"}
@@ -315,29 +310,18 @@ export function AdminShell({
                 key={item.href}
                 href={item.href}
                 onClick={() => setMobileMenuOpen(false)}
-                className={`flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium transition-all group ${
+                className={`flex items-center px-3 py-2 rounded-lg text-[13px] font-medium transition-colors group ${
                   isActive
-                    ? "bg-primary text-primary-foreground font-semibold shadow-sm shadow-primary/20"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/70"
+                    ? "bg-primary/10 text-primary font-semibold"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
                 }`}
               >
                 <div className="flex items-center gap-3">
                   <Icon
-                    className={`w-4 h-4 transition-transform group-hover:scale-110 ${
-                      isActive ? "text-primary-foreground" : "text-muted-foreground group-hover:text-foreground"
-                    }`}
+                    className={`w-4 h-4 ${isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground"}`}
                   />
                   <span>{item.name}</span>
                 </div>
-                <span
-                  className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${
-                    isActive
-                      ? "bg-white/20 text-white font-semibold"
-                      : "bg-muted text-muted-foreground"
-                  }`}
-                >
-                  {item.badge}
-                </span>
               </Link>
             );
           })}
@@ -347,14 +331,14 @@ export function AdminShell({
         <div className="p-3 border-t border-border bg-muted/20 space-y-2">
           {/* Direct Storefront link */}
           <a
-            href="http://localhost:3000"
+            href={process.env.NEXT_PUBLIC_STOREFRONT_URL || "http://localhost:3000"}
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center justify-between p-2 rounded-lg border border-border bg-card hover:border-primary/50 text-xs font-medium text-foreground transition-all group"
           >
             <div className="flex items-center gap-2">
               <Store className="w-3.5 h-3.5 text-primary group-hover:scale-110 transition-transform" />
-              <span>Live Storefront</span>
+              <span>View store</span>
             </div>
             <ExternalLink className="w-3 h-3 text-muted-foreground group-hover:text-primary" />
           </a>
@@ -368,7 +352,6 @@ export function AdminShell({
               <LogOut className="w-3.5 h-3.5 text-red-500 group-hover:scale-110 transition-transform" />
               <span>Log Out</span>
             </div>
-            <span className="text-[10px] font-mono text-red-400">Exit</span>
           </button>
         </div>
       </aside>
@@ -380,12 +363,12 @@ export function AdminShell({
           <div className="flex flex-col">
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Link href="/" className="hover:text-foreground">
-                Admin Center
+                Admin
               </Link>
               <ChevronRight className="w-3 h-3" />
               <span className="text-foreground font-medium">{title}</span>
             </div>
-            <h1 className="text-xl font-black tracking-tight text-foreground flex items-center gap-2 mt-0.5">
+            <h1 className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2 mt-0.5">
               {title}
               {subtitle && (
                 <span className="text-xs font-normal text-muted-foreground hidden sm:inline">
@@ -446,7 +429,7 @@ export function AdminShell({
               <div className="pt-2 flex items-center justify-center gap-3">
                 <Link
                   href="/seo"
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-semibold shadow-md shadow-primary/25"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-semibold"
                 >
                   <span>Go to SEO & Tag Manager Hub</span>
                   <ArrowRight className="w-3.5 h-3.5" />
